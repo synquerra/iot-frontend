@@ -17,8 +17,8 @@
     COPY . .
     
     # Expose Vite port
-    EXPOSE 8030
+    EXPOSE 80
     
     # Default command for local development
-    CMD ["npm", "run", "dev", "--", "--host", "--port", "8030"]
+    CMD ["nginx", "-g", "daemon off;"]
     
