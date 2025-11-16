@@ -1,24 +1,23 @@
-# ---------- Synq Dashboard: Local Dev Build ----------
-    FROM node:18-bullseye
+# ---------- Synq Dashboard: Production Build ----------
+    FROM node:18-bullseye AS build
 
-    # Install build dependencies (required for native npm packages)
-    RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
-    
-    # Set working directory
     WORKDIR /app
     
-    # Copy package files
-    COPY package*.json ./
+    RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
     
-    # Install dependencies
+    COPY package*.json ./
     RUN npm install
     
-    # Copy rest of the project
     COPY . .
     
-    # Expose Vite port
+    RUN npm run build
+    
+    # ---------- NGINX Stage ----------
+    FROM nginx:alpine
+    
+    COPY --from=build /app/dist /usr/share/nginx/html
+    
     EXPOSE 80
     
-    # Default command for local development
     CMD ["nginx", "-g", "daemon off;"]
     
