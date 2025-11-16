@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  synq-frontend-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: synq-dashboard:latest
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production

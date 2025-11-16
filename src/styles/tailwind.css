@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom globals */
+:root{
+  --radius: 12px;
+  --card: #0f1b2a;
+  --bg: #071021;
+  --muted: #9aa7b2;
+  --primary: #7c3aed;
+  --accent: #5eead4;
+}
+
+body { @apply bg-bg text-slate-100 font-sans; }
