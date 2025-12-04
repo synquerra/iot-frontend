@@ -1,16 +1,17 @@
 services:
   synq-frontend-local:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: synq-frontend-local
+    image: node:18-bullseye
     working_dir: /app
+
     volumes:
-      - /Applications/DIC/synquerra/iot-frontend:/app   # 👈 Full local project path mounted
-      - /app/node_modules                               # 👈 Keep node_modules inside container
+      - /Applications/DIC/synquerra/iot-frontend:/app
+      - /app/node_modules
+
     ports:
-      - "8030:8030"                                     # Map port 8030
+      - "8030:8030"
+
     environment:
       - NODE_ENV=development
       - VITE_PORT=8030
+
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 8030"

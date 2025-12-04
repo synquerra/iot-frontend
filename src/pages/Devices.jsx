@@ -1,12 +1,15 @@
 // src/pages/Devices.jsx
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import { listDevices } from "../utils/device";
+
 
 export default function Devices() {
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     async function load() {
@@ -59,6 +62,7 @@ export default function Devices() {
               <th className="py-2 text-left">Interval</th>
               <th className="py-2 text-left">Geoid</th>
               <th className="py-2 text-left">Created At</th>
+              <th className="py-2 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -72,6 +76,9 @@ export default function Devices() {
                 <td className="py-2">{d.interval}</td>
                 <td className="py-2">{d.geoid}</td>
                 <td className="py-2">{d.createdAt}</td>
+                <td className="py-2">
+                <button className="px-4 py-1 bg-blue-500 rounded text-black font-semibold" onClick={() => navigate(`/devices/${d.imei}`)}>View</button>
+                </td>
               </tr>
             ))}
           </tbody>

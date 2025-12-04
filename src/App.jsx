@@ -14,6 +14,8 @@ import Configuration from "./pages/Configuration";
 import DeviceSettings from "./pages/DeviceSettings";
 import Geofence from "./pages/Geofence";
 
+import DeviceDetails from "./pages/DeviceDetails";
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -32,6 +34,7 @@ export default function App() {
         >
           <Route index element={<Dashboard />} />
           <Route path="devices" element={<Devices />} />
+          <Route path="devices/:imei" element={<DeviceDetails />} />
           <Route path="telemetry" element={<Telemetry />} />
           <Route path="configuration" element={<Configuration />} />
           <Route path="device-settings" element={<DeviceSettings />} />

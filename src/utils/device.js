@@ -62,3 +62,5 @@ export async function getDeviceByTopic(topic) {
 
   return json.data.deviceByTopic;
 }
+
+
