@@ -278,3 +278,20 @@ export async function getAnalyticsHealth(imei) {
   const result = await sendQuery(q);
   return result.analyticsHealth;
 }
+
+export async function getAnalyticsUptime(imei) {
+  const q = `
+  {
+    analyticsUptime(imei: "${imei}") {
+      score
+      expectedPackets
+      receivedPackets
+      largestGapSec
+      dropouts
+    }
+  }
+  `;
+  const result = await sendQuery(q);
+  return result.analyticsUptime;
+}
+

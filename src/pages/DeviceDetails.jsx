@@ -1,7 +1,7 @@
 // src/pages/DeviceDetails.jsx
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getAnalyticsByImei, getAnalyticsHealth } from "../utils/analytics";
+import { getAnalyticsByImei, getAnalyticsHealth,  getAnalyticsUptime } from "../utils/analytics";
 
 /* ------------------------------------
    TIMESTAMP HELPERS (RAW TIMESTAMP LOGIC)
@@ -328,6 +328,7 @@ export default function DeviceDetails() {
   const [packets, setPackets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [health, setHealth] = useState(null);
+  const [uptime, setUptime] = useState(null);
 
   useEffect(() => {
     let timer;
@@ -338,6 +339,9 @@ export default function DeviceDetails() {
 
         const healthData = await getAnalyticsHealth(imei);
         setHealth(healthData);
+
+        const uptimeData = await getAnalyticsUptime(imei);
+        setUptime(uptimeData);
         
         const normalized = byImei.map((p) => ({
           ...p,
@@ -366,7 +370,7 @@ export default function DeviceDetails() {
     }
 
     load();
-    timer = setInterval(load, 20000);
+    timer = setInterval(load, 10000);
 
     return () => clearInterval(timer);
   }, [imei]);
@@ -633,6 +637,42 @@ export default function DeviceDetails() {
     </div>
   </div>
 )}
+
+{uptime && (
+  <div className="bg-[#111827] border border-slate-700 rounded-lg p-6 text-sm">
+    <h3 className="text-lg text-orange-300 font-semibold mb-3">
+      Uptime Reliability Score
+    </h3>
+
+    <div className="space-y-2">
+      <div className="flex justify-between">
+        <span className="text-slate-400">Score</span>
+        <span className="text-orange-300 font-bold">{uptime.score}/100</span>
+      </div>
+
+      <div className="flex justify-between">
+        <span className="text-slate-400">Expected Packets</span>
+        <span>{uptime.expectedPackets}</span>
+      </div>
+
+      <div className="flex justify-between">
+        <span className="text-slate-400">Received Packets</span>
+        <span>{uptime.receivedPackets}</span>
+      </div>
+
+      <div className="flex justify-between">
+        <span className="text-slate-400">Largest Gap</span>
+        <span>{Math.round(uptime.largestGapSec)} sec</span>
+      </div>
+
+      <div className="flex justify-between">
+        <span className="text-slate-400">Dropouts (>10 min)</span>
+        <span>{uptime.dropouts}</span>
+      </div>
+    </div>
+  </div>
+)}
+
 
 
 
