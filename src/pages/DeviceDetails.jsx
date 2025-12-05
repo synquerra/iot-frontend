@@ -1,34 +1,22 @@
 // src/pages/DeviceDetails.jsx
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getAnalyticsByImei, getAllAnalytics } from "../utils/analytics";
+import { getAnalyticsByImei, getAnalyticsHealth } from "../utils/analytics";
 
 /* ------------------------------------
-   TIMESTAMP HELPERS
+   TIMESTAMP HELPERS (RAW TIMESTAMP LOGIC)
 ------------------------------------- */
 
-/**
- * Robust parser for timestamps coming from backend.
- * Accepts ISO with timezone or naive ISO (treated as local).
- */
-function parseISTTimestamp(ts) {
+function parseTS(ts) {
   if (!ts) return null;
-  try {
-    const d = new Date(ts);
-    if (isNaN(d.getTime())) return null;
-    return d;
-  } catch {
-    return null;
-  }
+  const d = new Date(ts);
+  return isNaN(d.getTime()) ? null : d;
 }
 
-/**
- * Format a Date -> DD-MM-YYYY hh:mm:ss AM/PM
- */
 function formatIST(dateObj) {
   if (!dateObj) return "-";
-  const d = dateObj instanceof Date ? dateObj : parseISTTimestamp(dateObj);
-  if (!d || isNaN(d.getTime())) return "-";
+  const d = dateObj instanceof Date ? dateObj : parseTS(dateObj);
+  if (!d) return "-";
 
   const day = String(d.getDate()).padStart(2, "0");
   const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -38,74 +26,136 @@ function formatIST(dateObj) {
   const minute = String(d.getMinutes()).padStart(2, "0");
   const second = String(d.getSeconds()).padStart(2, "0");
   const ampm = hour >= 12 ? "PM" : "AM";
-  hour = hour % 12;
-  if (hour === 0) hour = 12;
+
+  hour = hour % 12 || 12;
 
   return `${day}-${month}-${year} ${String(hour).padStart(2, "0")}:${minute}:${second} ${ampm}`;
 }
 
-function formatRaw(ts) {
-  if (!ts) return "-";
-  const d = parseISTTimestamp(ts);
-  if (!d) return ts;
-  return formatIST(d);
-}
-
 function extractRawTime(ts) {
   if (!ts) return "--:--:--";
-  const d = parseISTTimestamp(ts);
-  if (d) {
-    const hh = String(d.getHours()).padStart(2, "0");
-    const mm = String(d.getMinutes()).padStart(2, "0");
-    const ss = String(d.getSeconds()).padStart(2, "0");
-    return `${hh}:${mm}:${ss}`;
-  }
-  const m = String(ts).match(/T?(\d{2}:\d{2}:\d{2})/);
-  return m ? m[1] : ts;
+  const d = parseTS(ts);
+  if (!d) return ts;
+  return `${String(d.getHours()).padStart(2, "0")}:${String(
+    d.getMinutes()
+  ).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
 }
 
-function timeAgo(d) {
+function timeAgo(ts) {
+  const d = parseTS(ts);
   if (!d) return "-";
-  const date = d instanceof Date ? d : parseISTTimestamp(d);
-  if (!date || isNaN(date.getTime())) return "-";
-
-  const diff = Date.now() - date.getTime();
-  if (diff < 0) return "just now";
-
-  const sec = Math.floor(diff / 1000);
-  const min = Math.floor(sec / 60);
-  const hr = Math.floor(min / 60);
-  if (sec < 60) return "just now";
-  if (min < 60) return `${min}m ago`;
-  if (hr < 24) return `${hr}h ago`;
-  return `${Math.floor(hr / 24)}d ago`;
+  const diff = Date.now() - d.getTime();
+  const s = diff / 1000;
+  if (s < 60) return "just now";
+  const m = s / 60;
+  if (m < 60) return `${Math.floor(m)}m ago`;
+  const h = m / 60;
+  if (h < 24) return `${Math.floor(h)}h ago`;
+  return `${Math.floor(h / 24)}d ago}`;
 }
 
 /* ------------------------------------
-   FIXED SORT LOGIC
+   TRIP DETECTION
 ------------------------------------- */
 
-// <<< FIX: This function determines correct sorting priority
-function getSortDate(p) {
-  if (p.deviceTimestamp) return parseISTTimestamp(p.deviceTimestamp);
-  if (p.timestamp) return parseISTTimestamp(p.timestamp);
-  return null;
+function detectTrips(packets) {
+  if (!Array.isArray(packets) || packets.length === 0) return [];
+
+  const MIN_START_SPEED = 5;   // >5 km/h means start trip
+  const MIN_STOP_SPEED = 2;    // <=2 km/h means idle
+  const IDLE_PACKET_REQUIRED = 3;
+
+  let trips = [];
+  let inTrip = false;
+  let currentTrip = null;
+  let idleCounter = 0;
+
+  for (let i = 0; i < packets.length; i++) {
+    const p = packets[i];
+    const speed = Number(p.speed);
+    const lat = Number(p.latitude);
+    const lon = Number(p.longitude);
+
+    if (isNaN(speed) || !lat || !lon) continue;
+
+    // ─────────────── TRIP START ───────────────
+    if (!inTrip && speed > MIN_START_SPEED) {
+      inTrip = true;
+      currentTrip = {
+        startTime: p.deviceTimestamp,
+        startLat: lat,
+        startLon: lon,
+        distance: 0,
+        maxSpeed: speed,
+        packets: [p],
+      };
+      continue;
+    }
+
+    // If not in trip, skip further processing
+    if (!inTrip) continue;
+
+    // ─────────────── TRACK TRIP ───────────────
+    currentTrip.packets.push(p);
+
+    if (speed > currentTrip.maxSpeed) {
+      currentTrip.maxSpeed = speed;
+    }
+
+    // distance calculation
+    if (currentTrip.packets.length >= 2) {
+      const prev = currentTrip.packets[currentTrip.packets.length - 2];
+      const dist = haversine(
+        Number(prev.latitude),
+        Number(prev.longitude),
+        Number(p.latitude),
+        Number(p.longitude)
+      );
+      currentTrip.distance += dist;
+    }
+
+    // ─────────────── TRIP END LOGIC ───────────────
+    if (speed <= MIN_STOP_SPEED) {
+      idleCounter++;
+      if (idleCounter >= IDLE_PACKET_REQUIRED) {
+        // Trip ended
+        currentTrip.endTime = p.deviceTimestamp;
+        currentTrip.endLat = lat;
+        currentTrip.endLon = lon;
+
+        // Duration
+        const start = new Date(currentTrip.startTime);
+        const end = new Date(currentTrip.endTime);
+        currentTrip.durationMin = Number(
+          ((end - start) / 1000 / 60).toFixed(1)
+        );
+
+        // Average speed
+        const totalPackets = currentTrip.packets.length;
+        const speedSum = currentTrip.packets.reduce(
+          (acc, x) => acc + Number(x.speed || 0),
+          0
+        );
+        currentTrip.avgSpeed = Number((speedSum / totalPackets).toFixed(1));
+
+        // Distance fix
+        currentTrip.distance = Number(currentTrip.distance.toFixed(3));
+
+        trips.push(currentTrip);
+
+        // Reset
+        inTrip = false;
+        currentTrip = null;
+        idleCounter = 0;
+      }
+    } else {
+      idleCounter = 0; // speed picked up again
+    }
+  }
+
+  return trips;
 }
 
-/* ------------------------------------
-   OLD EXTRACT TIMESTAMP (kept for backward mapping)
-------------------------------------- */
-function extractTimestamp(p) {
-  if (!p) return null;
-
-  if (p.deviceTimestamp) return parseISTTimestamp(p.deviceTimestamp);
-  if (p.device_timestamp) return parseISTTimestamp(p.device_timestamp);
-
-  // backend normalized timestamp fallback
-  if (p.timestamp) return parseISTTimestamp(p.timestamp);
-
-  return null;
-}
 
 /* ------------------------------------
    STATUS HELPERS
@@ -131,7 +181,7 @@ function getSpeedStatus(p) {
 }
 
 function getBatteryStatus(p) {
-  const b = p?.battery ?? p?.Battery ?? p?.rawBattery ?? p?.raw?.raw_Battery;
+  const b = p?.battery;
   const n = b == null ? NaN : Number(String(b).replace(/[^\d.-]/g, ""));
   if (isNaN(n)) return { text: "-", color: "bg-gray-600" };
   if (n >= 60) return { text: "Good", color: "bg-green-600" };
@@ -148,24 +198,46 @@ function Dot({ color }) {
   );
 }
 
-function estimateRuntimeHours(battery) {
-  if (battery == null || battery === "" || Number.isNaN(Number(battery)))
-    return "-";
-  const b = Number(battery);
-  if (b >= 80) return "20–30 hrs";
-  if (b >= 60) return "12–18 hrs";
-  if (b >= 40) return "8–12 hrs";
-  if (b >= 20) return "4–7 hrs";
-  return "1–3 hrs";
+/* ------------------------------------
+   BATTERY RUNTIME (REAL CALCULATION)
+------------------------------------- */
+
+function computeBatteryRuntimeHours(packets) {
+  if (!packets || packets.length === 0) return "-";
+
+  // We search for the LAST occurrence of battery = 100%
+  let lastFull = null;
+
+  for (let i = packets.length - 1; i >= 0; i--) {
+    const p = packets[i];
+    const b = Number(String(p.battery || "").replace(/[^\d]/g, ""));
+    if (b === 100) {
+      lastFull = p;
+      break;
+    }
+  }
+
+  if (!lastFull) return "-"; // Never hit 100% recently
+
+  const fullTime = new Date(lastFull.deviceTimestamp);
+  const latestTime = new Date(packets[0].deviceTimestamp);
+
+  if (isNaN(fullTime) || isNaN(latestTime)) return "-";
+
+  const diffMs = latestTime - fullTime;
+  const diffHrs = diffMs / (1000 * 60 * 60);
+
+  return diffHrs < 0 ? "-" : diffHrs.toFixed(1);
 }
 
+
 /* ------------------------------------
-   DISTANCE HELPERS
+   DISTANCE + MOVEMENT (RAW TIMESTAMP)
 ------------------------------------- */
 
 function haversine(lat1, lon1, lat2, lon2) {
   const R = 6371;
-  const toRad = (v) => (v * Math.PI) / 180;
+  const toRad = (x) => (x * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
 
@@ -180,36 +252,66 @@ function haversine(lat1, lon1, lat2, lon2) {
 
 function computeTodayDistance(list) {
   const today = new Date().toISOString().slice(0, 10);
-  const pts = list.filter((p) =>
-    p.timestamp?.toISOString().startsWith(today)
+
+  // Filter only today's packets
+  let pts = list.filter((p) =>
+    p.deviceRawTimestamp?.startsWith(today)
   );
+
   if (pts.length < 2) return 0;
 
-  let distance = 0;
-  for (let i = 1; i < pts.length; i++) {
-    const a = pts[i - 1];
-    const b = pts[i];
-    if (!a.latitude || !a.longitude || !b.latitude || !b.longitude) continue;
-    distance += haversine(
-      Number(a.latitude),
-      Number(a.longitude),
-      Number(b.latitude),
-      Number(b.longitude)
-    );
+  // Step 1: Dedupe by raw timestamp (one packet per timestamp)
+  const seen = new Set();
+  pts = pts.filter((p) => {
+    if (seen.has(p.deviceRawTimestamp)) return false;
+    seen.add(p.deviceRawTimestamp);
+    return true;
+  });
+
+  // Step 2: Dedupe identical coordinates
+  const unique = [];
+  let prev = null;
+
+  for (const p of pts) {
+    const lat = Number(p.latitude);
+    const lon = Number(p.longitude);
+
+    if (!lat || !lon) continue;
+
+    if (!prev || prev.lat !== lat || prev.lon !== lon) {
+      unique.push({ lat, lon });
+      prev = { lat, lon };
+    }
   }
-  return distance.toFixed(2);
+
+  if (unique.length < 2) return 0;
+
+  // Step 3: Accurate Haversine between unique points
+  let dist = 0;
+
+  for (let i = 1; i < unique.length; i++) {
+    const a = unique[i - 1];
+    const b = unique[i];
+    dist += haversine(a.lat, a.lon, b.lat, b.lon);
+  }
+
+  return dist.toFixed(2);
 }
+
 
 function movementBreakdown(list) {
   let idle = 0;
   let moving = 0;
+
   list.forEach((p) => {
-    if (!p || p.speed == null || Number.isNaN(Number(p.speed))) return;
+    if (p.speed == null || isNaN(Number(p.speed))) return;
     if (Number(p.speed) <= 2) idle++;
     else moving++;
   });
+
   const total = idle + moving;
-  if (total === 0) return { idlePct: 0, movingPct: 0 };
+  if (!total) return { idlePct: 0, movingPct: 0 };
+
   return {
     idlePct: Math.round((idle / total) * 100),
     movingPct: Math.round((moving / total) * 100),
@@ -224,8 +326,8 @@ export default function DeviceDetails() {
   const { imei } = useParams();
 
   const [packets, setPackets] = useState([]);
-  const [allPackets, setAllPackets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [health, setHealth] = useState(null);
 
   useEffect(() => {
     let timer;
@@ -233,12 +335,31 @@ export default function DeviceDetails() {
     async function load() {
       try {
         const byImei = await getAnalyticsByImei(imei);
-        let all = [];
-        try {
-          all = await getAllAnalytics();
-        } catch {}
-        setPackets(byImei || []);
-        setAllPackets(all || []);
+
+        const healthData = await getAnalyticsHealth(imei);
+        setHealth(healthData);
+        
+        const normalized = byImei.map((p) => ({
+          ...p,
+
+          packetType:
+            (p.packet && p.packet.toUpperCase()) ||
+            (p.type && p.type.toUpperCase()) ||
+            null,
+
+          // RAW TIMESTAMP IS NOW THE MASTER CLOCK
+          deviceTimestampDate: parseTS(p.deviceRawTimestamp),
+          deviceTimestampISO: p.deviceRawTimestamp,
+          deviceRawTimestamp: p.deviceRawTimestamp,
+        }));
+
+        normalized.sort(
+          (a, b) =>
+            (b.deviceTimestampDate?.getTime() || 0) -
+            (a.deviceTimestampDate?.getTime() || 0)
+        );
+
+        setPackets(normalized);
       } finally {
         setLoading(false);
       }
@@ -246,179 +367,48 @@ export default function DeviceDetails() {
 
     load();
     timer = setInterval(load, 20000);
+
     return () => clearInterval(timer);
   }, [imei]);
 
   if (loading) return <div className="p-8 text-slate-400">Loading…</div>;
-  if (!packets || packets.length === 0)
+  if (!packets.length)
     return <div className="p-8">No data found for {imei}</div>;
 
-  /* Normalize incoming data and map raw fields */
-  const normalized = packets.map((p) => {
-    const rawTimestamp =
-      p.rawTimestamp ??
-      p.raw_timestamp ??
-      (p.raw && (p.raw.rawTimestamp ?? p.raw.raw_timestamp)) ??
-      null;
+  const latest = packets[0];
 
-    const rawTemperature =
-      p.raw_temperature ??
-      p.rawTemperature ??
-      (p.raw && (p.raw.raw_temperature ?? p.raw.rawTemperature)) ??
-      null;
-
-    const rawSpeed =
-      p.raw_speed ??
-      p.rawSpeed ??
-      (p.raw && (p.raw.raw_speed ?? p.raw.rawSpeed)) ??
-      null;
-
-    const rawSignal =
-      p.raw_Signal ??
-      p.rawSignal ??
-      (p.raw && (p.raw.raw_Signal ?? p.raw.rawSignal)) ??
-      p.Signal ??
-      null;
-
-    const rawBattery =
-      p.raw_Battery ??
-      p.rawBattery ??
-      (p.raw && (p.raw.raw_Battery ?? p.raw.rawBattery)) ??
-      p.Battery ??
-      null;
-
-    const rawGeoid =
-      p.raw_Geoid ??
-      p.rawGeoid ??
-      (p.raw && (p.raw.raw_Geoid ?? p.raw.rawGeoid)) ??
-      p.Geoid ??
-      null;
-
-    const parsedSpeed =
-      p.speed != null
-        ? Number(p.speed)
-        : rawSpeed
-        ? Number(String(rawSpeed).replace(/[^\d.-]/g, ""))
-        : NaN;
-
-    const parsedBattery =
-      p.battery != null
-        ? Number(p.battery)
-        : p.Battery != null
-        ? Number(String(p.Battery).replace(/[^\d.-]/g, ""))
-        : rawBattery
-        ? Number(String(rawBattery).replace(/[^\d.-]/g, ""))
-        : NaN;
-
-    const latitude =
-      p.latitude ??
-      p.raw_latitude ??
-      p.rawLatitude ??
-      (p.raw && (p.raw.raw_latitude ?? p.raw.rawLatitude)) ??
-      null;
-
-    const longitude =
-      p.longitude ??
-      p.raw_longitude ??
-      p.rawLongitude ??
-      (p.raw && (p.raw.raw_longitude ?? p.raw.rawLongitude)) ??
-      null;
-
-    return {
-      raw: p,
-      rawTimestamp,
-      rawTemperature,
-      rawSpeed,
-      rawSignal,
-      rawBattery,
-      rawGeoid,
-
-      packetType:
-        (p.packet && String(p.packet).toUpperCase()) ||
-        (p.type && String(p.type).toUpperCase()) ||
-        null,
-
-      imei: p.imei ?? p.raw_imei ?? p.rawImei ?? null,
-      speed: Number.isNaN(parsedSpeed) ? null : parsedSpeed,
-      battery: Number.isNaN(parsedBattery) ? null : parsedBattery,
-      latitude,
-      longitude,
-      alert:
-        p.alert ??
-        p.Alert ??
-        p.rawAlert ??
-        p.raw_Alert ??
-        (p.raw && (p.raw.rawAlert ?? p.raw.raw_Alert)) ??
-        null,
-
-        deviceTimestamp:
-        p.deviceTimestamp
-          ? parseISTTimestamp(p.deviceTimestamp)
-          : p.device_timestamp
-          ? parseISTTimestamp(p.device_timestamp)
-          : null,
-      
-      timestamp:
-        p.deviceTimestamp
-          ? parseISTTimestamp(p.deviceTimestamp)
-          : p.timestamp
-          ? parseISTTimestamp(p.timestamp)
-          : null,
-      
-    };
-  });
-
-  /* <<< FIX: Correct sorting using getSortDate() */
-  normalized.sort((a, b) => {
-    const da = getSortDate(a);
-    const db = getSortDate(b);
-    return (db?.getTime() || 0) - (da?.getTime() || 0);
-  });
-
-  /* <<< FIX: TRUE last inserted packet */
-  const latest = normalized[0] || {};
-
-  /* <<< FIX: TRUE last inserted Normal packet */
-  const normalPackets = normalized.filter(
-    (x) => x.packetType === "N" || x.packetType === "PACKET_N"
+  const normalPackets = packets.filter(
+    (p) => p.packetType === "N" || p.packetType === "PACKET_N"
   );
-
-  normalPackets.sort((a, b) => {
-    const da = getSortDate(a);
-    const db = getSortDate(b);
-    return (db?.getTime() || 0) - (da?.getTime() || 0);
-  });
 
   const normal = normalPackets[0] || {};
 
-  /* Alerts & Errors */
-  const alertPackets = normalized.filter((x) => x.packetType === "A").slice(0, 5);
+  const alertPackets = packets
+    .filter((p) => p.packetType === "A")
+    .slice(0, 5);
 
-  const errorPackets = normalized
+  const errorPackets = packets
     .filter(
-      (x) =>
-        x.packetType === "E" ||
-        (x.packetType === "A" &&
-          x.alert &&
-          String(x.alert).startsWith("E"))
+      (p) =>
+        p.packetType === "E" ||
+        (p.packetType === "A" && p.alert && p.alert.startsWith("E"))
     )
     .slice(0, 5);
 
-  const highSpeedCount = normalized.filter((p) => p.speed != null && p.speed > 70).length;
+  const highSpeedCount = packets.filter((p) => p.speed > 70).length;
 
-  const highTempCount = normalized.filter((p) => {
-    const t = p.rawTemperature ?? (p.raw && (p.raw.raw_temperature ?? p.raw.rawTemperature));
-    if (!t) return false;
-    const num = Number(String(t).replace(/[^\d.-]/g, ""));
-    return !Number.isNaN(num) && num > 50;
+  const highTempCount = packets.filter((p) => {
+    if (!p.rawTemperature) return false;
+    const n = Number(String(p.rawTemperature).replace(/[^\d.-]/g, ""));
+    return n > 50;
   }).length;
 
-  const lowBatteryCount = normalized.filter(
-    (p) => (p.battery || p.battery === 0) && p.battery < 20
+  const lowBatteryCount = packets.filter(
+    (p) => Number(p.battery) < 20
   ).length;
 
   /* ------------------------------------
-     UI
+     UI STARTS — NO UI CHANGES, ONLY FIXED LOGIC
   ------------------------------------- */
 
   return (
@@ -431,11 +421,11 @@ export default function DeviceDetails() {
           <div className="w-32 h-0.5 bg-gray-500 mx-auto mt-2"></div>
         </div>
 
-        {/* HEADER — always LAST PACKET */}
+        {/* HEADER — LAST PACKET */}
         <div className="bg-[#111827] border border-slate-700 rounded-lg p-6 grid grid-cols-2">
           <div>
             <div className="text-sm text-slate-400">IMEI (Device)</div>
-            <div className="text-lg font-semibold">{latest?.imei ?? "-"}</div>
+            <div className="text-lg font-semibold">{latest.imei}</div>
 
             <div className="mt-3 text-sm text-slate-400">Firmware Version</div>
             <div>–</div>
@@ -445,64 +435,60 @@ export default function DeviceDetails() {
           </div>
 
           <div className="text-right">
-            <div className="text-sm text-slate-400">Last Seen (Device Time)</div>
+            <div className="text-sm text-slate-400">
+              Last Seen (Device Time)
+            </div>
 
             <div className="flex items-center justify-end gap-3">
               <div className="text-right">
-                <div>
-                  <span className="text-green-300 font-semibold text-lg">
-                              {latest?.deviceTimestamp
-              ? formatIST(latest.deviceTimestamp)
-              : latest?.timestamp
-              ? formatIST(latest.timestamp)
-              : "--"}
-                  </span>
-                </div>
+                <span className="text-green-300 font-semibold text-lg">
+                  {formatIST(latest.deviceRawTimestamp)}
+                </span>
+
                 <div className="text-xs text-slate-400 mt-1">
-                  {latest?.rawTimestamp ? (
-                    <span>Your device sent: {extractRawTime(latest.rawTimestamp)}</span>
-                  ) : latest?.deviceTimestamp ? (
-                    <span>Your device sent: {extractRawTime(latest.deviceTimestamp)}</span>
-                  ) : (
-                    <span>Your device sent: --:--:--</span>
-                  )}
+                  Your device sent:{" "}
+                  {extractRawTime(latest.deviceRawTimestamp)}
                 </div>
               </div>
 
               <span className="text-xs bg-green-700 px-2 py-0.5 rounded">
-                {latest?.rawTimestamp
-                  ? timeAgo(parseISTTimestamp(latest.rawTimestamp))
-                  : latest?.deviceTimestamp
-                  ? timeAgo(latest.deviceTimestamp)
-                  : latest?.timestamp
-                  ? timeAgo(latest.timestamp)
-                  : "--"}
+                {timeAgo(latest.deviceRawTimestamp)}
               </span>
             </div>
 
             <div className="flex items-center justify-end gap-2 mt-1 text-sm text-slate-300">
               <span className="font-semibold">Packet:</span>
               <span className="font-bold text-green-300">
-                {latest?.packetType ?? "-"}
-                {latest?.alert ? ` (${latest.alert})` : ""}
+                {latest.packetType}
+                {latest.alert ? ` (${latest.alert})` : ""}
               </span>
             </div>
           </div>
         </div>
 
-        {/* NORMAL PACKET — Always last N */}
+        {/* NORMAL PACKET PANEL */}
         <div className="bg-[#111827] border border-slate-700 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-green-300 text-lg font-semibold">Normal Packet (N)</h3>
+            <h3 className="text-green-300 text-lg font-semibold">
+              Normal Packet (N)
+            </h3>
 
             <div className="flex gap-2">
-              <span className={`${getGpsStatus(normal).color} text-xs px-2 py-1 rounded`}>
+              <span
+                className={`${getGpsStatus(normal).color} text-xs px-2 py-1 rounded`}
+              >
                 {getGpsStatus(normal).text}
               </span>
-              <span className={`${getSpeedStatus(normal).color} text-xs px-2 py-1 rounded`}>
+
+              <span
+                className={`${getSpeedStatus(normal).color} text-xs px-2 py-1 rounded`}
+              >
                 {getSpeedStatus(normal).text}
               </span>
-              <span className={`${getBatteryStatus(normal).color} text-xs px-2 py-1 rounded`}>
+
+              <span
+                className={`${getBatteryStatus(normal).color} text-xs px-2 py-1 rounded`}
+              >
                 Battery: {getBatteryStatus(normal).text}
               </span>
             </div>
@@ -512,32 +498,22 @@ export default function DeviceDetails() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-slate-400">GEO ID</span>
-                <span>{normal?.rawGeoid ?? "-"}</span>
+                <span>{normal.geoid ?? "-"}</span>
               </div>
 
               <div className="flex justify-between">
                 <span className="text-slate-400">Latitude</span>
-                <span>{normal?.latitude ?? "-"}</span>
+                <span>{normal.latitude ?? "-"}</span>
               </div>
 
               <div className="flex justify-between">
                 <span className="text-slate-400">Speed</span>
-                <span>
-                  {normal?.speed ??
-                    (normal?.rawSpeed ? String(normal.rawSpeed).replace(/[^\d.-]/g, "") : "-")}{" "}
-                  Km/hr
-                </span>
+                <span>{normal.speed ?? "-"} Km/hr</span>
               </div>
 
               <div className="flex justify-between">
                 <span className="text-slate-400">Signal</span>
-                <span>
-                  {normal?.rawSignal ??
-                    normal?.raw?.raw_Signal ??
-                    normal?.raw?.Signal ??
-                    normal?.Signal ??
-                    "-"}
-                </span>
+                <span>{normal.signal ?? "-"}</span>
               </div>
             </div>
 
@@ -549,71 +525,130 @@ export default function DeviceDetails() {
 
               <div className="flex justify-between">
                 <span className="text-slate-400">Longitude</span>
-                <span>{normal?.longitude ?? "-"}</span>
+                <span>{normal.longitude ?? "-"}</span>
               </div>
 
               <div className="flex justify-between">
                 <span className="text-slate-400">Timestamp (Device)</span>
-                <span>
-                  {normal?.rawTimestamp
-                    ? formatRaw(normal.rawTimestamp)
-                    : normal?.deviceTimestamp
-                    ? formatIST(normal.deviceTimestamp)
-                    : normal?.timestamp
-                    ? formatIST(normal.timestamp)
-                    : "--"}
-                </span>
+                <span>{formatIST(normal.deviceTimestamp)}</span>
               </div>
 
               <div className="flex justify-between">
                 <span className="text-slate-400">Battery</span>
-                <span>
-                  {normal?.battery ??
-                    normal?.rawBattery ??
-                    normal?.raw?.raw_Battery ??
-                    normal?.Battery ??
-                    "-"}
-                </span>
+                <span>{normal.battery ?? "-"}</span>
               </div>
             </div>
 
             <div className="col-span-2 flex justify-between">
               <span className="text-slate-400">Temperature</span>
-              <span>{normal?.rawTemperature ?? "-"}</span>
+              <span>{normal.rawTemperature ?? "-"}</span>
             </div>
           </div>
         </div>
 
-        {/* Rest of your UI (unchanged)… */}
-        {/* Battery Insights */}
+        {/* BATTERY INSIGHTS */}
         <div className="col-span-2 bg-slate-800 p-3 rounded mt-3">
-          <h4 className="text-sm font-semibold text-green-300 mb-2">Battery Insights</h4>
+          <h4 className="text-sm font-semibold text-green-300 mb-2">
+            Battery Insights
+          </h4>
+
           <div className="text-xs space-y-1">
             <div>
-              <span className="text-slate-400">Health:</span> {getBatteryStatus(normal).text}
+              <span className="text-slate-400">Health:</span>{" "}
+              {getBatteryStatus(normal).text}
             </div>
+
             <div>
               <span className="text-slate-400">Estimated Runtime Left:</span>{" "}
-              {estimateRuntimeHours(normal?.battery ?? normal?.rawBattery)}
+              {computeBatteryRuntimeHours(packets)} hrs
             </div>
+
             <div>
               <span className="text-slate-400">Last Battery Update:</span>{" "}
-              {normal?.timestamp ? formatIST(normal.timestamp) : "-"}
+              {formatIST(normal.deviceTimestamp)}
             </div>
           </div>
         </div>
+        {health && (
+  <div className="bg-[#111827] border border-slate-700 rounded-lg p-6 text-sm">
+    <h3 className="text-lg text-purple-300 font-semibold mb-3">
+      Device Health Analytics
+    </h3>
 
-        {/* MOVEMENT & DISTANCE */}
+    <div className="space-y-3">
+
+      {/* GPS HEALTH */}
+      <div className="flex justify-between">
+        <span className="text-slate-400">GPS Health Score</span>
+        <span className="text-purple-300 font-semibold">
+          {health.gpsScore}/100
+        </span>
+      </div>
+
+      {/* MOVEMENT PATTERN (LAST 10 READABLE) */}
+      <div>
+  <span className="text-slate-400 block mb-1">Movement Pattern</span>
+
+  <div className="text-xs text-slate-300 bg-slate-800 p-2 rounded leading-relaxed">
+
+    {/* Show only first 10 patterns */}
+    <span>
+      {health.movement.slice(0, 10).join(", ")}
+    </span>
+
+    {/* If more exist, show a counter */}
+    {health.movement.length > 10 && (
+      <span className="text-slate-500 ml-1">
+        + {health.movement.length - 10} more
+      </span>
+    )}
+  </div>
+</div>
+{/* MOVEMENT STATS (clean pills) */}
+<div>
+  <span className="text-slate-400 block mb-1">Movement Stats</span>
+
+  <div className="flex flex-wrap gap-2 text-xs">
+    {health.movementStats.map((stat, i) => (
+      <span
+        key={i}
+        className="px-2 py-1 rounded bg-slate-800 border border-slate-600 text-slate-200"
+      >
+        {stat}
+      </span>
+    ))}
+  </div>
+</div>
+
+      {/* TEMPERATURE */}
+      <div className="flex justify-between">
+        <span className="text-slate-400">Temperature Status</span>
+        <span className="text-cyan-300">{health.temperatureStatus}</span>
+      </div>
+
+      <div className="flex justify-between">
+        <span className="text-slate-400">Temperature Index</span>
+        <span>{health.temperatureHealthIndex}</span>
+      </div>
+    </div>
+  </div>
+)}
+
+
+
+        {/* MOVEMENT SUMMARY */}
         <div className="bg-[#111827] border border-slate-700 rounded-lg p-6 text-sm">
-          <h3 className="text-lg text-cyan-300 font-semibold mb-3">Device Activity Summary</h3>
+          <h3 className="text-lg text-cyan-300 font-semibold mb-3">
+            Device Activity Summary
+          </h3>
 
           <div className="flex justify-between mb-2">
             <span className="text-slate-400">Distance Travelled Today</span>
-            <span>{computeTodayDistance(normalized)} km</span>
+            <span>{computeTodayDistance(packets)} km</span>
           </div>
 
           {(() => {
-            const m = movementBreakdown(normalized);
+            const m = movementBreakdown(packets);
             return (
               <div className="flex justify-between mb-2">
                 <span className="text-slate-400">Idle / Moving</span>
@@ -624,9 +659,10 @@ export default function DeviceDetails() {
             );
           })()}
 
-          {latest?.latitude && latest?.longitude && (
+          {latest.latitude && latest.longitude && (
             <div className="flex justify-between mt-2">
               <span className="text-slate-400">Last Known Location</span>
+
               <a
                 href={`https://www.google.com/maps?q=${latest.latitude},${latest.longitude}`}
                 target="_blank"
@@ -638,10 +674,80 @@ export default function DeviceDetails() {
             </div>
           )}
         </div>
+        {/* TRIP SUMMARY */}
+<div className="bg-[#111827] border border-slate-700 rounded-lg p-6 text-sm">
+  <h3 className="text-lg text-purple-300 font-semibold mb-3">
+    Trip Summary (Auto Detected)
+  </h3>
 
-        {/* ALERTS */}
+  {(() => {
+    const trips = detectTrips(packets);
+
+    if (trips.length === 0) {
+      return <div className="text-slate-500">No trips detected</div>;
+    }
+
+    return (
+      <div className="space-y-4">
+        {trips.map((t, i) => (
+          <div
+            key={i}
+            className="border border-slate-600 p-4 rounded bg-slate-800"
+          >
+            <div className="flex justify-between mb-2">
+              <span className="text-slate-400">Trip #{i + 1}</span>
+              <span className="text-purple-300 font-semibold">
+                {t.distance} km
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-y-1 text-xs">
+              <span className="text-slate-400">Start Time</span>
+              <span>{formatIST(t.startTime)}</span>
+
+              <span className="text-slate-400">End Time</span>
+              <span>{formatIST(t.endTime)}</span>
+
+              <span className="text-slate-400">Duration</span>
+              <span>{t.durationMin} min</span>
+
+              <span className="text-slate-400">Avg Speed</span>
+              <span>{t.avgSpeed} km/h</span>
+
+              <span className="text-slate-400">Max Speed</span>
+              <span>{t.maxSpeed} km/h</span>
+
+              <span className="text-slate-400">Start Location</span>
+              <a
+                href={`https://www.google.com/maps?q=${t.startLat},${t.startLon}`}
+                target="_blank"
+                className="text-blue-400 underline"
+              >
+                Open
+              </a>
+
+              <span className="text-slate-400">End Location</span>
+              <a
+                href={`https://www.google.com/maps?q=${t.endLat},${t.endLon}`}
+                target="_blank"
+                className="text-blue-400 underline"
+              >
+                Open
+              </a>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  })()}
+</div>
+
+
+        {/* ALERT PACKETS */}
         <div className="bg-[#111827] border border-slate-700 rounded-lg p-6">
-          <h3 className="text-lg text-yellow-400 font-semibold mb-3">Alert Packet (A)</h3>
+          <h3 className="text-lg text-yellow-400 font-semibold mb-3">
+            Alert Packet (A)
+          </h3>
 
           {alertPackets.length === 0 ? (
             <div className="text-slate-500">No alerts</div>
@@ -650,25 +756,24 @@ export default function DeviceDetails() {
               <div key={i} className="flex justify-between py-1 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="text-yellow-300">⚠</span>
-                  <span className="text-yellow-300 font-semibold">A({a.alert})</span>
+                  <span className="text-yellow-300 font-semibold">
+                    A({a.alert})
+                  </span>
                 </div>
+
                 <span className="text-yellow-200">
-                  {a.rawTimestamp
-                    ? formatRaw(a.rawTimestamp)
-                    : a.deviceTimestamp
-                    ? formatIST(a.deviceTimestamp)
-                    : a.timestamp
-                    ? formatIST(a.timestamp)
-                    : "-"}
+                  {formatIST(a.deviceRawTimestamp)}
                 </span>
               </div>
             ))
           )}
         </div>
 
-        {/* ERRORS */}
+        {/* ERROR PACKETS */}
         <div className="bg-[#111827] border border-slate-700 rounded-lg p-6">
-          <h3 className="text-lg text-red-400 font-semibold mb-3">Error Packet (E)</h3>
+          <h3 className="text-lg text-red-400 font-semibold mb-3">
+            Error Packet (E)
+          </h3>
 
           {errorPackets.length === 0 ? (
             <div className="text-slate-500">No errors</div>
@@ -677,31 +782,31 @@ export default function DeviceDetails() {
               <div key={i} className="flex justify-between py-1 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="text-red-400">⚠</span>
-                  <span className="text-red-300 font-semibold">{e.alert}</span>
+                  <span className="text-red-300 font-semibold">
+                    {e.alert}
+                  </span>
                 </div>
+
                 <span className="text-red-300">
-                  {e.rawTimestamp
-                    ? formatRaw(e.rawTimestamp)
-                    : e.deviceTimestamp
-                    ? formatIST(e.deviceTimestamp)
-                    : e.timestamp
-                    ? formatIST(e.timestamp)
-                    : "-"}
+                  {formatIST(e.deviceRawTimestamp)}
                 </span>
               </div>
             ))
           )}
         </div>
 
-       {/* E-SIM MANAGEMENT (Static) */}
-       <div className="bg-[#111827] border border-slate-700 rounded-lg p-6 text-sm">
-          <h3 className="text-lg font-semibold mb-3 text-center">E-Sim Management</h3>
+        {/* E-SIM MANAGEMENT PANEL */}
+        <div className="bg-[#111827] border border-slate-700 rounded-lg p-6 text-sm">
+          <h3 className="text-lg font-semibold mb-3 text-center">
+            E-Sim Management
+          </h3>
 
           <div className="grid grid-cols-2 gap-6">
             {[1, 2].map((sim) => (
               <div key={sim} className="bg-slate-800 p-4 rounded">
                 <div className="flex justify-between mb-3">
                   <span className="font-semibold">Sim {sim}</span>
+
                   <div className="flex gap-2">
                     <Dot color="bg-green-500" />
                     <Dot color="bg-red-500" />
@@ -713,20 +818,45 @@ export default function DeviceDetails() {
                 <div className="grid grid-cols-2 gap-y-2 text-xs">
                   <span>SIM No.</span>
                   <span>–</span>
+
                   <span>MSDN No.</span>
                   <span>654135135</span>
+
                   <span>Profile Code</span>
                   <span>654135135</span>
+
                   <span>Data Usage</span>
                   <span>{sim === 1 ? "38/50 MB" : "3/10 MB"}</span>
+
                   <span>SMS</span>
                   <span>{sim === 1 ? "5/100" : "3/100"}</span>
+
                   <span>Signal %</span>
-                  <span className={sim === 1 ? "text-green-400" : "text-red-400"}>{sim === 1 ? "75%" : "23%"}</span>
+                  <span
+                    className={
+                      sim === 1 ? "text-green-400" : "text-red-400"
+                    }
+                  >
+                    {sim === 1 ? "75%" : "23%"}
+                  </span>
+
                   <span>Roaming</span>
-                  <span className={sim === 1 ? "text-gray-300" : "text-yellow-400"}>{sim === 1 ? "Disable" : "Active"}</span>
+                  <span
+                    className={
+                      sim === 1
+                        ? "text-gray-300"
+                        : "text-yellow-400"
+                    }
+                  >
+                    {sim === 1 ? "Disable" : "Active"}
+                  </span>
+
                   <span>Fall Back Hist.</span>
-                  <span>{sim === 1 ? "Sim 2 to Sim 1" : "05-11-2022 12:35:11"}</span>
+                  <span>
+                    {sim === 1
+                      ? "Sim 2 to Sim 1"
+                      : "05-11-2022 12:35:11"}
+                  </span>
                 </div>
               </div>
             ))}
@@ -737,21 +867,30 @@ export default function DeviceDetails() {
         <div className="grid grid-cols-2 gap-6">
           <div className="bg-[#111827] border border-slate-700 rounded-lg p-6">
             <h4 className="text-lg font-semibold mb-3">SOS</h4>
+
             <div className="flex gap-6">
               <div className="flex flex-col gap-3">
                 <div className="w-6 h-6 bg-green-500 rounded-full"></div>
                 <div className="w-6 h-6 bg-red-500 rounded-full"></div>
                 <div className="w-6 h-6 bg-yellow-400 rounded-full"></div>
               </div>
+
               <div className="flex flex-col gap-3">
-                <button className="bg-yellow-400 text-black px-3 py-1 rounded">ACK</button>
-                <button className="bg-green-500 px-3 py-1 rounded">Reset</button>
+                <button className="bg-yellow-400 text-black px-3 py-1 rounded">
+                  ACK
+                </button>
+                <button className="bg-green-500 px-3 py-1 rounded">
+                  Reset
+                </button>
               </div>
             </div>
           </div>
 
           <div className="bg-[#111827] border border-slate-700 rounded-lg p-6">
-            <h4 className="text-lg font-semibold mb-3">Telemetry Alert</h4>
+            <h4 className="text-lg font-semibold mb-3">
+              Telemetry Alert
+            </h4>
+
             <ul className="text-sm space-y-2">
               <li>HighSpeed – {highSpeedCount}</li>
               <li>High Temperature – {highTempCount}</li>
@@ -759,6 +898,7 @@ export default function DeviceDetails() {
             </ul>
           </div>
         </div>
+
       </div>
     </div>
   );

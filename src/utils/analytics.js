@@ -1,5 +1,3 @@
-// src/utils/analytics.js
-
 const API_BASE_URL =
   import.meta.env.VITE_BACKEND_API_BASE_URL || "http://127.0.0.1:8020";
 
@@ -31,17 +29,19 @@ async function sendQuery(queryString) {
 }
 
 /* ---------------------------------------------------------
-   MASTER TIMESTAMP EXTRACTOR
-   Always use deviceTimestamp as the REAL timestamp.
+   TIMESTAMP EXTRACTOR
+   PRIORITY:
+   1) deviceTimestamp  (naive IST datetime from backend)
+   2) timestamp        (fallback)
+   3) deviceRawTimestamp (string from device)
 --------------------------------------------------------- */
 export function extractTimestamp(p) {
   if (!p) return null;
 
   const ts =
     p.deviceTimestamp ??
-    p.device_timestamp ??
     p.timestamp ??
-    p.rawTimestamp ??
+    p.deviceRawTimestamp ??
     null;
 
   if (!ts) return null;
@@ -51,7 +51,7 @@ export function extractTimestamp(p) {
 }
 
 /* ---------------------------------------------------------
-   Correct Sort: newest → oldest using ONLY device timestamp
+   SORT newest → oldest
 --------------------------------------------------------- */
 function sortPackets(arr) {
   if (!Array.isArray(arr)) return [];
@@ -64,14 +64,14 @@ function sortPackets(arr) {
 }
 
 /* ---------------------------------------------------------
-   Clean Response: normalize timestamps to Date objects
+   NORMALIZE PACKETS
 --------------------------------------------------------- */
-function normalize(resultArray) {
-  if (!Array.isArray(resultArray)) return [];
+function normalize(list) {
+  if (!Array.isArray(list)) return [];
 
-  return resultArray.map((p) => ({
+  return list.map((p) => ({
     ...p,
-    __timestamp: extractTimestamp(p), // internal Date object
+    __timestamp: extractTimestamp(p),
   }));
 }
 
@@ -80,41 +80,32 @@ function normalize(resultArray) {
 --------------------------------------------------------- */
 export async function getAllAnalytics() {
   const q = `
-    {
-      analyticsData {
-        id
-        topic
-        imei
-        interval
-        geoid
-        packet
-        alert
-        latitude
-        longitude
-        speed
-        battery
-        signal
+  {
+    analyticsData {
+      id
+      topic
+      imei
+      interval
+      geoid
+      packet
+      latitude
+      longitude
+      speed
+      battery
+      signal
+      alert
+      type
 
-        timestamp
-        deviceTimestamp
-        receivedAtUtc
-        rawTimestamp
+      timestamp
+      deviceTimestamp
+      deviceRawTimestamp
 
-        rawPacket
-        rawImei
-        rawAlert
-        rawTemperature
-        rawSpeed
-        rawSignal
-        rawBattery
-        rawGeoid
-        rawLatitude
-        rawLongitude
-        rawInterval
-        type
-      }
+      rawPacket
+      rawImei
+      rawAlert
+      rawTemperature
     }
-  `;
+  }`;
 
   const result = await sendQuery(q);
   const cleaned = normalize(result.analyticsData || []);
@@ -126,23 +117,25 @@ export async function getAllAnalytics() {
 --------------------------------------------------------- */
 export async function getAnalyticsPaginated(skip = 0, limit = 10) {
   const q = `
-    {
-      analyticsDataPaginated(skip: ${skip}, limit: ${limit}) {
-        id
-        topic
-        imei
-        latitude
-        longitude
-        speed
-        battery
-        alert
+  {
+    analyticsDataPaginated(skip: ${skip}, limit: ${limit}) {
+      id
+      topic
+      imei
+      packet
+      latitude
+      longitude
+      speed
+      battery
+      alert
+      type
 
-        timestamp
-        deviceTimestamp
-        rawTimestamp
-      }
+      timestamp
+      deviceTimestamp
+      deviceRawTimestamp
+      rawTemperature
     }
-  `;
+  }`;
 
   const result = await sendQuery(q);
   const cleaned = normalize(result.analyticsDataPaginated || []);
@@ -150,27 +143,33 @@ export async function getAnalyticsPaginated(skip = 0, limit = 10) {
 }
 
 /* ---------------------------------------------------------
-   3. Get Analytics by ID
+   3. Get by ID
 --------------------------------------------------------- */
 export async function getAnalyticsById(id) {
   const q = `
-    {
-      analyticsDataById(id: "${id}") {
-        id
-        topic
-        imei
-        latitude
-        longitude
-        speed
-        battery
-        alert
+  {
+    analyticsDataById(id: "${id}") {
+      id
+      topic
+      imei
+      latitude
+      longitude
+      speed
+      battery
+      signal
+      alert
+      type
 
-        timestamp
-        deviceTimestamp
-        rawTimestamp
-      }
+      timestamp
+      deviceTimestamp
+      deviceRawTimestamp
+
+      rawPacket
+      rawImei
+      rawAlert
+      rawTemperature
     }
-  `;
+  }`;
 
   const result = await sendQuery(q);
   return {
@@ -180,27 +179,34 @@ export async function getAnalyticsById(id) {
 }
 
 /* ---------------------------------------------------------
-   4. Get Analytics by Topic
+   4. Get by TOPIC
 --------------------------------------------------------- */
 export async function getAnalyticsByTopic(topic) {
   const q = `
-    {
-      analyticsDataByTopic(topic: "${topic}") {
-        id
-        topic
-        imei
-        latitude
-        longitude
-        speed
-        battery
-        alert
+  {
+    analyticsDataByTopic(topic: "${topic}") {
+      id
+      topic
+      imei
+      packet
+      latitude
+      longitude
+      speed
+      battery
+      signal
+      alert
+      type
 
-        timestamp
-        deviceTimestamp
-        rawTimestamp
-      }
+      timestamp
+      deviceTimestamp
+      deviceRawTimestamp
+
+      rawPacket
+      rawImei
+      rawAlert
+      rawTemperature
     }
-  `;
+  }`;
 
   const result = await sendQuery(q);
   const cleaned = normalize(result.analyticsDataByTopic || []);
@@ -211,58 +217,64 @@ export async function getAnalyticsByTopic(topic) {
    5. Count
 --------------------------------------------------------- */
 export async function getAnalyticsCount() {
-  const q = `
-    {
-      analyticsDataCount
-    }
-  `;
+  const q = `{ analyticsDataCount }`;
 
   const result = await sendQuery(q);
   return result.analyticsDataCount || 0;
 }
 
 /* ---------------------------------------------------------
-   6. Get Analytics by IMEI
+   6. Get by IMEI (FULL CLEAN)
 --------------------------------------------------------- */
 export async function getAnalyticsByImei(imei) {
   const q = `
-    {
-      analyticsDataByImei(imei: "${imei}") {
-        id
-        topic
-        imei
-        geoid
-        packet
-        latitude
-        longitude
-        speed
-        battery
-        signal
-        alert
-        
-        type
+  {
+    analyticsDataByImei(imei: "${imei}") {
+      id
+      topic
+      imei
+      interval
+      geoid
+      packet
+      latitude
+      longitude
+      speed
+      battery
+      signal
+      alert
+      type
 
-        timestamp
-        deviceTimestamp
-        rawTimestamp
-        receivedAtUtc
+      timestamp
+      deviceTimestamp
+      deviceRawTimestamp
 
-        rawPacket
-        rawImei
-        rawAlert
-        rawTemperature
-        rawSpeed
-        rawSignal
-        rawBattery
-        rawGeoid
-        rawLatitude
-        rawLongitude
-        rawInterval
-      }
+      rawPacket
+      rawImei
+      rawAlert
+      rawTemperature
     }
-  `;
+  }`;
 
   const result = await sendQuery(q);
   const cleaned = normalize(result.analyticsDataByImei || []);
   return sortPackets(cleaned);
+}
+/* ---------------------------------------------------------
+   7. DEVICE HEALTH (New)
+--------------------------------------------------------- */
+
+export async function getAnalyticsHealth(imei) {
+  const q = `
+  {
+    analyticsHealth(imei: "${imei}") {
+      gpsScore
+      movement
+      movementStats
+      temperatureHealthIndex
+      temperatureStatus
+    }
+  }
+  `;
+  const result = await sendQuery(q);
+  return result.analyticsHealth;
 }
