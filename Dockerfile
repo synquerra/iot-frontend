@@ -9,7 +9,7 @@
     RUN npm install
     
     COPY . .
-    
+    COPY .env /app/.env
     RUN npm run build
     
     # ---------- NGINX Stage ----------
