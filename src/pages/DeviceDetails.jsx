@@ -343,25 +343,46 @@ export default function DeviceDetails() {
         const uptimeData = await getAnalyticsUptime(imei);
         setUptime(uptimeData);
         
-        const normalized = byImei.map((p) => ({
+        const normalized = byImei.map((p) => {
+          const serverTS =
+          (p.device_timestamp && (p.device_timestamp.$date || p.device_timestamp)) ||
+          p.deviceTimestamp ||
+          p.timestamp || // some records use "timestamp"
+          null;
+
+          return {
           ...p,
 
           packetType:
-            (p.packet && p.packet.toUpperCase()) ||
-            (p.type && p.type.toUpperCase()) ||
+          (p.packet && String(p.packet).toUpperCase()) ||
+          (p.type && String(p.type).toUpperCase()) ||
             null,
 
-          // RAW TIMESTAMP IS NOW THE MASTER CLOCK
+          // DEVICE TIMESTAMP
           deviceTimestampDate: parseTS(p.deviceRawTimestamp),
           deviceTimestampISO: p.deviceRawTimestamp,
           deviceRawTimestamp: p.deviceRawTimestamp,
-        }));
 
-        normalized.sort(
-          (a, b) =>
-            (b.deviceTimestampDate?.getTime() || 0) -
-            (a.deviceTimestampDate?.getTime() || 0)
-        );
+          // SERVER TIMESTAMP (DB order)
+          serverTimestampDate: parseTS(serverTS),
+          serverTimestampISO: serverTS,
+        };
+        });
+
+        normalized.sort((a, b) => {
+          const aT =
+            a.serverTimestampDate?.getTime() ??
+            a.deviceTimestampDate?.getTime() ??
+            0;
+        
+          const bT =
+            b.serverTimestampDate?.getTime() ??
+            b.deviceTimestampDate?.getTime() ??
+            0;
+        
+          return bT - aT;
+        });
+        
 
         setPackets(normalized);
       } finally {
@@ -446,7 +467,7 @@ export default function DeviceDetails() {
             <div className="flex items-center justify-end gap-3">
               <div className="text-right">
                 <span className="text-green-300 font-semibold text-lg">
-                  {formatIST(latest.deviceRawTimestamp)}
+                {formatIST(latest.serverTimestampISO || latest.deviceRawTimestamp)}
                 </span>
 
                 <div className="text-xs text-slate-400 mt-1">
@@ -456,7 +477,8 @@ export default function DeviceDetails() {
               </div>
 
               <span className="text-xs bg-green-700 px-2 py-0.5 rounded">
-                {timeAgo(latest.deviceRawTimestamp)}
+              {timeAgo(latest.serverTimestampISO || latest.deviceRawTimestamp)}
+
               </span>
             </div>
 
