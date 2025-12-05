@@ -5,7 +5,6 @@ services:
 
     volumes:
       - /Applications/DIC/synquerra/iot-frontend:/app
-      - /app/node_modules
 
     ports:
       - "8030:8030"

@@ -1,131 +1,268 @@
 // src/utils/analytics.js
+
 const API_BASE_URL =
   import.meta.env.VITE_BACKEND_API_BASE_URL || "http://127.0.0.1:8020";
 
-// helper: send GraphQL query and return parsed json.data
-async function sendQuery(query) {
+/* ---------------------------------------------------------
+   Send GraphQL Query (POST)
+--------------------------------------------------------- */
+async function sendQuery(queryString) {
+  if (!queryString || !queryString.trim()) {
+    throw new Error("Missing GraphQL query");
+  }
+
   const res = await fetch(`${API_BASE_URL}/analytics/analytics-query`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ query }),
+    headers: {
+      "Content-Type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify({ query: queryString }),
   });
+
   const json = await res.json();
-  if (!json || json.status !== "success") {
-    throw new Error(json?.error_description || "Analytics API error");
+
+  if (json?.errors) {
+    console.error(json.errors);
+    throw new Error(json.errors[0]?.message || "GraphQL Error");
   }
+
   return json.data;
 }
 
 /* ---------------------------------------------------------
-   TIMESTAMP PRIORITY
-   1) timestampNormalized (has timezone)
-   2) timestamp          (ISO or datetime)
-   3) processedAt        (Z format)
+   MASTER TIMESTAMP EXTRACTOR
+   Always use deviceTimestamp as the REAL timestamp.
 --------------------------------------------------------- */
 export function extractTimestamp(p) {
   if (!p) return null;
 
-  return (
-    p.timestampNormalized ||
-    p.timestamp ||
-    p.processedAt ||
-    null
-  );
+  const ts =
+    p.deviceTimestamp ??
+    p.device_timestamp ??
+    p.timestamp ??
+    p.rawTimestamp ??
+    null;
+
+  if (!ts) return null;
+
+  const d = new Date(ts);
+  return isNaN(d.getTime()) ? null : d;
 }
 
 /* ---------------------------------------------------------
-   SORT newest → oldest
+   Correct Sort: newest → oldest using ONLY device timestamp
 --------------------------------------------------------- */
 function sortPackets(arr) {
-  return arr.sort((a, b) => {
-    const tb = new Date(extractTimestamp(b));
-    const ta = new Date(extractTimestamp(a));
+  if (!Array.isArray(arr)) return [];
+
+  return [...arr].sort((a, b) => {
+    const ta = extractTimestamp(a)?.getTime() || 0;
+    const tb = extractTimestamp(b)?.getTime() || 0;
     return tb - ta;
   });
+}
+
+/* ---------------------------------------------------------
+   Clean Response: normalize timestamps to Date objects
+--------------------------------------------------------- */
+function normalize(resultArray) {
+  if (!Array.isArray(resultArray)) return [];
+
+  return resultArray.map((p) => ({
+    ...p,
+    __timestamp: extractTimestamp(p), // internal Date object
+  }));
 }
 
 /* ---------------------------------------------------------
    1. Get ALL analytics
 --------------------------------------------------------- */
 export async function getAllAnalytics() {
-  const query = `
-    { analyticsData { 
-        id topic imei interval geoid packet latitude longitude speed 
-        battery signal alert rawText timestampNormalized  
-        timestamp processedAt type 
-    }}
+  const q = `
+    {
+      analyticsData {
+        id
+        topic
+        imei
+        interval
+        geoid
+        packet
+        alert
+        latitude
+        longitude
+        speed
+        battery
+        signal
+
+        timestamp
+        deviceTimestamp
+        receivedAtUtc
+        rawTimestamp
+
+        rawPacket
+        rawImei
+        rawAlert
+        rawTemperature
+        rawSpeed
+        rawSignal
+        rawBattery
+        rawGeoid
+        rawLatitude
+        rawLongitude
+        rawInterval
+        type
+      }
+    }
   `;
-  const data = await sendQuery(query);
-  return sortPackets(data.analyticsData || []);
+
+  const result = await sendQuery(q);
+  const cleaned = normalize(result.analyticsData || []);
+  return sortPackets(cleaned);
 }
 
 /* ---------------------------------------------------------
    2. Paginated
 --------------------------------------------------------- */
 export async function getAnalyticsPaginated(skip = 0, limit = 10) {
-  const query = `
-    { analyticsDataPaginated(skip: ${skip}, limit: ${limit}) { 
-        id topic imei interval geoid packet latitude longitude speed 
-        battery signal alert rawText timestampNormalized  
-        timestamp processedAt type
-    }}
+  const q = `
+    {
+      analyticsDataPaginated(skip: ${skip}, limit: ${limit}) {
+        id
+        topic
+        imei
+        latitude
+        longitude
+        speed
+        battery
+        alert
+
+        timestamp
+        deviceTimestamp
+        rawTimestamp
+      }
+    }
   `;
-  const data = await sendQuery(query);
-  return sortPackets(data.analyticsDataPaginated || []);
+
+  const result = await sendQuery(q);
+  const cleaned = normalize(result.analyticsDataPaginated || []);
+  return sortPackets(cleaned);
 }
 
 /* ---------------------------------------------------------
    3. Get Analytics by ID
 --------------------------------------------------------- */
 export async function getAnalyticsById(id) {
-  const query = `
-    { analyticsDataById(id: "${id}") {
-        id topic imei packet latitude longitude speed 
-        timestampNormalized processedAt type timestamp
-    }}
+  const q = `
+    {
+      analyticsDataById(id: "${id}") {
+        id
+        topic
+        imei
+        latitude
+        longitude
+        speed
+        battery
+        alert
+
+        timestamp
+        deviceTimestamp
+        rawTimestamp
+      }
+    }
   `;
-  const data = await sendQuery(query);
-  return data.analyticsDataById || null;
+
+  const result = await sendQuery(q);
+  return {
+    ...result.analyticsDataById,
+    __timestamp: extractTimestamp(result.analyticsDataById),
+  };
 }
 
 /* ---------------------------------------------------------
-   4. Get by Topic
+   4. Get Analytics by Topic
 --------------------------------------------------------- */
 export async function getAnalyticsByTopic(topic) {
-  const query = `
-    { analyticsDataByTopic(topic: "${topic}") {
-        id topic imei packet latitude longitude speed 
-        timestampNormalized processedAt type timestamp
-    }}
+  const q = `
+    {
+      analyticsDataByTopic(topic: "${topic}") {
+        id
+        topic
+        imei
+        latitude
+        longitude
+        speed
+        battery
+        alert
+
+        timestamp
+        deviceTimestamp
+        rawTimestamp
+      }
+    }
   `;
-  const data = await sendQuery(query);
-  return sortPackets(data.analyticsDataByTopic || []);
+
+  const result = await sendQuery(q);
+  const cleaned = normalize(result.analyticsDataByTopic || []);
+  return sortPackets(cleaned);
 }
 
 /* ---------------------------------------------------------
    5. Count
 --------------------------------------------------------- */
 export async function getAnalyticsCount() {
-  const query = `{ analyticsDataCount }`;
-  const data = await sendQuery(query);
-  const c = data.analyticsDataCount;
-  return typeof c === "number" ? c : Number(c) || 0;
+  const q = `
+    {
+      analyticsDataCount
+    }
+  `;
+
+  const result = await sendQuery(q);
+  return result.analyticsDataCount || 0;
 }
 
 /* ---------------------------------------------------------
-   6. Get Analytics by IMEI (MAIN USED)
+   6. Get Analytics by IMEI
 --------------------------------------------------------- */
 export async function getAnalyticsByImei(imei) {
-  const query = `
-    { analyticsDataByImei(imei: "${imei}") {
-        id topic imei interval geoid packet latitude longitude speed
-        battery signal alert rawText timestampNormalized processedAt
-        type timestamp
-    }}
+  const q = `
+    {
+      analyticsDataByImei(imei: "${imei}") {
+        id
+        topic
+        imei
+        geoid
+        packet
+        latitude
+        longitude
+        speed
+        battery
+        signal
+        alert
+        
+        type
+
+        timestamp
+        deviceTimestamp
+        rawTimestamp
+        receivedAtUtc
+
+        rawPacket
+        rawImei
+        rawAlert
+        rawTemperature
+        rawSpeed
+        rawSignal
+        rawBattery
+        rawGeoid
+        rawLatitude
+        rawLongitude
+        rawInterval
+      }
+    }
   `;
 
-  const data = await sendQuery(query);
-  const arr = data.analyticsDataByImei || [];
-
-  return sortPackets(arr);
+  const result = await sendQuery(q);
+  const cleaned = normalize(result.analyticsDataByImei || []);
+  return sortPackets(cleaned);
 }
