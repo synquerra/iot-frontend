@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getAnalyticsByImei, getAnalyticsHealth,  getAnalyticsUptime } from "../utils/analytics";
-
+import TripSummary from "../components/TripSummary";
 /* ------------------------------------
    TIMESTAMP HELPERS (RAW TIMESTAMP LOGIC)
 ------------------------------------- */
@@ -329,6 +329,9 @@ export default function DeviceDetails() {
   const [loading, setLoading] = useState(true);
   const [health, setHealth] = useState(null);
   const [uptime, setUptime] = useState(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
 
   useEffect(() => {
     let timer;
@@ -736,73 +739,42 @@ export default function DeviceDetails() {
             </div>
           )}
         </div>
-        {/* TRIP SUMMARY */}
-<div className="bg-[#111827] border border-slate-700 rounded-lg p-6 text-sm">
-  <h3 className="text-lg text-purple-300 font-semibold mb-3">
-    Trip Summary (Auto Detected)
-  </h3>
+        
+        {/* TRIP FILTER CONTROLS */}
+        <div className="bg-[#111827] border border-slate-700 rounded-lg p-4 text-sm mb-4">
+          <h3 className="text-slate-300 font-semibold mb-3">
+            Filter Trips by Date & Time
+          </h3>
 
-  {(() => {
-    const trips = detectTrips(packets);
-
-    if (trips.length === 0) {
-      return <div className="text-slate-500">No trips detected</div>;
-    }
-
-    return (
-      <div className="space-y-4">
-        {trips.map((t, i) => (
-          <div
-            key={i}
-            className="border border-slate-600 p-4 rounded bg-slate-800"
-          >
-            <div className="flex justify-between mb-2">
-              <span className="text-slate-400">Trip #{i + 1}</span>
-              <span className="text-purple-300 font-semibold">
-                {t.distance} km
-              </span>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-slate-400 text-xs">Start</label>
+              <input
+                type="datetime-local"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full bg-slate-800 p-2 rounded text-white"
+              />
             </div>
 
-            <div className="grid grid-cols-2 gap-y-1 text-xs">
-              <span className="text-slate-400">Start Time</span>
-              <span>{formatIST(t.startTime)}</span>
-
-              <span className="text-slate-400">End Time</span>
-              <span>{formatIST(t.endTime)}</span>
-
-              <span className="text-slate-400">Duration</span>
-              <span>{t.durationMin} min</span>
-
-              <span className="text-slate-400">Avg Speed</span>
-              <span>{t.avgSpeed} km/h</span>
-
-              <span className="text-slate-400">Max Speed</span>
-              <span>{t.maxSpeed} km/h</span>
-
-              <span className="text-slate-400">Start Location</span>
-              <a
-                href={`https://www.google.com/maps?q=${t.startLat},${t.startLon}`}
-                target="_blank"
-                className="text-blue-400 underline"
-              >
-                Open
-              </a>
-
-              <span className="text-slate-400">End Location</span>
-              <a
-                href={`https://www.google.com/maps?q=${t.endLat},${t.endLon}`}
-                target="_blank"
-                className="text-blue-400 underline"
-              >
-                Open
-              </a>
+            <div>
+              <label className="text-slate-400 text-xs">End</label>
+              <input
+                type="datetime-local"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full bg-slate-800 p-2 rounded text-white"
+              />
             </div>
           </div>
-        ))}
-      </div>
-    );
-  })()}
-</div>
+        </div>
+          {/* TRIP SUMMARY */}
+        <TripSummary
+        packets={packets}
+        startDate={startDate}
+        endDate={endDate}
+      />
+
 
 
         {/* ALERT PACKETS */}
