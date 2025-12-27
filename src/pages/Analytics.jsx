@@ -1,24 +1,24 @@
 import React, { useState, useEffect } from 'react'
 import { Card } from '../design-system/components/Card'
+import { KpiCard } from '../design-system/components/KpiCard'
 import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts'
+  SectionDivider,
+  GradientHeader,
+  ContentSection,
+  HierarchySection
+} from '../design-system/components/LayoutComponents'
+import {
+  EnhancedLineChart,
+  EnhancedAreaChart,
+  EnhancedBarChart,
+  EnhancedPieChart,
+  PerformanceTrendChart,
+  UsageTrendChart,
+  RegionalDistributionChart,
+  DeviceTypeChart,
+} from '../design-system/components/EnhancedCharts'
 
-// Sample data for analytics charts
+// Sample data for analytics charts with enhanced color coding
 const performanceData = [
   { time: '00:00', throughput: 3200, latency: 120, errors: 2 },
   { time: '04:00', throughput: 2800, latency: 95, errors: 1 },
@@ -29,18 +29,18 @@ const performanceData = [
 ]
 
 const deviceTypeData = [
-  { name: 'Sensors', value: 45, color: '#3b82f6' },
-  { name: 'Gateways', value: 25, color: '#10b981' },
-  { name: 'Controllers', value: 20, color: '#f59e0b' },
-  { name: 'Monitors', value: 10, color: '#ef4444' },
+  { name: 'Sensors', value: 45 },
+  { name: 'Gateways', value: 25 },
+  { name: 'Controllers', value: 20 },
+  { name: 'Monitors', value: 10 },
 ]
 
 const regionData = [
-  { region: 'North America', devices: 1250, active: 1180 },
-  { region: 'Europe', devices: 980, active: 920 },
-  { region: 'Asia Pacific', devices: 1450, active: 1380 },
-  { region: 'South America', devices: 320, active: 290 },
-  { region: 'Africa', devices: 180, active: 165 },
+  { name: 'North America', devices: 1250, active: 1180 },
+  { name: 'Europe', devices: 980, active: 920 },
+  { name: 'Asia Pacific', devices: 1450, active: 1380 },
+  { name: 'South America', devices: 320, active: 290 },
+  { name: 'Africa', devices: 180, active: 165 },
 ]
 
 const usageData = [
@@ -62,304 +62,354 @@ export default function Analytics() {
     uptime: 99.7,
   })
 
-  // Chart styling configuration for consistency
+  // Enhanced chart styling configuration for maximum vibrancy
   const chartConfig = {
     grid: {
       stroke: '#334155',
       strokeDasharray: '3 3',
+      strokeOpacity: 0.4,
     },
     axis: {
-      tick: { fill: '#cbd5e1', fontSize: 12 },
-      axisLine: { stroke: '#475569' },
+      tick: { fill: '#cbd5e1', fontSize: 12, fontWeight: 500 },
+      axisLine: { stroke: '#475569', strokeWidth: 1 },
+      tickLine: { stroke: '#475569', strokeWidth: 1 },
     },
     tooltip: {
       contentStyle: {
-        background: '#1a2332',
-        border: '1px solid #334155',
-        borderRadius: '8px',
+        background: 'rgba(26, 35, 50, 0.95)',
+        backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(139, 92, 246, 0.6)',
+        borderRadius: '12px',
         color: '#f8fafc',
         fontSize: '14px',
+        fontWeight: '500',
+        boxShadow: '0 20px 25px -5px rgba(139, 92, 246, 0.3), 0 10px 10px -5px rgba(139, 92, 246, 0.2)',
+        padding: '12px 16px',
+      },
+      cursor: {
+        stroke: '#8b5cf6',
+        strokeWidth: 2,
+        strokeDasharray: '5 5',
       },
     },
     legend: {
       wrapperStyle: {
         color: '#cbd5e1',
-        fontSize: '12px',
+        fontSize: '13px',
+        fontWeight: '500',
+        paddingTop: '16px',
       },
+      iconType: 'circle',
     },
   }
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <Card variant="default" padding="lg">
-        <Card.Header>
-          <Card.Title>Analytics Dashboard</Card.Title>
-          <Card.Description>
-            Comprehensive analytics and performance metrics for your device network
-          </Card.Description>
-        </Card.Header>
-      </Card>
+      {/* Enhanced Page Header with Gradient */}
+      <GradientHeader
+        title="Analytics Dashboard"
+        subtitle="Comprehensive analytics and performance metrics for your device network"
+        variant="hero"
+        colorScheme="amber"
+        size="xl"
+        centered={false}
+      />
 
-      {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <Card variant="elevated" padding="md" hover>
-          <Card.Content className="py-3">
-            <div className="flex flex-col space-y-2">
-              <p className="text-sm font-medium text-text-secondary">Total Devices</p>
-              <p className="text-2xl font-bold text-text-primary">
-                {currentMetrics.totalDevices.toLocaleString()}
-              </p>
-              <p className="text-xs text-status-success">+12% from last month</p>
-            </div>
-          </Card.Content>
-        </Card>
+      {/* Colorful Section Divider */}
+      <SectionDivider 
+        variant="rainbow" 
+        spacing="lg" 
+        animated={true}
+      />
 
-        <Card variant="elevated" padding="md" hover>
-          <Card.Content className="py-3">
-            <div className="flex flex-col space-y-2">
-              <p className="text-sm font-medium text-text-secondary">Active Devices</p>
-              <p className="text-2xl font-bold text-text-primary">
-                {currentMetrics.activeDevices.toLocaleString()}
-              </p>
-              <p className="text-xs text-status-success">
-                {((currentMetrics.activeDevices / currentMetrics.totalDevices) * 100).toFixed(1)}% online
-              </p>
-            </div>
-          </Card.Content>
-        </Card>
+      {/* Key Metrics Cards with Enhanced Visual Hierarchy and Gradient Backgrounds */}
+      <HierarchySection level={1} colorScheme="amber" spacing="lg">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <KpiCard
+            title="Total Devices"
+            value={currentMetrics.totalDevices.toLocaleString()}
+            subtitle="+12% from last month"
+            trend="up"
+            trendValue="+12%"
+            type="growth"
+            colorScheme="blue"
+            size="md"
+            animated={true}
+          />
 
-        <Card variant="elevated" padding="md" hover>
-          <Card.Content className="py-3">
-            <div className="flex flex-col space-y-2">
-              <p className="text-sm font-medium text-text-secondary">Throughput</p>
-              <p className="text-2xl font-bold text-text-primary">
-                {currentMetrics.totalThroughput.toLocaleString()}k
-              </p>
-              <p className="text-xs text-status-info">requests/hour</p>
-            </div>
-          </Card.Content>
-        </Card>
+          <KpiCard
+            title="Active Devices"
+            value={currentMetrics.activeDevices.toLocaleString()}
+            subtitle={`${((currentMetrics.activeDevices / currentMetrics.totalDevices) * 100).toFixed(1)}% online`}
+            trend="up"
+            type="status"
+            colorScheme="green"
+            size="md"
+            animated={true}
+          />
 
-        <Card variant="elevated" padding="md" hover>
-          <Card.Content className="py-3">
-            <div className="flex flex-col space-y-2">
-              <p className="text-sm font-medium text-text-secondary">Avg Latency</p>
-              <p className="text-2xl font-bold text-text-primary">
-                {currentMetrics.avgLatency}ms
-              </p>
-              <p className="text-xs text-status-warning">+5ms from baseline</p>
-            </div>
-          </Card.Content>
-        </Card>
+          <KpiCard
+            title="Throughput"
+            value={`${currentMetrics.totalThroughput.toLocaleString()}k`}
+            subtitle="requests/hour"
+            type="performance"
+            colorScheme="cyan"
+            size="md"
+            animated={true}
+          />
 
-        <Card variant="elevated" padding="md" hover>
-          <Card.Content className="py-3">
-            <div className="flex flex-col space-y-2">
-              <p className="text-sm font-medium text-text-secondary">Error Rate</p>
-              <p className="text-2xl font-bold text-text-primary">
-                {currentMetrics.errorRate}%
-              </p>
-              <p className="text-xs text-status-success">-0.3% improvement</p>
-            </div>
-          </Card.Content>
-        </Card>
+          <KpiCard
+            title="Avg Latency"
+            value={`${currentMetrics.avgLatency}ms`}
+            subtitle="+5ms from baseline"
+            trend="up"
+            trendValue="+5ms"
+            type="performance"
+            colorScheme="amber"
+            size="md"
+            animated={true}
+          />
 
-        <Card variant="elevated" padding="md" hover>
-          <Card.Content className="py-3">
-            <div className="flex flex-col space-y-2">
-              <p className="text-sm font-medium text-text-secondary">Uptime</p>
-              <p className="text-2xl font-bold text-text-primary">
-                {currentMetrics.uptime}%
-              </p>
-              <p className="text-xs text-status-success">Excellent</p>
-            </div>
-          </Card.Content>
-        </Card>
-      </div>
+          <KpiCard
+            title="Error Rate"
+            value={`${currentMetrics.errorRate}%`}
+            subtitle="-0.3% improvement"
+            trend="down"
+            trendValue="-0.3%"
+            type="performance"
+            colorScheme="red"
+            size="md"
+            animated={true}
+          />
 
-      {/* Performance Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Performance Over Time */}
-        <Card variant="default" padding="lg">
-          <Card.Header>
-            <Card.Title>Performance Trends</Card.Title>
-            <Card.Description>
-              System performance metrics over the last 24 hours
-            </Card.Description>
-          </Card.Header>
+          <KpiCard
+            title="Uptime"
+            value={`${currentMetrics.uptime}%`}
+            subtitle="Excellent"
+            type="performance"
+            colorScheme="violet"
+            size="md"
+            animated={true}
+          />
+        </div>
+      </HierarchySection>
+
+      {/* Section Divider */}
+      <SectionDivider 
+        variant="gradient" 
+        colorScheme="blue" 
+        spacing="md" 
+        animated={true}
+      />
+
+      {/* Performance Charts with Enhanced Colors and Gradient Backgrounds */}
+      <ContentSection variant="accent" colorScheme="blue" padding="lg" spacing="lg" bordered={true} elevated={true}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Performance Over Time */}
+          <HierarchySection level={2} colorScheme="blue" spacing="md">
+            <Card variant="gradient" colorScheme="blue" padding="lg" hover={true} glowEffect={true}>
+              <Card.Header>
+                <Card.Title className="text-white">Performance Trends</Card.Title>
+                <Card.Description className="text-blue-100">
+                  System performance metrics over the last 24 hours
+                </Card.Description>
+              </Card.Header>
+              <Card.Content>
+                <PerformanceTrendChart
+                  data={performanceData}
+                  metrics={['throughput', 'latency', 'errors']}
+                  height={320}
+                  animated={true}
+                  colorVariant="vibrant"
+                />
+              </Card.Content>
+            </Card>
+          </HierarchySection>
+
+          {/* Device Type Distribution */}
+          <HierarchySection level={2} colorScheme="cyan" spacing="md">
+            <Card variant="gradient" colorScheme="cyan" padding="lg" hover={true} glowEffect={true}>
+              <Card.Header>
+                <Card.Title className="text-white">Device Type Distribution</Card.Title>
+                <Card.Description className="text-cyan-100">
+                  Breakdown of connected devices by type
+                </Card.Description>
+              </Card.Header>
+              <Card.Content>
+                <DeviceTypeChart
+                  data={deviceTypeData}
+                  height={320}
+                  innerRadius={60}
+                  outerRadius={120}
+                  animated={true}
+                  colorCombination={0}
+                />
+              </Card.Content>
+            </Card>
+          </HierarchySection>
+        </div>
+      </ContentSection>
+
+      {/* Section Divider */}
+      <SectionDivider 
+        variant="dotted" 
+        colorScheme="teal" 
+        spacing="lg" 
+        animated={true}
+      />
+
+      {/* Additional Colorful Analytics Section */}
+      <ContentSection variant="colorful" colorScheme="purple" padding="lg" spacing="lg" bordered={true} elevated={true}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Real-time Activity Chart */}
+          <HierarchySection level={2} colorScheme="purple" spacing="md">
+            <Card variant="glass" padding="lg" hover={true}>
+              <Card.Header>
+                <Card.Title>Real-time Activity</Card.Title>
+                <Card.Description>
+                  Live device activity and data flow
+                </Card.Description>
+              </Card.Header>
+              <Card.Content>
+                <EnhancedAreaChart
+                  data={performanceData.slice(-4)}
+                  areas={[{ dataKey: 'throughput', name: 'Activity' }]}
+                  height={200}
+                  animated={true}
+                  colorVariant="vibrant"
+                  stacked={false}
+                />
+              </Card.Content>
+            </Card>
+          </HierarchySection>
+
+          {/* Error Distribution */}
+          <HierarchySection level={2} colorScheme="red" spacing="md">
+            <Card variant="colorful" colorScheme="red" padding="lg" hover={true} borderAccent={true}>
+              <Card.Header>
+                <Card.Title>Error Distribution</Card.Title>
+                <Card.Description>
+                  Error types and frequency
+                </Card.Description>
+              </Card.Header>
+              <Card.Content>
+                <EnhancedPieChart
+                  data={[
+                    { name: 'Timeout', value: 45 },
+                    { name: 'Connection', value: 30 },
+                    { name: 'Auth', value: 15 },
+                    { name: 'Other', value: 10 },
+                  ]}
+                  height={200}
+                  innerRadius={40}
+                  outerRadius={80}
+                  animated={true}
+                  colorCombination={1}
+                />
+              </Card.Content>
+            </Card>
+          </HierarchySection>
+
+          {/* Performance Score */}
+          <HierarchySection level={2} colorScheme="green" spacing="md">
+            <Card variant="gradient" colorScheme="green" padding="lg" hover={true} glowEffect={true}>
+              <Card.Header>
+                <Card.Title className="text-white">Performance Score</Card.Title>
+                <Card.Description className="text-green-100">
+                  Overall system health
+                </Card.Description>
+              </Card.Header>
+              <Card.Content>
+                <div className="flex flex-col items-center justify-center h-32">
+                  <div className="text-6xl font-bold text-white mb-2">
+                    {Math.round((currentMetrics.uptime + (100 - currentMetrics.errorRate * 10)) / 2)}
+                  </div>
+                  <div className="text-green-200 text-sm uppercase tracking-wide">
+                    Excellent
+                  </div>
+                  <div className="w-full bg-green-800/30 rounded-full h-2 mt-4">
+                    <div 
+                      className="bg-gradient-to-r from-green-400 to-green-200 h-2 rounded-full transition-all duration-1000"
+                      style={{ width: `${Math.round((currentMetrics.uptime + (100 - currentMetrics.errorRate * 10)) / 2)}%` }}
+                    />
+                  </div>
+                </div>
+              </Card.Content>
+            </Card>
+          </HierarchySection>
+        </div>
+      </ContentSection>
+
+      {/* Regional Analytics with Enhanced Visualizations and Gradient Cards */}
+      <ContentSection variant="highlighted" colorScheme="teal" padding="lg" spacing="lg" bordered={true}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Regional Device Distribution */}
+          <HierarchySection level={2} colorScheme="teal" spacing="md">
+            <Card variant="gradient" colorScheme="teal" padding="lg" hover={true} glowEffect={true}>
+              <Card.Header>
+                <Card.Title className="text-white">Regional Distribution</Card.Title>
+                <Card.Description className="text-teal-100">
+                  Device deployment and activity by geographic region
+                </Card.Description>
+              </Card.Header>
+              <Card.Content>
+                <RegionalDistributionChart
+                  data={regionData}
+                  metrics={['devices', 'active']}
+                  height={320}
+                  animated={true}
+                  colorVariant="vibrant"
+                />
+              </Card.Content>
+            </Card>
+          </HierarchySection>
+
+          {/* Usage Trends */}
+          <HierarchySection level={2} colorScheme="green" spacing="md">
+            <Card variant="gradient" colorScheme="green" padding="lg" hover={true} glowEffect={true}>
+              <Card.Header>
+                <Card.Title className="text-white">Usage Trends</Card.Title>
+                <Card.Description className="text-green-100">
+                  Data transfer and API usage over the last 6 months
+                </Card.Description>
+              </Card.Header>
+              <Card.Content>
+                <UsageTrendChart
+                  data={usageData}
+                  metrics={['dataTransfer', 'apiCalls']}
+                  height={320}
+                  animated={true}
+                  colorVariant="vibrant"
+                />
+              </Card.Content>
+            </Card>
+          </HierarchySection>
+        </div>
+      </ContentSection>
+
+      {/* Final Section Divider */}
+      <SectionDivider 
+        variant="gradient" 
+        colorScheme="purple" 
+        spacing="lg" 
+        animated={true}
+      />
+
+      {/* Summary Footer with Subtle Background */}
+      <ContentSection variant="subtle" colorScheme="purple" padding="lg" bordered={true}>
+        <Card variant="outlined" padding="lg">
           <Card.Content>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={performanceData}>
-                  <CartesianGrid {...chartConfig.grid} />
-                  <XAxis dataKey="time" {...chartConfig.axis} />
-                  <YAxis yAxisId="left" {...chartConfig.axis} />
-                  <YAxis yAxisId="right" orientation="right" {...chartConfig.axis} />
-                  <Tooltip {...chartConfig.tooltip} />
-                  <Legend {...chartConfig.legend} />
-                  <Line
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey="throughput"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
-                    name="Throughput (k)"
-                  />
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="latency"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
-                    name="Latency (ms)"
-                  />
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="errors"
-                    stroke="#ef4444"
-                    strokeWidth={2}
-                    dot={{ fill: '#ef4444', strokeWidth: 2, r: 4 }}
-                    name="Errors"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+            <div className="text-center">
+              <p className="text-text-secondary">
+                Analytics data is updated every 5 minutes. Last updated:{' '}
+                <span className="text-text-primary font-medium">
+                  {new Date().toLocaleTimeString()}
+                </span>
+              </p>
             </div>
           </Card.Content>
         </Card>
-
-        {/* Device Type Distribution */}
-        <Card variant="default" padding="lg">
-          <Card.Header>
-            <Card.Title>Device Type Distribution</Card.Title>
-            <Card.Description>
-              Breakdown of connected devices by type
-            </Card.Description>
-          </Card.Header>
-          <Card.Content>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={deviceTypeData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={2}
-                    stroke="#334155"
-                    strokeWidth={1}
-                  >
-                    {deviceTypeData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip {...chartConfig.tooltip} />
-                  <Legend {...chartConfig.legend} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </Card.Content>
-        </Card>
-      </div>
-
-      {/* Regional Analytics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Regional Device Distribution */}
-        <Card variant="default" padding="lg">
-          <Card.Header>
-            <Card.Title>Regional Distribution</Card.Title>
-            <Card.Description>
-              Device deployment and activity by geographic region
-            </Card.Description>
-          </Card.Header>
-          <Card.Content>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={regionData} layout="horizontal">
-                  <CartesianGrid {...chartConfig.grid} />
-                  <XAxis type="number" {...chartConfig.axis} />
-                  <YAxis type="category" dataKey="region" {...chartConfig.axis} width={100} />
-                  <Tooltip {...chartConfig.tooltip} />
-                  <Legend {...chartConfig.legend} />
-                  <Bar
-                    dataKey="devices"
-                    fill="#3b82f6"
-                    radius={[0, 4, 4, 0]}
-                    name="Total Devices"
-                  />
-                  <Bar
-                    dataKey="active"
-                    fill="#10b981"
-                    radius={[0, 4, 4, 0]}
-                    name="Active Devices"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card.Content>
-        </Card>
-
-        {/* Usage Trends */}
-        <Card variant="default" padding="lg">
-          <Card.Header>
-            <Card.Title>Usage Trends</Card.Title>
-            <Card.Description>
-              Data transfer and API usage over the last 6 months
-            </Card.Description>
-          </Card.Header>
-          <Card.Content>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={usageData}>
-                  <CartesianGrid {...chartConfig.grid} />
-                  <XAxis dataKey="month" {...chartConfig.axis} />
-                  <YAxis {...chartConfig.axis} />
-                  <Tooltip {...chartConfig.tooltip} />
-                  <Legend {...chartConfig.legend} />
-                  <Area
-                    type="monotone"
-                    dataKey="dataTransfer"
-                    stackId="1"
-                    stroke="#3b82f6"
-                    fill="#3b82f6"
-                    fillOpacity={0.6}
-                    name="Data Transfer (TB)"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="apiCalls"
-                    stackId="1"
-                    stroke="#10b981"
-                    fill="#10b981"
-                    fillOpacity={0.6}
-                    name="API Calls (M)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </Card.Content>
-        </Card>
-      </div>
-
-      {/* Summary Footer */}
-      <Card variant="outlined" padding="lg">
-        <Card.Content>
-          <div className="text-center">
-            <p className="text-text-secondary">
-              Analytics data is updated every 5 minutes. Last updated:{' '}
-              <span className="text-text-primary font-medium">
-                {new Date().toLocaleTimeString()}
-              </span>
-            </p>
-          </div>
-        </Card.Content>
-      </Card>
+      </ContentSection>
     </div>
   )
 }

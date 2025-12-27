@@ -81,6 +81,14 @@ export const keyframes = {
     '0%': { transform: 'rotate(0deg)' },
     '100%': { transform: 'rotate(360deg)' },
   },
+  glow: {
+    '0%, 100%': { 
+      boxShadow: '0 0 5px rgba(139, 92, 246, 0.5), 0 0 10px rgba(139, 92, 246, 0.3), 0 0 15px rgba(139, 92, 246, 0.1)' 
+    },
+    '50%': { 
+      boxShadow: '0 0 10px rgba(139, 92, 246, 0.8), 0 0 20px rgba(139, 92, 246, 0.5), 0 0 30px rgba(139, 92, 246, 0.3)' 
+    },
+  },
 };
 
 // Animation classes for common effects
@@ -158,6 +166,7 @@ export const tailwindAnimations = {
     'scale-in': `scaleIn ${duration.normal} ${easing.default}`,
     'pulse': `pulse ${duration.slower} ${easing.default} infinite`,
     'spin': 'spin 1s linear infinite',
+    'glow': `glow 2s ${easing.default} infinite`,
   },
   transitionDuration: {
     fast: duration.fast,
@@ -166,4 +175,46 @@ export const tailwindAnimations = {
     slower: duration.slower,
   },
   transitionTimingFunction: easing,
+  dropShadow: {
+    'glow': [
+      '0 0 5px rgba(139, 92, 246, 0.5)',
+      '0 0 10px rgba(139, 92, 246, 0.3)',
+      '0 0 15px rgba(139, 92, 246, 0.1)',
+    ],
+    'glow-blue': [
+      '0 0 5px rgba(59, 130, 246, 0.5)',
+      '0 0 10px rgba(59, 130, 246, 0.3)',
+      '0 0 15px rgba(59, 130, 246, 0.1)',
+    ],
+    'glow-teal': [
+      '0 0 5px rgba(20, 184, 166, 0.5)',
+      '0 0 10px rgba(20, 184, 166, 0.3)',
+      '0 0 15px rgba(20, 184, 166, 0.1)',
+    ],
+    'glow-green': [
+      '0 0 5px rgba(34, 197, 94, 0.5)',
+      '0 0 10px rgba(34, 197, 94, 0.3)',
+      '0 0 15px rgba(34, 197, 94, 0.1)',
+    ],
+    'glow-amber': [
+      '0 0 5px rgba(245, 158, 11, 0.5)',
+      '0 0 10px rgba(245, 158, 11, 0.3)',
+      '0 0 15px rgba(245, 158, 11, 0.1)',
+    ],
+    'glow-red': [
+      '0 0 5px rgba(239, 68, 68, 0.5)',
+      '0 0 10px rgba(239, 68, 68, 0.3)',
+      '0 0 15px rgba(239, 68, 68, 0.1)',
+    ],
+    'glow-pink': [
+      '0 0 5px rgba(236, 72, 153, 0.5)',
+      '0 0 10px rgba(236, 72, 153, 0.3)',
+      '0 0 15px rgba(236, 72, 153, 0.1)',
+    ],
+    'glow-purple': [
+      '0 0 5px rgba(168, 85, 247, 0.5)',
+      '0 0 10px rgba(168, 85, 247, 0.3)',
+      '0 0 15px rgba(168, 85, 247, 0.1)',
+    ],
+  },
 };

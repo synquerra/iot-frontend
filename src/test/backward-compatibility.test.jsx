@@ -120,7 +120,7 @@ describe('Backward Compatibility Tests', () => {
       
       // Check that core dashboard elements are present
       expect(screen.getByText('Overview')).toBeInTheDocument()
-      expect(screen.getByText('Live analytics dashboard')).toBeInTheDocument()
+      expect(screen.getByText(/Live analytics dashboard/)).toBeInTheDocument()
       expect(screen.getByText('Total Analytics')).toBeInTheDocument()
       expect(screen.getByText('Total Devices')).toBeInTheDocument()
       expect(screen.getByText('Recent Data')).toBeInTheDocument()

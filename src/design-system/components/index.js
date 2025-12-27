@@ -27,6 +27,15 @@ export {
   ProgressBar,
 } from './Loading.jsx';
 
+// Layout components for colorful UI redesign
+export {
+  SectionDivider,
+  GradientHeader,
+  ContentSection,
+  PageContainer,
+  HierarchySection
+} from './LayoutComponents.jsx';
+
 export const DESIGN_SYSTEM_VERSION = '1.0.0';
 
 // Component registry for tracking implemented components
@@ -36,4 +45,5 @@ export const componentRegistry = {
   input: { implemented: true, version: '1.0.0' },
   table: { implemented: true, version: '1.0.0' },
   loading: { implemented: true, version: '1.0.0' },
+  layoutComponents: { implemented: true, version: '1.0.0' },
 };

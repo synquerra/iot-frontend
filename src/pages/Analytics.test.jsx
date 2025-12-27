@@ -79,7 +79,7 @@ describe('Analytics Page', () => {
       
       expect(screen.getByText('Device Type Distribution')).toBeInTheDocument()
       expect(screen.getByText('Breakdown of connected devices by type')).toBeInTheDocument()
-      expect(screen.getByTestId('pie-chart')).toBeInTheDocument()
+      expect(screen.getAllByTestId('pie-chart')).toHaveLength(2) // Now we have 2 pie charts
     })
 
     test('renders regional distribution chart', () => {
@@ -95,7 +95,17 @@ describe('Analytics Page', () => {
       
       expect(screen.getByText('Usage Trends')).toBeInTheDocument()
       expect(screen.getByText('Data transfer and API usage over the last 6 months')).toBeInTheDocument()
-      expect(screen.getByTestId('area-chart')).toBeInTheDocument()
+      expect(screen.getAllByTestId('area-chart')).toHaveLength(2) // Now we have 2 area charts
+    })
+
+    test('renders additional colorful analytics section', () => {
+      renderWithRouter(<Analytics />)
+      
+      // Check for new colorful analytics components
+      expect(screen.getByText('Real-time Activity')).toBeInTheDocument()
+      expect(screen.getByText('Error Distribution')).toBeInTheDocument()
+      expect(screen.getByText('Performance Score')).toBeInTheDocument()
+      expect(screen.getAllByText('Excellent')).toHaveLength(2) // Now we have 2 instances of "Excellent"
     })
   })
 

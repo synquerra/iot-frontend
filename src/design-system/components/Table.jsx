@@ -44,8 +44,16 @@ const tableHeaderVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-surface-secondary border-border-primary text-text-secondary',
-        bordered: 'bg-surface-secondary border-border-primary text-text-secondary',
+        default: [
+          'bg-gradient-to-r from-surface-secondary via-surface-secondary to-surface-secondary',
+          'border-border-primary text-text-secondary',
+          'hover:from-violet-500/10 hover:via-blue-500/10 hover:to-teal-500/10',
+        ].join(' '),
+        bordered: [
+          'bg-gradient-to-r from-surface-secondary via-surface-secondary to-surface-secondary',
+          'border-border-primary text-text-secondary',
+          'hover:from-violet-500/10 hover:via-blue-500/10 hover:to-teal-500/10',
+        ].join(' '),
         minimal: 'bg-transparent border-border-muted text-text-tertiary',
       },
       size: {
@@ -86,7 +94,7 @@ const tableCellVariants = cva(
 
 // Table row styles
 const tableRowVariants = cva(
-  'transition-colors duration-150',
+  'transition-all duration-200',
   {
     variants: {
       variant: {
@@ -95,7 +103,12 @@ const tableRowVariants = cva(
         minimal: '',
       },
       hoverable: {
-        true: 'hover:bg-surface-secondary/50 cursor-pointer',
+        true: [
+          'hover:bg-gradient-to-r hover:from-violet-500/10 hover:via-blue-500/10 hover:to-teal-500/10',
+          'hover:border-l-2 hover:border-l-teal-400',
+          'hover:shadow-sm hover:shadow-teal-500/20',
+          'cursor-pointer transform hover:scale-[1.005]',
+        ].join(' '),
         false: '',
       },
       striped: {

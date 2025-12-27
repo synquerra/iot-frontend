@@ -97,42 +97,116 @@ export function DesignSystemDemo() {
         {/* Button Variants */}
         <Card>
           <Card.Header>
-            <Card.Title>Button Components</Card.Title>
-            <Card.Description>All button variants and sizes</Card.Description>
+            <Card.Title>Enhanced Button Components</Card.Title>
+            <Card.Description>All button variants, sizes, and new colorful options</Card.Description>
           </Card.Header>
           <Card.Content>
             <div className="space-y-6">
-              {/* Button Variants */}
+              {/* Basic Button Variants */}
               <div>
-                <h4 className="text-sm font-medium text-text-secondary mb-3">Variants</h4>
+                <h4 className="text-sm font-medium text-text-secondary mb-3">Basic Variants</h4>
                 <div className="flex flex-wrap gap-3">
                   <Button variant="primary">Primary</Button>
                   <Button variant="secondary">Secondary</Button>
                   <Button variant="ghost">Ghost</Button>
                   <Button variant="danger">Danger</Button>
+                  <Button variant="success">Success</Button>
+                  <Button variant="warning">Warning</Button>
+                </div>
+              </div>
+
+              {/* New Colorful Variants */}
+              <div>
+                <h4 className="text-sm font-medium text-text-secondary mb-3">New Colorful Variants</h4>
+                <div className="space-y-4">
+                  <div>
+                    <h5 className="text-xs font-medium text-text-tertiary mb-2">Gradient Buttons</h5>
+                    <div className="flex flex-wrap gap-3">
+                      <Button variant="gradient" colorScheme="violet">Violet Gradient</Button>
+                      <Button variant="gradient" colorScheme="blue">Blue Gradient</Button>
+                      <Button variant="gradient" colorScheme="teal">Teal Gradient</Button>
+                      <Button variant="gradient" colorScheme="green">Green Gradient</Button>
+                      <Button variant="gradient" colorScheme="amber">Amber Gradient</Button>
+                      <Button variant="gradient" colorScheme="red">Red Gradient</Button>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h5 className="text-xs font-medium text-text-tertiary mb-2">Colorful Buttons</h5>
+                    <div className="flex flex-wrap gap-3">
+                      <Button variant="colorful" colorScheme="violet">Violet</Button>
+                      <Button variant="colorful" colorScheme="blue">Blue</Button>
+                      <Button variant="colorful" colorScheme="teal">Teal</Button>
+                      <Button variant="colorful" colorScheme="green">Green</Button>
+                      <Button variant="colorful" colorScheme="pink">Pink</Button>
+                      <Button variant="colorful" colorScheme="purple">Purple</Button>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h5 className="text-xs font-medium text-text-tertiary mb-2">Outline Buttons</h5>
+                    <div className="flex flex-wrap gap-3">
+                      <Button variant="outline" colorScheme="violet">Violet</Button>
+                      <Button variant="outline" colorScheme="blue">Blue</Button>
+                      <Button variant="outline" colorScheme="teal">Teal</Button>
+                      <Button variant="outline" colorScheme="green">Green</Button>
+                      <Button variant="outline" colorScheme="amber">Amber</Button>
+                      <Button variant="outline" colorScheme="red">Red</Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Color Schemes for Primary Buttons */}
+              <div>
+                <h4 className="text-sm font-medium text-text-secondary mb-3">Primary Button Color Schemes</h4>
+                <div className="flex flex-wrap gap-3">
+                  <Button variant="primary" colorScheme="violet">Violet</Button>
+                  <Button variant="primary" colorScheme="blue">Blue</Button>
+                  <Button variant="primary" colorScheme="teal">Teal</Button>
+                  <Button variant="primary" colorScheme="green">Green</Button>
+                  <Button variant="primary" colorScheme="amber">Amber</Button>
+                  <Button variant="primary" colorScheme="red">Red</Button>
+                  <Button variant="primary" colorScheme="pink">Pink</Button>
+                  <Button variant="primary" colorScheme="purple">Purple</Button>
                 </div>
               </div>
 
               {/* Button Sizes */}
               <div>
-                <h4 className="text-sm font-medium text-text-secondary mb-3">Sizes</h4>
+                <h4 className="text-sm font-medium text-text-secondary mb-3">Enhanced Sizes</h4>
                 <div className="flex flex-wrap items-center gap-3">
+                  <Button size="xs">Extra Small</Button>
                   <Button size="sm">Small</Button>
                   <Button size="md">Medium</Button>
                   <Button size="lg">Large</Button>
+                  <Button size="xl">Extra Large</Button>
                 </div>
+              </div>
+
+              {/* Glow Effects */}
+              <div>
+                <h4 className="text-sm font-medium text-text-secondary mb-3">Glow Effects</h4>
+                <div className="flex flex-wrap gap-3">
+                  <Button variant="gradient" colorScheme="violet" glow>Violet Glow</Button>
+                  <Button variant="colorful" colorScheme="blue" glow>Blue Glow</Button>
+                  <Button variant="gradient" colorScheme="teal" glow>Teal Glow</Button>
+                  <Button variant="colorful" colorScheme="pink" glow>Pink Glow</Button>
+                </div>
+                <p className="text-xs text-text-tertiary mt-2">Hover over these buttons to see the glow effect</p>
               </div>
 
               {/* Button States */}
               <div>
-                <h4 className="text-sm font-medium text-text-secondary mb-3">States</h4>
+                <h4 className="text-sm font-medium text-text-secondary mb-3">Enhanced States</h4>
                 <div className="flex flex-wrap gap-3">
-                  <Button loading={loading}>
+                  <Button loading={loading} variant="gradient" colorScheme="violet">
                     {loading ? 'Loading...' : 'Click to Load'}
                   </Button>
-                  <Button disabled>Disabled</Button>
+                  <Button disabled variant="colorful" colorScheme="blue">Disabled</Button>
                   <Button 
-                    variant="secondary"
+                    variant="outline" 
+                    colorScheme="teal"
                     onClick={() => setLoading(!loading)}
                   >
                     Toggle Loading
@@ -346,7 +420,174 @@ export function DesignSystemDemo() {
         </Card>
 
         {/* Card Variants */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <Card.Header>
+            <Card.Title>Card Variants</Card.Title>
+            <Card.Description>All card variants including new colorful options</Card.Description>
+          </Card.Header>
+          <Card.Content>
+            <div className="space-y-8">
+              
+              {/* Basic Variants */}
+              <div>
+                <h4 className="text-sm font-medium text-text-secondary mb-4">Basic Variants</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Card variant="default">
+                    <Card.Header>
+                      <Card.Title>Default Card</Card.Title>
+                      <Card.Description>Standard card variant</Card.Description>
+                    </Card.Header>
+                    <Card.Content>
+                      <p className="text-text-secondary">
+                        This is the default card variant with standard styling.
+                      </p>
+                    </Card.Content>
+                  </Card>
+
+                  <Card variant="elevated">
+                    <Card.Header>
+                      <Card.Title>Elevated Card</Card.Title>
+                      <Card.Description>Card with elevation shadow</Card.Description>
+                    </Card.Header>
+                    <Card.Content>
+                      <p className="text-text-secondary">
+                        This card has elevated styling with enhanced shadows.
+                      </p>
+                    </Card.Content>
+                  </Card>
+
+                  <Card variant="outlined">
+                    <Card.Header>
+                      <Card.Title>Outlined Card</Card.Title>
+                      <Card.Description>Card with accent border</Card.Description>
+                    </Card.Header>
+                    <Card.Content>
+                      <p className="text-text-secondary">
+                        This card uses an outlined style with accent border.
+                      </p>
+                    </Card.Content>
+                  </Card>
+                </div>
+              </div>
+
+              {/* New Colorful Variants */}
+              <div>
+                <h4 className="text-sm font-medium text-text-secondary mb-4">New Colorful Variants</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Card variant="gradient" colorScheme="violet">
+                    <Card.Header>
+                      <Card.Title>Gradient Card</Card.Title>
+                      <Card.Description>Card with gradient background</Card.Description>
+                    </Card.Header>
+                    <Card.Content>
+                      <p className="text-white/90">
+                        This card features a beautiful gradient background with enhanced visual appeal.
+                      </p>
+                    </Card.Content>
+                  </Card>
+
+                  <Card variant="glass">
+                    <Card.Header>
+                      <Card.Title>Glass Card</Card.Title>
+                      <Card.Description>Glassmorphism effect</Card.Description>
+                    </Card.Header>
+                    <Card.Content>
+                      <p className="text-text-secondary">
+                        This card uses glassmorphism with backdrop blur for a modern look.
+                      </p>
+                    </Card.Content>
+                  </Card>
+
+                  <Card variant="colorful" colorScheme="teal">
+                    <Card.Header>
+                      <Card.Title>Colorful Card</Card.Title>
+                      <Card.Description>Vibrant accent borders</Card.Description>
+                    </Card.Header>
+                    <Card.Content>
+                      <p className="text-text-secondary">
+                        This card features colorful accent borders and enhanced shadows.
+                      </p>
+                    </Card.Content>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Color Scheme Examples */}
+              <div>
+                <h4 className="text-sm font-medium text-text-secondary mb-4">Color Scheme Examples</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { color: 'violet', name: 'Violet' },
+                    { color: 'blue', name: 'Blue' },
+                    { color: 'teal', name: 'Teal' },
+                    { color: 'green', name: 'Green' },
+                    { color: 'amber', name: 'Amber' },
+                    { color: 'red', name: 'Red' },
+                    { color: 'pink', name: 'Pink' },
+                    { color: 'purple', name: 'Purple' }
+                  ].map(({ color, name }) => (
+                    <Card key={color} variant="colorful" colorScheme={color} padding="sm">
+                      <Card.Content>
+                        <div className="text-center">
+                          <h5 className="font-medium text-text-primary">{name}</h5>
+                          <p className="text-xs text-text-tertiary mt-1">
+                            {color} color scheme
+                          </p>
+                        </div>
+                      </Card.Content>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              {/* Interactive Effects */}
+              <div>
+                <h4 className="text-sm font-medium text-text-secondary mb-4">Interactive Effects</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Card variant="colorful" colorScheme="violet" hover glowEffect>
+                    <Card.Header>
+                      <Card.Title>Hover + Glow</Card.Title>
+                      <Card.Description>Hover for glow effect</Card.Description>
+                    </Card.Header>
+                    <Card.Content>
+                      <p className="text-text-secondary">
+                        This card has hover effects with a colorful glow.
+                      </p>
+                    </Card.Content>
+                  </Card>
+
+                  <Card variant="default" borderAccent colorScheme="teal">
+                    <Card.Header>
+                      <Card.Title>Border Accent</Card.Title>
+                      <Card.Description>Left accent border</Card.Description>
+                    </Card.Header>
+                    <Card.Content>
+                      <p className="text-text-secondary">
+                        This card features a colorful left accent border.
+                      </p>
+                    </Card.Content>
+                  </Card>
+
+                  <Card variant="gradient" colorScheme="green" hover>
+                    <Card.Header>
+                      <Card.Title>Gradient Hover</Card.Title>
+                      <Card.Description>Enhanced hover effects</Card.Description>
+                    </Card.Header>
+                    <Card.Content>
+                      <p className="text-white/90">
+                        This gradient card has enhanced hover animations.
+                      </p>
+                    </Card.Content>
+                  </Card>
+                </div>
+              </div>
+
+            </div>
+          </Card.Content>
+        </Card>
+
+        {/* Original Card Variants Section - Remove this */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6" style={{ display: 'none' }}>
           <Card variant="default">
             <Card.Header>
               <Card.Title>Default Card</Card.Title>
@@ -447,6 +688,237 @@ export function DesignSystemDemo() {
                 </Button>
               </div>
             </form>
+          </Card.Content>
+        </Card>
+
+        {/* Colorful Form Components */}
+        <Card>
+          <Card.Header>
+            <Card.Title>Colorful Form Components</Card.Title>
+            <Card.Description>New colorful variants with gradient backgrounds and enhanced focus states</Card.Description>
+          </Card.Header>
+          <Card.Content>
+            <div className="space-y-8">
+              
+              {/* Colorful Variants */}
+              <div>
+                <h4 className="text-sm font-medium text-text-secondary mb-4">Colorful Variants</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Input
+                    variant="colorful"
+                    colorScheme="violet"
+                    label="Violet Input"
+                    placeholder="Enter text with violet theme"
+                    helperText="Colorful focus states and validation feedback"
+                  />
+                  
+                  <Input
+                    variant="colorful"
+                    colorScheme="blue"
+                    label="Blue Input"
+                    placeholder="Enter text with blue theme"
+                    helperText="Enhanced visual feedback"
+                  />
+                  
+                  <Input
+                    variant="colorful"
+                    colorScheme="teal"
+                    label="Teal Input"
+                    placeholder="Enter text with teal theme"
+                    helperText="Smooth transitions for state changes"
+                  />
+                  
+                  <Input
+                    variant="colorful"
+                    colorScheme="green"
+                    label="Green Input"
+                    placeholder="Enter text with green theme"
+                    helperText="Color-coded validation states"
+                  />
+                </div>
+              </div>
+
+              {/* Gradient Variants */}
+              <div>
+                <h4 className="text-sm font-medium text-text-secondary mb-4">Gradient Variants</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Input
+                    variant="gradient"
+                    label="Gradient Input"
+                    placeholder="Multi-color gradient background"
+                    helperText="Beautiful gradient backgrounds"
+                  />
+                  
+                  <Textarea
+                    variant="gradient"
+                    label="Gradient Textarea"
+                    placeholder="Enter your message with gradient styling"
+                    rows={3}
+                    helperText="Enhanced visual appeal"
+                  />
+                </div>
+              </div>
+
+              {/* Glass Variants */}
+              <div>
+                <h4 className="text-sm font-medium text-text-secondary mb-4">Glass Variants</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Input
+                    variant="glass"
+                    label="Glass Input"
+                    placeholder="Glassmorphism effect"
+                    helperText="Modern glass-like appearance"
+                  />
+                  
+                  <Select
+                    variant="glass"
+                    label="Glass Select"
+                    placeholder="Choose with glass effect"
+                    helperText="Backdrop blur and transparency"
+                  >
+                    <option value="option1">Glass Option 1</option>
+                    <option value="option2">Glass Option 2</option>
+                    <option value="option3">Glass Option 3</option>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Color Scheme Examples */}
+              <div>
+                <h4 className="text-sm font-medium text-text-secondary mb-4">All Color Schemes</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[
+                    { color: 'violet', name: 'Violet' },
+                    { color: 'blue', name: 'Blue' },
+                    { color: 'teal', name: 'Teal' },
+                    { color: 'green', name: 'Green' },
+                    { color: 'amber', name: 'Amber' },
+                    { color: 'red', name: 'Red' },
+                    { color: 'pink', name: 'Pink' },
+                    { color: 'purple', name: 'Purple' }
+                  ].map(({ color, name }) => (
+                    <Input
+                      key={color}
+                      variant="colorful"
+                      colorScheme={color}
+                      label={`${name} Input`}
+                      placeholder={`${name} themed input`}
+                      size="sm"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Validation States */}
+              <div>
+                <h4 className="text-sm font-medium text-text-secondary mb-4">Enhanced Validation States</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <Input
+                      label="Success State"
+                      placeholder="Valid input"
+                      success="This field looks great!"
+                    />
+                    
+                    <Input
+                      label="Error State"
+                      placeholder="Invalid input"
+                      error="This field has an error"
+                    />
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <Input
+                      label="Warning State"
+                      placeholder="Warning input"
+                      warning="Please double-check this field"
+                    />
+                    
+                    <Input
+                      label="Info State"
+                      placeholder="Info input"
+                      info="Additional information about this field"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Colorful Validation States */}
+              <div>
+                <h4 className="text-sm font-medium text-text-secondary mb-4">Colorful Validation States</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <Input
+                      variant="colorful"
+                      colorScheme="green"
+                      label="Colorful Success"
+                      placeholder="Valid colorful input"
+                      success="Perfect! This looks amazing"
+                    />
+                    
+                    <Input
+                      variant="colorful"
+                      colorScheme="red"
+                      label="Colorful Error"
+                      placeholder="Invalid colorful input"
+                      error="Oops! Something went wrong"
+                    />
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <Textarea
+                      variant="colorful"
+                      colorScheme="amber"
+                      label="Colorful Warning"
+                      placeholder="Warning textarea"
+                      warning="Please review your input carefully"
+                      rows={3}
+                    />
+                    
+                    <Select
+                      variant="colorful"
+                      colorScheme="blue"
+                      label="Colorful Info"
+                      placeholder="Info select"
+                      info="Choose from the available options"
+                    >
+                      <option value="info1">Info Option 1</option>
+                      <option value="info2">Info Option 2</option>
+                      <option value="info3">Info Option 3</option>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Interactive Demo */}
+              <div>
+                <h4 className="text-sm font-medium text-text-secondary mb-4">Interactive Focus Demo</h4>
+                <div className="space-y-4">
+                  <p className="text-sm text-text-tertiary">
+                    Click on the inputs below to see the enhanced focus states with colorful shadows and smooth transitions:
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Input
+                      variant="colorful"
+                      colorScheme="violet"
+                      placeholder="Focus me for violet glow"
+                      size="sm"
+                    />
+                    <Input
+                      variant="gradient"
+                      placeholder="Focus me for gradient effect"
+                      size="sm"
+                    />
+                    <Input
+                      variant="glass"
+                      placeholder="Focus me for glass effect"
+                      size="sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+            </div>
           </Card.Content>
         </Card>
 

@@ -150,7 +150,7 @@ describe('Table Component', () => {
     );
     
     const row = screen.getByText('Test').closest('tr');
-    expect(row).toHaveClass('hover:bg-surface-secondary/50');
+    expect(row).toHaveClass('hover:bg-gradient-to-r');
     expect(row).toHaveClass('even:bg-surface-secondary/20');
   });
 

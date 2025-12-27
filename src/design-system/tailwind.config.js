@@ -18,3 +18,15 @@ export const designSystemConfig = {
   ...tailwindAnimations,
   ...tailwindResponsive,
 };
+
+// Export individual color utilities for component usage
+export { 
+  spectrumColors, 
+  gradients, 
+  semanticColors, 
+  getColorIntensity, 
+  getColorScale, 
+  getGradient, 
+  getChartColors, 
+  getChartGradients 
+} from './tokens/colors.js';

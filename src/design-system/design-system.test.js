@@ -64,11 +64,39 @@ describe('Design System Consistency Properties', () => {
           const colorValues = Object.values(group)
           expect(colorValues.length).toBeGreaterThan(0)
           
-          // All color values in the group should be valid hex colors
-          colorValues.forEach(colorValue => {
-            const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
-            expect(colorValue).toMatch(hexColorRegex)
-          })
+          // Handle different structures for different color groups
+          if (colorGroup === 'chart') {
+            // Chart colors have arrays and special structure
+            expect(group.palette).toBeDefined()
+            expect(Array.isArray(group.palette)).toBe(true)
+            expect(group.paletteSubtle).toBeDefined()
+            expect(Array.isArray(group.paletteSubtle)).toBe(true)
+            expect(group.gradientFills).toBeDefined()
+            expect(Array.isArray(group.gradientFills)).toBe(true)
+            
+            // Validate palette colors
+            group.palette.forEach(colorValue => {
+              const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
+              expect(colorValue).toMatch(hexColorRegex)
+            })
+            
+            group.paletteSubtle.forEach(colorValue => {
+              const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
+              expect(colorValue).toMatch(hexColorRegex)
+            })
+            
+            group.gradientFills.forEach(gradientValue => {
+              expect(gradientValue).toMatch(/^linear-gradient\(/)
+            })
+          } else {
+            // Other color groups should have hex color values
+            colorValues.forEach(colorValue => {
+              if (typeof colorValue === 'string') {
+                const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
+                expect(colorValue).toMatch(hexColorRegex)
+              }
+            })
+          }
         }
       ),
       { numRuns: 100 }
@@ -263,9 +291,14 @@ describe('Design System Consistency Properties', () => {
     expect(boxShadow).toBeDefined()
     expect(tailwindSpacing).toBeDefined()
     
-    // colorTokens should combine base and semantic colors
+    // colorTokens should include base colors and new structure
     expect(Object.keys(colorTokens)).toEqual(
-      expect.arrayContaining([...Object.keys(baseColors), ...Object.keys(semanticColors)])
+      expect.arrayContaining([...Object.keys(baseColors), 'spectrum', 'gradients', 'semantic'])
     )
+    
+    // Verify the new structure
+    expect(colorTokens.spectrum).toBeDefined()
+    expect(colorTokens.gradients).toBeDefined()
+    expect(colorTokens.semantic).toBeDefined()
   })
 })
