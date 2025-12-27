@@ -1,7 +1,10 @@
 // src/pages/Devices.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Card from "../components/Card";
+import { Card } from "../design-system/components";
+import { Table } from "../design-system/components";
+import { Button } from "../design-system/components";
+import { Loading } from "../design-system/components";
 import { listDevices } from "../utils/device";
 
 
@@ -37,8 +40,13 @@ export default function Devices() {
 
   if (loading)
     return (
-      <div className="text-center text-slate-400 mt-10">
-        Loading devices...
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loading 
+          type="spinner" 
+          size="lg" 
+          text="Loading devices..." 
+          textPosition="bottom"
+        />
       </div>
     );
 
@@ -51,44 +59,69 @@ export default function Devices() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <h3 className="text-lg font-semibold mb-4 text-white">Devices</h3>
-
-        <table className="w-full text-sm text-slate-300">
-          <thead className="text-slate-400 border-b border-slate-700">
-            <tr>
-              <th className="py-2 text-left">Topic</th>
-              <th className="py-2 text-left">IMEI</th>
-              <th className="py-2 text-left">Interval</th>
-              <th className="py-2 text-left">Geoid</th>
-              <th className="py-2 text-left">Created At</th>
-              <th className="py-2 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {devices.map((d, idx) => (
-              <tr
-                key={idx}
-                className="border-b border-slate-800 hover:bg-slate-800/40 transition"
-              >
-                <td className="py-2">{d.topic}</td>
-                <td className="py-2">{d.imei}</td>
-                <td className="py-2">{d.interval}</td>
-                <td className="py-2">{d.geoid}</td>
-                <td className="py-2">{d.createdAt}</td>
-                <td className="py-2">
-                <button className="px-4 py-1 bg-blue-500 rounded text-black font-semibold" onClick={() => navigate(`/devices/${d.imei}`)}>View</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {devices.length === 0 && (
-          <div className="text-center py-6 text-slate-500">
-            No devices found.
-          </div>
-        )}
+      <Card variant="default" padding="md">
+        <Card.Header>
+          <Card.Title>Devices</Card.Title>
+          <Card.Description>
+            Manage and monitor your connected devices
+          </Card.Description>
+        </Card.Header>
+        
+        <Card.Content>
+          <Table
+            variant="default"
+            size="md"
+            hoverable={true}
+            striped={false}
+            loading={loading}
+            loadingRows={5}
+            loadingColumns={6}
+            emptyMessage="No devices found."
+            data={devices}
+            columns={[
+              {
+                key: 'topic',
+                header: 'Topic',
+                sortable: false,
+              },
+              {
+                key: 'imei',
+                header: 'IMEI',
+                sortable: false,
+              },
+              {
+                key: 'interval',
+                header: 'Interval',
+                sortable: false,
+              },
+              {
+                key: 'geoid',
+                header: 'Geoid',
+                sortable: false,
+              },
+              {
+                key: 'createdAt',
+                header: 'Created At',
+                sortable: false,
+              },
+              {
+                key: 'actions',
+                header: 'Actions',
+                sortable: false,
+                render: (value, device) => (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => navigate(`/devices/${device.imei}`)}
+                  >
+                    View
+                  </Button>
+                ),
+              },
+            ]}
+            onRowClick={(device) => navigate(`/devices/${device.imei}`)}
+          />
+        </Card.Content>
       </Card>
     </div>
   );
