@@ -1,20 +1,36 @@
-import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { authenticateUser } from "../utils/auth";
 import { Input } from "../design-system/components/Input";
 import { Button } from "../design-system/components/Button";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
+
+  // Handle success message from signup
+  useEffect(() => {
+    if (location.state?.message) {
+      setSuccess(location.state.message);
+      // Pre-fill email if provided
+      if (location.state.email) {
+        setEmail(location.state.email);
+      }
+      // Clear the state to prevent showing message on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError(""); // Clear previous errors
+    setSuccess(""); // Clear success message
     setFieldErrors({}); // Clear field errors
 
     // Validate fields
@@ -61,6 +77,15 @@ export default function Login() {
             </p>
           </div>
 
+          {/* Success Message */}
+          {success && (
+            <div className="mb-6 p-4 bg-status-success/10 border border-status-success/20 rounded-lg">
+              <p className="text-status-success text-sm font-medium">
+                {success}
+              </p>
+            </div>
+          )}
+
           {/* Global Error Message */}
           {error && (
             <div className="mb-6 p-4 bg-status-error/10 border border-status-error/20 rounded-lg">
@@ -88,7 +113,7 @@ export default function Login() {
               error={fieldErrors.email}
               size="lg"
               autoComplete="email"
-              autoFocus
+              autoFocus={!email} // Only autofocus if email is not pre-filled
             />
 
             {/* Password Field */}
@@ -107,6 +132,7 @@ export default function Login() {
               error={fieldErrors.password}
               size="lg"
               autoComplete="current-password"
+              autoFocus={!!email} // Autofocus password if email is pre-filled
             />
 
             {/* Submit Button */}

@@ -1,0 +1,108 @@
+/**
+ * Authentication Styles
+ * 
+ * Shared styling tokens and CSS classes for authentication pages
+ * Ensures consistent visual design across login and signup
+ */
+
+/* Animation for auth page entrance */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out;
+}
+
+/* Authentication-specific utility classes */
+.auth-gradient-bg {
+  background: linear-gradient(to bottom, #0f172a, #071021);
+}
+
+.auth-card {
+  background-color: #0f1b2a;
+  border: 1px solid #334155;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.auth-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin-bottom: 0.5rem;
+}
+
+.auth-subtitle {
+  color: #cbd5e1;
+}
+
+.auth-help-text {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.auth-link {
+  color: #5eead4;
+  transition: color 0.2s ease-in-out;
+}
+
+.auth-link:hover {
+  color: rgba(94, 234, 212, 0.8);
+}
+
+/* Error message styling for authentication */
+.auth-error {
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.auth-error-text {
+  color: #ef4444;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Success message styling for authentication */
+.auth-success {
+  background-color: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.auth-success-text {
+  color: #22c55e;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Form spacing for authentication pages */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Navigation footer styling */
+.auth-footer {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.auth-footer-text {
+  color: #64748b;
+  font-size: 0.875rem;
+}
