@@ -17,6 +17,20 @@ export {
   TableCell, 
   TableHeaderCell 
 } from './Table.jsx';
+
+// Enhanced table components with advanced styling
+export {
+  EnhancedTable,
+  EnhancedTableContainer,
+  EnhancedTableHeaderCell,
+  EnhancedTableCell,
+  EnhancedTableRow,
+  EnhancedCellRenderer,
+  StatusBadge,
+  EnhancedLoadingSkeleton,
+  getDataValueType,
+  dataTypeColorSchemes,
+} from './EnhancedTable.jsx';
 export {
   Loading,
   LoadingOverlay,
@@ -67,6 +81,18 @@ export {
 // Performance monitoring components
 export { PerformanceMonitor, PerformanceWarning, withPerformanceMonitoring } from './PerformanceMonitor.jsx';
 
+// Enhanced dashboard components (TypeScript)
+export {
+  DashboardErrorBoundary,
+  withErrorBoundary,
+  ResponsiveLayout,
+  ResponsiveContainer,
+  ResponsiveSection,
+  EnhancedDashboard,
+  DashboardProvider,
+  useDashboardContext
+} from '../../components/dashboard/index';
+
 export const DESIGN_SYSTEM_VERSION = '1.0.0';
 
 // Component registry for tracking implemented components
@@ -75,6 +101,7 @@ export const componentRegistry = {
   card: { implemented: true, version: '1.0.0' },
   input: { implemented: true, version: '1.0.0' },
   table: { implemented: true, version: '1.0.0' },
+  enhancedTable: { implemented: true, version: '1.0.0' },
   loading: { implemented: true, version: '1.0.0' },
   layoutComponents: { implemented: true, version: '1.0.0' },
   kpiCard: { implemented: true, version: '1.0.0' },
@@ -82,4 +109,10 @@ export const componentRegistry = {
   responsiveGrid: { implemented: true, version: '1.0.0' },
   performanceMonitor: { implemented: true, version: '1.0.0' },
   gradientCard: { implemented: true, version: '1.0.0' },
+  // New enhanced dashboard components
+  dashboardErrorBoundary: { implemented: true, version: '1.0.0' },
+  responsiveLayout: { implemented: true, version: '1.0.0' },
+  enhancedDashboard: { implemented: true, version: '1.0.0' },
+  performanceUtilities: { implemented: true, version: '1.0.0' },
+  dashboardTypes: { implemented: true, version: '1.0.0' },
 };

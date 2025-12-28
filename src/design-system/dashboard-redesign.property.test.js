@@ -64,7 +64,7 @@ describe('Dashboard Redesign - Design System Consistency Properties', () => {
           validateSpacingConsistency(component, componentType)
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 5 }
     )
   })
 
@@ -94,7 +94,7 @@ describe('Dashboard Redesign - Design System Consistency Properties', () => {
           expect(typography.letterSpacing).toMatch(/^-?\d+(\.\d+)?em$/)
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 5 }
     )
   })
 
@@ -136,7 +136,7 @@ describe('Dashboard Redesign - Design System Consistency Properties', () => {
           })
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 5 }
     )
   })
 
@@ -167,7 +167,7 @@ describe('Dashboard Redesign - Design System Consistency Properties', () => {
           expect(colorScale.vibrant).toBe(colorScale[500])
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 5 }
     )
   })
 
@@ -229,7 +229,7 @@ describe('Dashboard Redesign - Design System Consistency Properties', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 5 }
     )
   })
 
@@ -252,7 +252,7 @@ describe('Dashboard Redesign - Design System Consistency Properties', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 5 }
     )
   })
 

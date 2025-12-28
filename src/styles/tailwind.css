@@ -4,6 +4,9 @@
 /* Import authentication styles */
 @import './auth.css';
 
+/* Import KPI animations */
+@import '../design-system/styles/kpi-animations.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

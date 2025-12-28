@@ -84,67 +84,69 @@ export const pieChartColorCombinations = [
   ],
 ];
 
-// Enhanced chart configuration with modern styling
+// Enhanced chart configuration with modern styling and improved interactivity
 export const modernChartConfig = {
-  // Grid styling
+  // Grid styling with enhanced visibility
   grid: {
     stroke: '#334155',
     strokeDasharray: '3 3',
-    strokeOpacity: 0.3,
+    strokeOpacity: 0.4,
   },
   
-  // Axis styling
+  // Axis styling with improved readability
   axis: {
     tick: { 
-      fill: '#cbd5e1', 
+      fill: '#e2e8f0', 
       fontSize: 12,
-      fontWeight: 500,
+      fontWeight: 600,
     },
     axisLine: { 
-      stroke: '#475569',
-      strokeWidth: 1,
+      stroke: '#64748b',
+      strokeWidth: 1.5,
     },
     tickLine: {
-      stroke: '#475569',
-      strokeWidth: 1,
+      stroke: '#64748b',
+      strokeWidth: 1.5,
     },
   },
   
-  // Tooltip styling with glassmorphism effect
+  // Enhanced tooltip styling with advanced glassmorphism effect
   tooltip: {
     contentStyle: {
-      background: 'rgba(26, 35, 50, 0.95)',
-      backdropFilter: 'blur(12px)',
-      border: '1px solid rgba(51, 65, 85, 0.6)',
-      borderRadius: '12px',
+      background: 'rgba(15, 23, 42, 0.95)',
+      backdropFilter: 'blur(16px)',
+      border: '1px solid rgba(51, 65, 85, 0.8)',
+      borderRadius: '16px',
       color: '#f8fafc',
       fontSize: '14px',
-      fontWeight: '500',
-      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
-      padding: '12px 16px',
+      fontWeight: '600',
+      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+      padding: '16px 20px',
+      minWidth: '200px',
     },
     cursor: {
       stroke: spectrumColors.violet[400],
-      strokeWidth: 2,
-      strokeDasharray: '5 5',
+      strokeWidth: 2.5,
+      strokeDasharray: '8 4',
+      filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.6))',
     },
   },
   
-  // Legend styling
+  // Enhanced legend styling
   legend: {
     wrapperStyle: {
-      color: '#cbd5e1',
-      fontSize: '13px',
-      fontWeight: '500',
-      paddingTop: '16px',
+      color: '#e2e8f0',
+      fontSize: '14px',
+      fontWeight: '600',
+      paddingTop: '20px',
     },
     iconType: 'circle',
   },
   
-  // Animation configuration
+  // Enhanced animation configuration with smoother transitions
   animation: {
     animationBegin: 0,
-    animationDuration: 800,
+    animationDuration: 1200,
     animationEasing: 'ease-out',
   },
 };
@@ -295,36 +297,45 @@ export const chartHoverEffects = {
   },
 };
 
-// Animated transition configurations
+// Enhanced animated transition configurations with improved timing
 export const chartAnimations = {
-  // Entrance animations
+  // Enhanced entrance animations with staggered timing
   entrance: {
     bar: {
       animationBegin: 0,
-      animationDuration: 1000,
+      animationDuration: 1200,
       animationEasing: 'ease-out',
     },
     line: {
-      animationBegin: 200,
-      animationDuration: 1200,
+      animationBegin: 300,
+      animationDuration: 1400,
       animationEasing: 'ease-out',
     },
     pie: {
       animationBegin: 0,
-      animationDuration: 1000,
+      animationDuration: 1200,
       animationEasing: 'ease-out',
     },
     area: {
-      animationBegin: 100,
-      animationDuration: 1000,
+      animationBegin: 200,
+      animationDuration: 1200,
       animationEasing: 'ease-out',
     },
   },
   
-  // Update animations
+  // Enhanced update animations with smoother transitions
   update: {
-    animationDuration: 600,
+    animationDuration: 800,
     animationEasing: 'ease-in-out',
+  },
+  
+  // New hover animations for interactive elements
+  hover: {
+    duration: 300,
+    easing: 'ease-out',
+    scale: 1.05,
+    brightness: 1.15,
+    saturation: 1.25,
   },
 };
 

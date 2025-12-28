@@ -1,0 +1,193 @@
+/**
+ * KPI Card Animation Styles
+ * Enhanced animations for KPI cards including shimmer, growth, and pulse effects
+ */
+
+/* Shimmer effect for performance cards */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Growth pulse animation for growth cards */
+@keyframes growth-pulse {
+  0%, 100% {
+    transform: scaleX(0);
+    opacity: 0.2;
+  }
+  50% {
+    transform: scaleX(1);
+    opacity: 0.4;
+  }
+}
+
+/* Enhanced bounce animation for trend indicators */
+@keyframes enhanced-bounce {
+  0%, 20%, 53%, 80%, 100% {
+    animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
+    transform: translate3d(0, 0, 0);
+  }
+  40%, 43% {
+    animation-timing-function: cubic-bezier(0.755, 0.050, 0.855, 0.060);
+    transform: translate3d(0, -8px, 0);
+  }
+  70% {
+    animation-timing-function: cubic-bezier(0.755, 0.050, 0.855, 0.060);
+    transform: translate3d(0, -4px, 0);
+  }
+  90% {
+    transform: translate3d(0, -2px, 0);
+  }
+}
+
+/* Glow pulse animation */
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 0.05;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.15;
+    transform: scale(1.1);
+  }
+}
+
+/* Gradient border animation */
+@keyframes gradient-border {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Floating animation for accent elements */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Scale and glow on hover */
+@keyframes scale-glow {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(59, 130, 246, 0);
+  }
+  100% {
+    transform: scale(1.05);
+    box-shadow: 0 20px 40px rgba(59, 130, 246, 0.2);
+  }
+}
+
+/* Responsive KPI card styles */
+.kpi-card {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.kpi-card:hover {
+  animation: scale-glow 0.3s ease-out forwards;
+}
+
+.kpi-card .trend-indicator {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.kpi-card:hover .trend-indicator {
+  transform: scale(1.1);
+}
+
+.kpi-card .glow-effect {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+.kpi-card .shimmer-effect {
+  animation: shimmer 2s linear infinite;
+}
+
+.kpi-card .growth-effect {
+  animation: growth-pulse 1.5s ease-in-out infinite;
+}
+
+.kpi-card .float-effect {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Enhanced responsive grid for KPI section */
+.kpi-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+}
+
+/* Enhanced hover effects for mobile */
+@media (hover: none) and (pointer: coarse) {
+  .kpi-card:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease-out;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  .kpi-card,
+  .kpi-card *,
+  .trend-indicator,
+  .glow-effect,
+  .shimmer-effect,
+  .growth-effect,
+  .float-effect {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .kpi-card {
+    border-width: 2px;
+    border-style: solid;
+  }
+  
+  .kpi-card .glow-effect {
+    opacity: 0 !important;
+  }
+}
+
+/* Dark mode enhancements */
+@media (prefers-color-scheme: dark) {
+  .kpi-card {
+    backdrop-filter: blur(16px);
+  }
+  
+  .kpi-card .glow-effect {
+    opacity: 0.1;
+  }
+}
