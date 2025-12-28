@@ -5,6 +5,7 @@ import { spectrumColors, gradients } from '../tokens/colors.js';
 import { responsiveTailwindClasses } from '../utils/responsiveColors.js';
 import { useAccessibility, useMotionAccessibility, useFocusManagement } from '../hooks/useAccessibility.js';
 import { accessibleColorUtils } from '../tokens/accessibleColors.js';
+import { interactivePresets, focusStates, createInteractiveProps } from '../utils/interactiveStates.js';
 
 /**
  * Enhanced Button Component with Colorful Design System
@@ -21,17 +22,19 @@ import { accessibleColorUtils } from '../tokens/accessibleColors.js';
  * - Full accessibility support
  */
 
-// Button variant styles using class-variance-authority with responsive color behavior
+// Button variant styles using class-variance-authority with enhanced interactive states
 const buttonVariants = cva(
-  // Base styles - common to all buttons with responsive enhancements
+  // Base styles - common to all buttons with enhanced interactive behavior
   [
     'inline-flex items-center justify-center gap-2',
-    'rounded-md font-medium transition-all duration-300',
-    'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900',
+    'rounded-md font-medium',
     'disabled:pointer-events-none disabled:opacity-50',
     'select-none cursor-pointer',
     'border border-transparent',
     'transform-gpu', // Enable GPU acceleration for smooth animations
+    // Enhanced interactive states from design system
+    'transition-all duration-300 ease-out',
+    'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent',
     // Responsive touch targets - larger on mobile
     'min-h-[44px] sm:min-h-[40px] md:min-h-[44px]',
     // Responsive text sizing for better readability
@@ -42,27 +45,23 @@ const buttonVariants = cva(
       variant: {
         primary: [
           'bg-violet-600 text-white shadow-sm',
-          // Responsive hover effects - more subtle on mobile
-          'hover:bg-violet-700 active:bg-violet-800',
-          'hover:shadow-md sm:hover:shadow-lg md:hover:shadow-xl',
-          'hover:scale-[1.01] sm:hover:scale-[1.02] md:hover:scale-[1.03]',
-          'active:scale-[0.98] sm:active:scale-[0.99]',
-          'focus:ring-violet-500',
+          // Enhanced hover effects with consistent timing
+          'hover:bg-violet-700 hover:scale-[1.02] hover:shadow-lg',
+          'active:bg-violet-800 active:scale-[0.98]',
+          'focus:ring-violet-500/50',
         ],
         secondary: [
           'bg-slate-800 text-slate-200 border-slate-700',
           'hover:bg-slate-700 hover:text-white hover:border-slate-600',
-          'hover:shadow-sm sm:hover:shadow-md md:hover:shadow-lg',
-          'hover:scale-[1.01] sm:hover:scale-[1.02] md:hover:scale-[1.03]',
-          'active:bg-slate-600 active:scale-[0.98] sm:active:scale-[0.99]',
-          'focus:ring-slate-500',
+          'hover:scale-[1.02] hover:shadow-md',
+          'active:bg-slate-600 active:scale-[0.98]',
+          'focus:ring-slate-500/50',
         ],
         ghost: [
           'text-slate-300 hover:text-white',
-          'hover:bg-slate-800/50',
-          'hover:scale-[1.01] sm:hover:scale-[1.02]',
-          'active:bg-slate-700/50 active:scale-[0.98] sm:active:scale-[0.99]',
-          'focus:ring-slate-500',
+          'hover:bg-slate-800/50 hover:scale-[1.01]',
+          'active:bg-slate-700/50 active:scale-[0.98]',
+          'focus:ring-slate-500/50',
         ],
         danger: [
           'bg-red-600 text-white shadow-sm',

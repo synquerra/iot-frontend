@@ -10,6 +10,22 @@ export { Input } from './components/Input.jsx';
 export { Loading } from './components/Loading.jsx';
 export { Table, TableContainer } from './components/Table.jsx';
 export { KpiCard, PerformanceKpiCard, GrowthKpiCard, StatusKpiCard } from './components/KpiCard.jsx';
+export { 
+  EnhancedKpiCard, 
+  EnhancedPerformanceKpiCard, 
+  EnhancedGrowthKpiCard, 
+  EnhancedStatusKpiCard 
+} from './components/EnhancedKpiCard.jsx';
+export {
+  ResponsiveGrid,
+  GridItem,
+  DashboardKpiGrid,
+  DashboardChartsGrid,
+  DashboardContentGrid,
+  MasonryGrid,
+  FlexGrid
+} from './components/ResponsiveGrid.jsx';
+export { PerformanceMonitor, PerformanceWarning, withPerformanceMonitoring } from './components/PerformanceMonitor.jsx';
 export {
   EnhancedLineChart,
   EnhancedAreaChart,
@@ -20,6 +36,14 @@ export {
   RegionalDistributionChart,
   DeviceTypeChart,
 } from './components/EnhancedCharts.jsx';
+
+// Gradient and glassmorphism components
+export {
+  GradientCard,
+  GradientKpiCard,
+  GradientChartCard,
+  GradientHeroCard,
+} from './components/GradientCard.jsx';
 
 // Accessibility components
 export {
@@ -89,6 +113,35 @@ export {
 
 // Utilities
 export { cn } from './utils/cn.js';
+
+// Interactive states utilities
+export {
+  default as interactiveStates,
+  interactiveBase,
+  hoverStates,
+  focusStates,
+  activeStates,
+  interactivePresets,
+  keyboardNavigation,
+  focusManagement,
+  interactionTiming,
+  createInteractiveProps,
+  createHoverProps,
+} from './utils/interactiveStates.js';
+
+// Glassmorphism utilities
+export {
+  default as glassmorphism,
+  glassmorphismBase,
+  glassmorphismPresets,
+  createGlassmorphism,
+  createColoredGlassmorphism,
+  glassmorphismAnimations,
+  withGlassmorphismAnimations,
+  responsiveGlassmorphism,
+  createResponsiveGlassmorphism,
+  glassmorphismThemes,
+} from './utils/glassmorphism.js';
 
 // Accessibility utilities
 export {
@@ -160,6 +213,20 @@ export {
   useBreakpoint,
   useTouchFeedback,
 } from './hooks/useResponsiveColors.js';
+
+// Performance utilities
+export {
+  performanceMonitor,
+  cssOptimizer,
+  lazyLoader,
+  deviceOptimizer,
+  performanceTester,
+} from './utils/performance.js';
+
+export {
+  dashboardPerformanceMonitor,
+  dashboardPerformanceTracker,
+} from './utils/dashboardPerformance.js';
 
 // Re-export Tailwind configuration from separate file
 export { designSystemConfig } from './tailwind.config.js';

@@ -27,6 +27,14 @@ export {
   ProgressBar,
 } from './Loading.jsx';
 
+// Gradient and glassmorphism components
+export {
+  GradientCard,
+  GradientKpiCard,
+  GradientChartCard,
+  GradientHeroCard,
+} from './GradientCard.jsx';
+
 // Layout components for colorful UI redesign
 export {
   SectionDivider,
@@ -35,6 +43,29 @@ export {
   PageContainer,
   HierarchySection
 } from './LayoutComponents.jsx';
+
+// Enhanced KPI components
+export { KpiCard, PerformanceKpiCard, GrowthKpiCard, StatusKpiCard } from './KpiCard.jsx';
+export { 
+  EnhancedKpiCard, 
+  EnhancedPerformanceKpiCard, 
+  EnhancedGrowthKpiCard, 
+  EnhancedStatusKpiCard 
+} from './EnhancedKpiCard.jsx';
+
+// Enhanced responsive grid system
+export {
+  ResponsiveGrid,
+  GridItem,
+  DashboardKpiGrid,
+  DashboardChartsGrid,
+  DashboardContentGrid,
+  MasonryGrid,
+  FlexGrid
+} from './ResponsiveGrid.jsx';
+
+// Performance monitoring components
+export { PerformanceMonitor, PerformanceWarning, withPerformanceMonitoring } from './PerformanceMonitor.jsx';
 
 export const DESIGN_SYSTEM_VERSION = '1.0.0';
 
@@ -46,4 +77,9 @@ export const componentRegistry = {
   table: { implemented: true, version: '1.0.0' },
   loading: { implemented: true, version: '1.0.0' },
   layoutComponents: { implemented: true, version: '1.0.0' },
+  kpiCard: { implemented: true, version: '1.0.0' },
+  enhancedKpiCard: { implemented: true, version: '1.0.0' },
+  responsiveGrid: { implemented: true, version: '1.0.0' },
+  performanceMonitor: { implemented: true, version: '1.0.0' },
+  gradientCard: { implemented: true, version: '1.0.0' },
 };

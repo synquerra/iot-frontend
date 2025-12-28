@@ -1,5 +1,5 @@
 // src/pages/Dashboard.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { Card } from "../design-system/components/Card";
 import { KpiCard } from "../design-system/components/KpiCard";
 import { Table, TableContainer } from "../design-system/components/Table";
@@ -10,49 +10,21 @@ import {
   ContentSection,
   HierarchySection
 } from "../design-system/components/LayoutComponents";
+// Lazy-loaded components
 import {
   EnhancedBarChart,
   EnhancedPieChart,
-} from "../design-system/components/EnhancedCharts";
+} from "../components/LazyCharts";
 
-import {
-  getAnalyticsCount,
-  getAnalyticsPaginated,
-  getAllAnalytics,
-  getAnalyticsByImei,
-} from "../utils/analytics";
+import { LeafletComponents } from "../components/LazyMap";
 
-import { listDevices } from "../utils/device";
-
-// Recharts - keeping minimal imports for backward compatibility
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-  CartesianGrid,
-} from "recharts";
-
-// Leaflet
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Polyline,
-  Popup,
-  useMap,
-} from "react-leaflet";
+// Custom hooks for data management
+import { useDashboardData } from "../hooks/useDashboardData";
 
 /* ------------------------------------------------
    FitBounds — proper auto zoom for device path
 ---------------------------------------------------*/
-function FitBounds({ path }) {
+const FitBounds = React.memo(function FitBounds({ path, useMap }) {
   const map = useMap();
 
   useEffect(() => {
@@ -61,76 +33,80 @@ function FitBounds({ path }) {
     const bounds = path.map((p) => [p.lat, p.lng]);
     map.fitBounds(bounds, { padding: [50, 50] });
 
-  }, [path]);
+  }, [path, map]);
 
   return null;
-}
+});
 
 /* ------------------------------------------------
    MiniMap component
 ---------------------------------------------------*/
-function MiniMap({ path }) {
+const MiniMap = React.memo(function MiniMap({ path }) {
   const fallback = [20.5937, 78.9629]; // India
 
   return (
     <div className="rounded-lg overflow-hidden border border-border-primary shadow-sm h-80">
-      <MapContainer
-        center={fallback}
-        zoom={5}
-        scrollWheelZoom
-        style={{ height: "100%" }}
-      >
-        <FitBounds path={path} />
-
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution="© OpenStreetMap contributors"
-        />
-
-        {/* Draw path */}
-        {path.length > 1 && (
-          <Polyline
-            positions={path.map((p) => [p.lat, p.lng])}
-            color="#3b82f6"
-            weight={3}
-            opacity={0.8}
-          />
-        )}
-
-        {/* Start */}
-        {path.length > 0 && (
-          <Marker position={[path[0].lat, path[0].lng]}>
-            <Popup>
-              <div className="text-sm">
-                <div className="font-medium text-status-success">Start</div>
-                <div className="text-text-secondary">{path[0].time}</div>
-              </div>
-            </Popup>
-          </Marker>
-        )}
-
-        {/* End */}
-        {path.length > 1 && (
-          <Marker
-            position={[path[path.length - 1].lat, path[path.length - 1].lng]}
+      <LeafletComponents>
+        {({ MapContainer, TileLayer, Marker, Polyline, Popup, useMap }) => (
+          <MapContainer
+            center={fallback}
+            zoom={5}
+            scrollWheelZoom
+            style={{ height: "100%" }}
           >
-            <Popup>
-              <div className="text-sm">
-                <div className="font-medium text-status-error">End</div>
-                <div className="text-text-secondary">{path[path.length - 1].time}</div>
-              </div>
-            </Popup>
-          </Marker>
+            <FitBounds path={path} useMap={useMap} />
+
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution="© OpenStreetMap contributors"
+            />
+
+            {/* Draw path */}
+            {path.length > 1 && (
+              <Polyline
+                positions={path.map((p) => [p.lat, p.lng])}
+                color="#3b82f6"
+                weight={3}
+                opacity={0.8}
+              />
+            )}
+
+            {/* Start */}
+            {path.length > 0 && (
+              <Marker position={[path[0].lat, path[0].lng]}>
+                <Popup>
+                  <div className="text-sm">
+                    <div className="font-medium text-status-success">Start</div>
+                    <div className="text-text-secondary">{path[0].time}</div>
+                  </div>
+                </Popup>
+              </Marker>
+            )}
+
+            {/* End */}
+            {path.length > 1 && (
+              <Marker
+                position={[path[path.length - 1].lat, path[path.length - 1].lng]}
+              >
+                <Popup>
+                  <div className="text-sm">
+                    <div className="font-medium text-status-error">End</div>
+                    <div className="text-text-secondary">{path[path.length - 1].time}</div>
+                  </div>
+                </Popup>
+              </Marker>
+            )}
+          </MapContainer>
         )}
-      </MapContainer>
+      </LeafletComponents>
     </div>
   );
-}
+});
 
 /* ------------------------------------------------
    Small UI components
 ---------------------------------------------------*/
-function KPI({ title, value, subtitle, color, trend, trendValue }) {
+const KPI = React.memo(function KPI({ title, value, subtitle, color, trend, trendValue }) {
   // Convert legacy KPI to new KpiCard format
   const getTypeFromColor = (color) => {
     if (color?.includes('status-info') || color?.includes('blue')) return 'performance';
@@ -158,9 +134,9 @@ function KPI({ title, value, subtitle, color, trend, trendValue }) {
       animated={true}
     />
   );
-}
+});
 
-function MiniStat({ label, value }) {
+const MiniStat = React.memo(function MiniStat({ label, value }) {
   return (
     <div className="flex flex-col space-y-1">
       <div className="text-xs text-text-tertiary font-medium uppercase tracking-wide">
@@ -171,143 +147,35 @@ function MiniStat({ label, value }) {
       </div>
     </div>
   );
-}
+});
 
 /* ------------------------------------------------
    MAIN DASHBOARD
 ---------------------------------------------------*/
 export default function Dashboard() {
-  const [totalAnalytics, setTotalAnalytics] = useState(0);
-  const [recentAnalytics, setRecentAnalytics] = useState([]);
-  const [devices, setDevices] = useState([]);
+  // Use the custom dashboard data hook with caching
+  const {
+    totalAnalytics,
+    recentAnalytics,
+    devices,
+    speedChart,
+    geoPie,
+    locationPath,
+    selectedImei,
+    stats: memoizedStats,
+    loading,
+    locationLoading,
+    error,
+    loadHistory,
+    refreshDashboard,
+    addOptimisticAnalytics
+  } = useDashboardData();
 
-  const [speedChart, setSpeedChart] = useState([]);
-  const [geoPie, setGeoPie] = useState([]);
-
-  // Map states
-  const [selectedImei, setSelectedImei] = useState("");
-  const [locationPath, setLocationPath] = useState([]);
-
-  // Load state
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  /* ------------------------------------------------
-       Load dashboard data
-  ---------------------------------------------------*/
-  useEffect(() => {
-    let mounted = true;
-
-    async function load() {
-      try {
-        setLoading(true);
-
-        const count = await getAnalyticsCount();
-        if (mounted) setTotalAnalytics(Number(count) || 0);
-
-        const recent = await getAnalyticsPaginated(0, 10);
-        if (mounted) setRecentAnalytics(Array.isArray(recent) ? recent : []);
-
-        const devResp = await listDevices();
-        const devArr = Array.isArray(devResp.devices)
-          ? devResp.devices
-          : Array.isArray(devResp.full)
-          ? devResp.full
-          : [];
-
-        if (mounted) setDevices(devArr.slice(0, 10));
-
-        const all = await getAllAnalytics();
-        if (mounted) {
-          buildSpeedChart(all);
-          buildGeoChart(devArr);
-        }
-      } catch (e) {
-        if (mounted) setError(e.message || "Dashboard failed to load");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-
-    load();
-    return () => (mounted = false);
-  }, []);
-
-  /* ------------------------------------------------
-       Chart builders
-  ---------------------------------------------------*/
-  function buildSpeedChart(data) {
-    const ranges = {
-      "0 - 20": 0,
-      "20 - 40": 0,
-      "40 - 60": 0,
-      "60 - 80": 0,
-      "80+": 0,
-    };
-
-    data.forEach((a) => {
-      const s = Number(a.speed || 0);
-
-      if (s <= 20) ranges["0 - 20"]++;
-      else if (s <= 40) ranges["20 - 40"]++;
-      else if (s <= 60) ranges["40 - 60"]++;
-      else if (s <= 80) ranges["60 - 80"]++;
-      else ranges["80+"]++;
-    });
-
-    // Convert to format expected by EnhancedBarChart
-    setSpeedChart(
-      Object.keys(ranges).map((key) => ({
-        name: key,
-        count: ranges[key],
-      }))
-    );
-  }
-
-  function buildGeoChart(devList) {
-    const dist = {};
-    devList.forEach((d) => {
-      const g = d.geoid ?? "Unknown";
-      dist[g] = (dist[g] || 0) + 1;
-    });
-
-    // Convert to format expected by EnhancedPieChart
-    setGeoPie(
-      Object.keys(dist).map((g) => ({
-        name: g,
-        value: dist[g],
-      }))
-    );
-  }
-
-  /* ------------------------------------------------
-       Load location history for map
-  ---------------------------------------------------*/
-  async function loadHistory(imei) {
-    if (!imei) {
-      setSelectedImei("");
-      setLocationPath([]);
-      return;
-    }
-
-    try {
-      const data = await getAnalyticsByImei(imei);
-
-      const formatted = data
-        .map((p) => ({
-          lat: Number(p.latitude),
-          lng: Number(p.longitude),
-          time: p.timestampIso || p.timestamp,
-        }))
-        .filter((p) => !isNaN(p.lat) && !isNaN(p.lng));
-
-      setSelectedImei(imei);
-      setLocationPath(formatted);
-    } catch (e) {
-      console.error("path error:", e);
-      setLocationPath([]);
-    }
-  }
+  // Memoized chart data
+  const memoizedChartData = useMemo(() => ({
+    speedChart,
+    geoPie
+  }), [speedChart, geoPie]);
 
   /* ------------------------------------------------
        Render
@@ -359,43 +227,14 @@ export default function Dashboard() {
 
           <div className="flex items-center gap-8">
             <div className="hidden md:flex gap-8">
-              <MiniStat label="Devices" value={devices.length} />
-              <MiniStat label="Recent" value={recentAnalytics.length} />
+              <MiniStat label="Devices" value={memoizedStats.devicesCount} />
+              <MiniStat label="Recent" value={memoizedStats.recentCount} />
             </div>
 
             {/* REFRESH BUTTON */}
             <button
               className="px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 border border-violet-500/30 rounded-lg text-white font-medium transition-all duration-200 shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30 hover:scale-105"
-              onClick={async () => {
-                try {
-                  setLoading(true);
-                  setError("");
-
-                  const [count, recent, devResp, all] = await Promise.all([
-                    getAnalyticsCount(),
-                    getAnalyticsPaginated(0, 10),
-                    listDevices(),
-                    getAllAnalytics(),
-                  ]);
-
-                  setTotalAnalytics(Number(count) || 0);
-                  setRecentAnalytics(recent);
-
-                  const dArr = Array.isArray(devResp.devices)
-                    ? devResp.devices
-                    : Array.isArray(devResp.full)
-                    ? devResp.full
-                    : [];
-
-                  setDevices(dArr.slice(0, 10));
-                  buildSpeedChart(all);
-                  buildGeoChart(dArr);
-                } catch (e) {
-                  setError(e.message || "Failed to refresh");
-                } finally {
-                  setLoading(false);
-                }
-              }}
+              onClick={refreshDashboard}
             >
               <div className="flex items-center gap-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -413,7 +252,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <KPI 
             title="Total Analytics" 
-            value={totalAnalytics} 
+            value={memoizedStats.totalAnalytics} 
             subtitle="All datapoints" 
             color="text-status-info"
             type="performance"
@@ -424,7 +263,7 @@ export default function Dashboard() {
 
           <KPI 
             title="Total Devices" 
-            value={devices.length} 
+            value={memoizedStats.devicesCount} 
             subtitle="Active devices" 
             color="text-status-success"
             type="status"
@@ -434,7 +273,7 @@ export default function Dashboard() {
 
           <KPI 
             title="Recent Data" 
-            value={recentAnalytics.length} 
+            value={memoizedStats.recentCount} 
             subtitle="Last 10 datapoints" 
             color="text-status-warning"
             type="performance"
@@ -477,7 +316,18 @@ export default function Dashboard() {
             {selectedImei ? (
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-lg -z-10" />
-                <MiniMap path={locationPath} />
+                {locationLoading ? (
+                  <div className="flex items-center justify-center h-80">
+                    <Loading 
+                      type="spinner" 
+                      size="md" 
+                      text="Loading location data..." 
+                      textPosition="bottom"
+                    />
+                  </div>
+                ) : (
+                  <MiniMap path={locationPath} />
+                )}
               </div>
             ) : (
               <div className="text-center py-16 text-slate-300">
@@ -514,7 +364,7 @@ export default function Dashboard() {
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-lg -z-10" />
                   <EnhancedBarChart
-                    data={speedChart}
+                    data={memoizedChartData.speedChart}
                     bars={[{ dataKey: 'count', name: 'Count' }]}
                     height={256}
                     layout="vertical"
@@ -537,7 +387,7 @@ export default function Dashboard() {
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-teal-500/10 rounded-lg -z-10" />
                   <EnhancedPieChart
-                    data={geoPie}
+                    data={memoizedChartData.geoPie}
                     height={256}
                     innerRadius={50}
                     outerRadius={90}
@@ -653,7 +503,7 @@ export default function Dashboard() {
                 <Card.Description className="text-red-100">Overview of registered devices in the system</Card.Description>
               </div>
               <div className="text-sm text-red-200 font-medium bg-red-500/20 px-3 py-1 rounded-lg border border-red-500/30">
-                {devices.length} devices shown
+                {memoizedStats.devicesCount} devices shown
               </div>
             </div>
           </Card.Header>

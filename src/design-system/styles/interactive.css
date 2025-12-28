@@ -1,0 +1,288 @@
+/**
+ * Interactive States and Glassmorphism CSS
+ * Custom CSS for advanced effects that complement Tailwind classes
+ */
+
+/* Glassmorphism keyframe animations */
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes glass-float {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+    filter: blur(0px);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.01);
+    filter: blur(0.5px);
+  }
+}
+
+@keyframes backdrop-pulse {
+  0%, 100% {
+    backdrop-filter: blur(16px) saturate(150%);
+  }
+  50% {
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Interactive state utilities */
+.interactive-base {
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateZ(0); /* Enable GPU acceleration */
+  will-change: transform, box-shadow, background-color;
+}
+
+/* Hover lift effect */
+.hover-lift {
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Glassmorphism base effect */
+.glass-base {
+  backdrop-filter: blur(16px) saturate(150%);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+/* Enhanced glassmorphism with animation */
+.glass-animated {
+  backdrop-filter: blur(16px) saturate(150%);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-animated:hover {
+  backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px) scale(1.01);
+}
+
+/* Gradient border animation */
+.gradient-border {
+  position: relative;
+  background: linear-gradient(45deg, transparent, transparent);
+  background-clip: padding-box;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 2px;
+  background: linear-gradient(45deg, #8b5cf6, #06b6d4, #10b981, #f59e0b, #ef4444, #ec4899);
+  background-size: 200% 200%;
+  border-radius: inherit;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: xor;
+  animation: gradient-shift 3s ease infinite;
+}
+
+/* Focus ring enhancements */
+.focus-ring-enhanced {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.5), 0 0 0 4px rgba(139, 92, 246, 0.1);
+  transition: box-shadow 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Button press effect */
+.button-press {
+  transition: transform 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.button-press:active {
+  transform: scale(0.98);
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Glow effects for different colors */
+.glow-violet {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+}
+
+.glow-blue {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+.glow-teal {
+  box-shadow: 0 0 20px rgba(20, 184, 166, 0.3);
+}
+
+.glow-green {
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+}
+
+.glow-amber {
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+}
+
+.glow-red {
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+}
+
+.glow-pink {
+  box-shadow: 0 0 20px rgba(236, 72, 153, 0.3);
+}
+
+/* Shimmer loading effect */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  animation: shimmer 2s infinite;
+}
+
+/* Responsive interaction adjustments */
+@media (max-width: 640px) {
+  /* Reduce hover effects on mobile for performance */
+  .hover-lift:hover {
+    transform: translateY(-1px) scale(1.01);
+  }
+  
+  .card-hover:hover {
+    transform: translateY(-2px) scale(1.01);
+  }
+  
+  /* Simplify glassmorphism on mobile */
+  .glass-animated {
+    backdrop-filter: blur(8px) saturate(120%);
+  }
+  
+  .glass-animated:hover {
+    backdrop-filter: blur(12px) saturate(140%);
+  }
+}
+
+/* High contrast mode adjustments */
+@media (prefers-contrast: high) {
+  .glass-base,
+  .glass-animated {
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+  }
+  
+  .focus-ring-enhanced {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8), 0 0 0 6px rgba(0, 0, 0, 0.8);
+  }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .interactive-base,
+  .hover-lift,
+  .glass-animated,
+  .card-hover,
+  .button-press {
+    transition: none;
+    animation: none;
+  }
+  
+  .gradient-border::before {
+    animation: none;
+  }
+  
+  .shimmer::after {
+    animation: none;
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .glass-base,
+  .glass-animated {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Disable hover effects on touch devices */
+  .hover-lift:hover,
+  .glass-animated:hover,
+  .card-hover:hover {
+    transform: none;
+    backdrop-filter: inherit;
+    background: inherit;
+    border: inherit;
+    box-shadow: inherit;
+  }
+  
+  /* Enhance active states for touch */
+  .button-press:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  
+  .card-hover:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
+}
+
+/* Print styles */
+@media print {
+  .glass-base,
+  .glass-animated,
+  .gradient-border,
+  .shimmer {
+    background: white !important;
+    border: 1px solid black !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+  
+  .glow-violet,
+  .glow-blue,
+  .glow-teal,
+  .glow-green,
+  .glow-amber,
+  .glow-red,
+  .glow-pink {
+    box-shadow: none !important;
+  }
+}

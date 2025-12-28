@@ -691,7 +691,7 @@ export default function DeviceDetails() {
       </div>
 
       <div className="flex justify-between">
-        <span className="text-slate-400">Dropouts (>10 min)</span>
+        <span className="text-slate-400">Dropouts (&gt;10 min)</span>
         <span>{uptime.dropouts}</span>
       </div>
     </div>

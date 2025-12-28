@@ -2,6 +2,7 @@ import React, { forwardRef } from 'react';
 import { cva } from 'class-variance-authority';
 import { cn } from '../utils/cn';
 import { responsiveTailwindClasses } from '../utils/responsiveColors.js';
+import { interactivePresets, focusStates, createInteractiveProps } from '../utils/interactiveStates.js';
 
 /**
  * Enhanced Card Component
@@ -91,8 +92,8 @@ const cardVariants = cva(
         lg: 'p-6 sm:p-7 md:p-8',     // 24px -> 28px -> 32px
       },
       hover: {
-        // Responsive hover effects - more subtle on mobile
-        true: 'hover:shadow-md sm:hover:shadow-lg md:hover:shadow-xl hover:scale-[1.005] sm:hover:scale-[1.01] md:hover:scale-[1.02] cursor-pointer',
+        // Enhanced hover effects with consistent timing
+        true: 'hover:shadow-lg hover:scale-[1.02] hover:-translate-y-1 cursor-pointer transition-all duration-300 ease-out',
         false: '',
       },
       glowEffect: {

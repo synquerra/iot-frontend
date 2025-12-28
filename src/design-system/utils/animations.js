@@ -89,6 +89,32 @@ export const keyframes = {
       boxShadow: '0 0 10px rgba(139, 92, 246, 0.8), 0 0 20px rgba(139, 92, 246, 0.5), 0 0 30px rgba(139, 92, 246, 0.3)' 
     },
   },
+  shimmer: {
+    '0%': { transform: 'translateX(-100%)' },
+    '100%': { transform: 'translateX(100%)' },
+  },
+  'gradient-shift': {
+    '0%, 100%': { backgroundPosition: '0% 50%' },
+    '50%': { backgroundPosition: '100% 50%' },
+  },
+  'glass-float': {
+    '0%, 100%': { 
+      transform: 'translateY(0px) scale(1)',
+      filter: 'blur(0px)',
+    },
+    '50%': { 
+      transform: 'translateY(-4px) scale(1.01)',
+      filter: 'blur(0.5px)',
+    },
+  },
+  'backdrop-pulse': {
+    '0%, 100%': { 
+      backdropFilter: 'blur(16px) saturate(150%)',
+    },
+    '50%': { 
+      backdropFilter: 'blur(20px) saturate(180%)',
+    },
+  },
 };
 
 // Animation classes for common effects
@@ -167,6 +193,10 @@ export const tailwindAnimations = {
     'pulse': `pulse ${duration.slower} ${easing.default} infinite`,
     'spin': 'spin 1s linear infinite',
     'glow': `glow 2s ${easing.default} infinite`,
+    'shimmer': `shimmer 2s ${easing.default} infinite`,
+    'gradient-shift': `gradient-shift 3s ${easing.default} infinite`,
+    'glass-float': `glass-float 3s ${easing.gentle} infinite`,
+    'backdrop-pulse': `backdrop-pulse 4s ${easing.default} infinite`,
   },
   transitionDuration: {
     fast: duration.fast,
