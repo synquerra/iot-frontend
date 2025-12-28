@@ -1,5 +1,5 @@
 // src/pages/Dashboard.jsx
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { Card } from "../design-system/components/Card";
 import { KpiCard } from "../design-system/components/KpiCard";
 import { Table, TableContainer } from "../design-system/components/Table";
@@ -24,98 +24,118 @@ import {
 } from "../components/LazyCharts";
 
 import { LeafletComponents } from "../components/LazyMap";
+import { EnhancedMiniMap } from "../components/EnhancedMap";
+import { MapboxStyleMap } from "../components/MapboxMap";
 
-// Custom hooks for data management
-import { useDashboardData } from "../hooks/useDashboardData";
+// API utilities
+import {
+  getAnalyticsCount,
+  getAnalyticsPaginated,
+  getAllAnalytics,
+  getAnalyticsByImei,
+} from "../utils/analytics";
+import { listDevices } from "../utils/device";
 
 // Design system utilities
 import { cn } from "../design-system/utils/cn";
 
-// Performance monitoring utilities
-import { usePerformanceMonitor, createPerformanceProfiler } from "../utils/performanceMonitor";
-import { performanceMonitor } from "../design-system/utils/performance";
-
 /* ------------------------------------------------
    FitBounds — proper auto zoom for device path
 ---------------------------------------------------*/
-const FitBounds = React.memo(function FitBounds({ path, useMap }) {
+function FitBounds({ path, useMap }) {
   const map = useMap();
 
   useEffect(() => {
     if (!path || path.length === 0) return;
 
-    const bounds = path.map((p) => [p.lat, p.lng]);
-    map.fitBounds(bounds, { padding: [50, 50] });
-
+    try {
+      const bounds = path.map((p) => [p.lat, p.lng]);
+      if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [50, 50] });
+      }
+    } catch (error) {
+      console.error("FitBounds error:", error);
+    }
   }, [path, map]);
 
   return null;
-});
+}
 
 /* ------------------------------------------------
-   MiniMap component with enhanced styling and performance optimizations
+   MiniMap component with enhanced street-level detail
 ---------------------------------------------------*/
-const MiniMap = React.memo(function MiniMap({ path }) {
+function MiniMap({ path }) {
   const fallback = [20.5937, 78.9629]; // India
 
-  // Performance monitoring for map component
-  const { metrics, recordRender } = usePerformanceMonitor('MiniMap');
-  
-  // Memoize path positions to avoid recalculation
-  const pathPositions = useMemo(() => {
-    return path.map((p) => [p.lat, p.lng]);
-  }, [path]);
+  console.log("MiniMap rendering with path:", path);
 
-  // Memoize map styles to prevent unnecessary re-renders
-  const mapStyles = useMemo(() => ({
+  // Ensure path is always an array
+  const safePath = Array.isArray(path) ? path : [];
+  
+  // Path positions for map rendering
+  const pathPositions = safePath.map((p) => [p.lat, p.lng]);
+
+  // Enhanced map styles with better street-level detail
+  const mapStyles = {
     height: "100%", 
     width: "100%"
-  }), []);
+  };
 
-  useEffect(() => {
-    recordRender();
-  });
+  // Determine map center - use first path point or fallback
+  const mapCenter = safePath.length > 0 ? [safePath[0].lat, safePath[0].lng] : fallback;
+  
+  console.log("Map center:", mapCenter, "Path positions:", pathPositions.length);
 
   return (
     <div className={cn(
       'rounded-xl overflow-hidden shadow-2xl',
       'border border-white/20 backdrop-blur-sm',
       'h-full w-full relative',
-      // Responsive height constraints
       'min-h-[280px] sm:min-h-[320px] md:min-h-[360px] lg:min-h-[400px]'
     )}>
       <LeafletComponents>
         {({ MapContainer, TileLayer, Marker, Polyline, Popup, useMap }) => (
           <MapContainer
-            center={fallback}
-            zoom={5}
+            center={mapCenter}
+            zoom={safePath.length > 0 ? 15 : 5} // Higher zoom for better street detail
             scrollWheelZoom
             style={mapStyles}
             className="rounded-xl"
           >
-            <FitBounds path={path} useMap={useMap} />
+            <FitBounds path={safePath} useMap={useMap} />
 
+            {/* Enhanced Street-Level Tile Layer with better detail */}
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution="© OpenStreetMap contributors"
+              maxZoom={19} // Allow higher zoom for street-level detail
+              minZoom={3}
             />
 
-            {/* Enhanced path rendering with gradient and improved visualization */}
-            {path.length > 1 && (
+            {/* Additional detailed tile layer for street names and features */}
+            <TileLayer
+              url="https://stamen-tiles-{s}.a.ssl.fastly.net/toner-labels/{z}/{x}/{y}{r}.png"
+              attribution="Map tiles by Stamen Design, CC BY 3.0 — Map data © OpenStreetMap contributors"
+              opacity={0.7}
+              maxZoom={18}
+            />
+
+            {/* Enhanced path rendering with street-by-street detail */}
+            {safePath.length > 1 && pathPositions.length > 1 && (
               <>
                 {/* Shadow path for depth effect */}
                 <Polyline
                   positions={pathPositions}
                   color="#1e293b"
-                  weight={6}
-                  opacity={0.3}
+                  weight={8}
+                  opacity={0.4}
                   className="drop-shadow-xl"
                 />
-                {/* Main gradient path */}
+                {/* Main gradient path with enhanced visibility */}
                 <Polyline
                   positions={pathPositions}
                   color="#3b82f6"
-                  weight={4}
+                  weight={5}
                   opacity={0.95}
                   className="drop-shadow-lg"
                   dashArray="0"
@@ -124,56 +144,97 @@ const MiniMap = React.memo(function MiniMap({ path }) {
                 <Polyline
                   positions={pathPositions}
                   color="#60a5fa"
-                  weight={2}
-                  opacity={0.7}
-                  dashArray="10, 5"
+                  weight={3}
+                  opacity={0.8}
+                  dashArray="8, 4"
                   className="animate-pulse"
+                />
+                {/* Direction indicators for street-by-street tracking */}
+                <Polyline
+                  positions={pathPositions}
+                  color="#ffffff"
+                  weight={1}
+                  opacity={0.6}
+                  dashArray="2, 8"
                 />
               </>
             )}
 
-            {/* Enhanced start marker with improved styling */}
-            {path.length > 0 && (
-              <Marker position={[path[0].lat, path[0].lng]}>
-                <Popup className="rounded-lg shadow-xl backdrop-blur-md">
-                  <div className="text-sm p-3 bg-white/95 backdrop-blur-sm rounded-lg border border-green-200/50">
-                    <div className="font-bold text-green-600 mb-2 flex items-center gap-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-lg shadow-green-500/50"></div>
-                      <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                        Journey Start
-                      </span>
-                    </div>
-                    <div className="text-gray-600 text-xs font-medium mb-1">{path[0].time}</div>
-                    <div className="text-gray-500 text-xs font-mono bg-gray-100/80 px-2 py-1 rounded border">
-                      {path[0].lat.toFixed(4)}, {path[0].lng.toFixed(4)}
-                    </div>
-                    <div className="mt-2 text-xs text-green-600 font-medium">
-                      📍 Starting Point
-                    </div>
-                  </div>
-                </Popup>
-              </Marker>
-            )}
+            {/* Enhanced markers with street-level information */}
+            {safePath.map((point, index) => {
+              const isStart = index === 0;
+              const isEnd = index === safePath.length - 1;
+              const isWaypoint = !isStart && !isEnd;
+              
+              // Show markers for start, end, and every 5th waypoint for street-level detail
+              if (isStart || isEnd || (isWaypoint && index % 5 === 0)) {
+                return (
+                  <Marker key={index} position={[point.lat, point.lng]}>
+                    <Popup className="rounded-lg shadow-xl backdrop-blur-md">
+                      <div className="text-sm p-3 bg-white/95 backdrop-blur-sm rounded-lg border border-gray-200/50">
+                        <div className={cn(
+                          "font-bold mb-2 flex items-center gap-2",
+                          isStart ? "text-green-600" : isEnd ? "text-red-600" : "text-blue-600"
+                        )}>
+                          <div className={cn(
+                            "w-3 h-3 rounded-full animate-pulse shadow-lg",
+                            isStart ? "bg-green-500 shadow-green-500/50" : 
+                            isEnd ? "bg-red-500 shadow-red-500/50" : 
+                            "bg-blue-500 shadow-blue-500/50"
+                          )}></div>
+                          <span className={cn(
+                            "bg-gradient-to-r bg-clip-text text-transparent",
+                            isStart ? "from-green-600 to-emerald-600" : 
+                            isEnd ? "from-red-600 to-rose-600" : 
+                            "from-blue-600 to-cyan-600"
+                          )}>
+                            {isStart ? "Journey Start" : isEnd ? "Journey End" : `Waypoint ${Math.floor(index / 5) + 1}`}
+                          </span>
+                        </div>
+                        <div className="text-gray-600 text-xs font-medium mb-2">{point.time}</div>
+                        <div className="text-gray-500 text-xs font-mono bg-gray-100/80 px-2 py-1 rounded border mb-2">
+                          {point.lat.toFixed(6)}, {point.lng.toFixed(6)}
+                        </div>
+                        <div className={cn(
+                          "text-xs font-medium",
+                          isStart ? "text-green-600" : isEnd ? "text-red-600" : "text-blue-600"
+                        )}>
+                          {isStart ? "📍 Starting Point" : isEnd ? "🏁 Destination" : "🚩 Checkpoint"}
+                        </div>
+                        {/* Street-level context information */}
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                          <div className="text-xs text-gray-500">
+                            <div>Point {index + 1} of {safePath.length}</div>
+                            {index > 0 && (
+                              <div className="mt-1">
+                                Distance from previous: ~{
+                                  Math.round(
+                                    Math.sqrt(
+                                      Math.pow(point.lat - safePath[index - 1].lat, 2) + 
+                                      Math.pow(point.lng - safePath[index - 1].lng, 2)
+                                    ) * 111000 // Rough conversion to meters
+                                  )
+                                }m
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </Popup>
+                  </Marker>
+                );
+              }
+              return null;
+            })}
 
-            {/* Enhanced end marker with improved styling */}
-            {path.length > 1 && (
-              <Marker
-                position={[path[path.length - 1].lat, path[path.length - 1].lng]}
-              >
-                <Popup className="rounded-lg shadow-xl backdrop-blur-md">
-                  <div className="text-sm p-3 bg-white/95 backdrop-blur-sm rounded-lg border border-red-200/50">
-                    <div className="font-bold text-red-600 mb-2 flex items-center gap-2">
-                      <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-lg shadow-red-500/50"></div>
-                      <span className="bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
-                        Journey End
-                      </span>
-                    </div>
-                    <div className="text-gray-600 text-xs font-medium mb-1">{path[path.length - 1].time}</div>
-                    <div className="text-gray-500 text-xs font-mono bg-gray-100/80 px-2 py-1 rounded border">
-                      {path[path.length - 1].lat.toFixed(4)}, {path[path.length - 1].lng.toFixed(4)}
-                    </div>
-                    <div className="mt-2 text-xs text-red-600 font-medium">
-                      🏁 Destination
+            {/* Show a default marker when no path data */}
+            {safePath.length === 0 && (
+              <Marker position={fallback}>
+                <Popup>
+                  <div className="text-sm p-2">
+                    <div className="font-bold text-blue-600 mb-1">No Location Data</div>
+                    <div className="text-gray-600 text-xs">
+                      Select a device to view its street-by-street location history
                     </div>
                   </div>
                 </Popup>
@@ -184,17 +245,7 @@ const MiniMap = React.memo(function MiniMap({ path }) {
       </LeafletComponents>
     </div>
   );
-}, (prevProps, nextProps) => {
-  // Custom comparison function for better performance
-  return (
-    prevProps.path.length === nextProps.path.length &&
-    prevProps.path.every((point, index) => 
-      point.lat === nextProps.path[index]?.lat &&
-      point.lng === nextProps.path[index]?.lng &&
-      point.time === nextProps.path[index]?.time
-    )
-  );
-});
+}
 
 /* ------------------------------------------------
    Small UI components
@@ -204,29 +255,153 @@ const MiniMap = React.memo(function MiniMap({ path }) {
    MAIN DASHBOARD
 ---------------------------------------------------*/
 export default function Dashboard() {
-  // Use the custom dashboard data hook with caching
-  const {
-    totalAnalytics,
-    recentAnalytics,
-    devices,
-    speedChart,
-    geoPie,
-    locationPath,
-    selectedImei,
-    stats: memoizedStats,
-    loading,
-    locationLoading,
-    error,
-    loadHistory,
-    refreshDashboard,
-    addOptimisticAnalytics
-  } = useDashboardData();
+  // State management
+  const [totalAnalytics, setTotalAnalytics] = useState(0);
+  const [recentAnalytics, setRecentAnalytics] = useState([]);
+  const [devices, setDevices] = useState([]);
+  const [allAnalytics, setAllAnalytics] = useState([]);
+  const [selectedImei, setSelectedImei] = useState("");
+  const [locationPath, setLocationPath] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [mapProvider, setMapProvider] = useState('enhanced'); // 'enhanced' or 'mapbox'
 
-  // Memoized chart data
-  const memoizedChartData = useMemo(() => ({
-    speedChart,
-    geoPie
-  }), [speedChart, geoPie]);
+  // Process speed chart data
+  const speedChart = (() => {
+    const ranges = {
+      "0 - 20": 0,
+      "20 - 40": 0,
+      "40 - 60": 0,
+      "60 - 80": 0,
+      "80+": 0,
+    };
+
+    allAnalytics.forEach((a) => {
+      const s = Number(a.speed || 0);
+      if (s <= 20) ranges["0 - 20"]++;
+      else if (s <= 40) ranges["20 - 40"]++;
+      else if (s <= 60) ranges["40 - 60"]++;
+      else if (s <= 80) ranges["60 - 80"]++;
+      else ranges["80+"]++;
+    });
+
+    return Object.keys(ranges).map((key) => ({
+      name: key,
+      count: ranges[key],
+    }));
+  })();
+
+  // Process geographic distribution
+  const geoPie = (() => {
+    const dist = {};
+    devices.forEach((d) => {
+      const g = d.geoid ?? "Unknown";
+      dist[g] = (dist[g] || 0) + 1;
+    });
+
+    return Object.keys(dist).map((g) => ({
+      name: g,
+      value: dist[g],
+    }));
+  })();
+
+  // Calculate stats
+  const stats = {
+    devicesCount: devices.length,
+    recentCount: recentAnalytics.length,
+    totalAnalytics: Number(totalAnalytics) || 0
+  };
+
+  // Load dashboard data
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      console.log("Loading dashboard data...");
+      const [countData, recentData, devicesData, allData] = await Promise.all([
+        getAnalyticsCount(),
+        getAnalyticsPaginated(0, 10),
+        listDevices(),
+        getAllAnalytics()
+      ]);
+
+      console.log("Dashboard data loaded:", {
+        countData,
+        recentData,
+        devicesData,
+        allData: allData?.length
+      });
+
+      setTotalAnalytics(countData || 0);
+      setRecentAnalytics(Array.isArray(recentData) ? recentData : []);
+      
+      const devicesList = Array.isArray(devicesData?.devices)
+        ? devicesData.devices
+        : Array.isArray(devicesData?.full)
+        ? devicesData.full
+        : [];
+      
+      console.log("Processed devices list:", devicesList);
+      setDevices(devicesList.slice(0, 10));
+      
+      setAllAnalytics(Array.isArray(allData) ? allData : []);
+    } catch (err) {
+      console.error("Dashboard data loading error:", err);
+      setError("Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load location history
+  const loadHistory = async (imei) => {
+    console.log("loadHistory called with imei:", imei);
+    
+    if (!imei) {
+      setSelectedImei("");
+      setLocationPath([]);
+      return;
+    }
+
+    setSelectedImei(imei);
+    setLocationLoading(true);
+    
+    try {
+      console.log("Fetching location data for imei:", imei);
+      const locationData = await getAnalyticsByImei(imei);
+      console.log("Raw location data:", locationData);
+      
+      const processedPath = Array.isArray(locationData) 
+        ? locationData
+            .map((p) => ({
+              lat: Number(p.latitude),
+              lng: Number(p.longitude),
+              time: p.timestampIso || p.timestamp,
+            }))
+            .filter((p) => !isNaN(p.lat) && !isNaN(p.lng))
+        : [];
+      
+      console.log("Processed location path:", processedPath);
+      setLocationPath(processedPath);
+    } catch (e) {
+      console.error("Location loading error:", e);
+      setLocationPath([]);
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+  // Refresh dashboard
+  const refreshDashboard = () => {
+    loadDashboardData();
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
 
   /* ------------------------------------------------
        Render
@@ -257,9 +432,9 @@ export default function Dashboard() {
         title="IoT Analytics Dashboard"
         subtitle="Live analytics dashboard with comprehensive device monitoring and real-time insights"
         stats={{
-          devicesCount: memoizedStats.devicesCount,
-          recentCount: memoizedStats.recentCount,
-          totalAnalytics: memoizedStats.totalAnalytics,
+          devicesCount: stats.devicesCount,
+          recentCount: stats.recentCount,
+          totalAnalytics: stats.totalAnalytics,
           // Add trend data for enhanced statistics
           devicesTrend: "stable",
           recentTrend: "up",
@@ -281,7 +456,7 @@ export default function Dashboard() {
           <div className="transform transition-all duration-300 hover:scale-105 hover:shadow-2xl">
             <KpiCard
               title="Total Analytics"
-              value={memoizedStats.totalAnalytics}
+              value={stats.totalAnalytics}
               subtitle="All datapoints collected"
               type="performance"
               colorScheme="blue"
@@ -302,7 +477,7 @@ export default function Dashboard() {
           <div className="transform transition-all duration-300 hover:scale-105 hover:shadow-2xl">
             <KpiCard
               title="Active Devices"
-              value={memoizedStats.devicesCount}
+              value={stats.devicesCount}
               subtitle="Connected IoT devices"
               type="status"
               colorScheme="green"
@@ -323,7 +498,7 @@ export default function Dashboard() {
           <div className="transform transition-all duration-300 hover:scale-105 hover:shadow-2xl sm:col-span-2 lg:col-span-1">
             <KpiCard
               title="Recent Activity"
-              value={memoizedStats.recentCount}
+              value={stats.recentCount}
               subtitle="Latest data points"
               type="growth"
               colorScheme="amber"
@@ -400,71 +575,87 @@ export default function Dashboard() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
               <div className="flex-1">
                 <Card.Title className="text-white text-xl font-bold bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
-                  Device Location Map
+                  Street-Level Device Tracking
                 </Card.Title>
                 <Card.Description className="text-blue-100/80 mt-1">
-                  Interactive map showing device locations and movement paths
+                  Interactive street-by-street device location history with detailed waypoint tracking
                 </Card.Description>
               </div>
               
-              {/* Enhanced Device Selection Dropdown with Advanced Glassmorphism */}
-              <div className="relative group">
-                <select
-                  value={selectedImei}
-                  onChange={(e) => loadHistory(e.target.value)}
-                  className={cn(
-                    // Base styling with advanced glassmorphism
-                    'px-5 py-3.5 min-w-[200px] rounded-xl',
-                    'bg-white/15 backdrop-blur-xl border border-white/30',
-                    'text-white placeholder-white/70',
-                    'shadow-xl shadow-black/30',
-                    
-                    // Enhanced interactive states with smooth transitions
-                    'hover:bg-white/20 hover:border-white/40 hover:shadow-2xl hover:shadow-blue-500/25',
-                    'focus:bg-white/25 focus:border-blue-300/60 focus:outline-none focus:ring-4 focus:ring-blue-400/20',
-                    'active:scale-[0.98] active:bg-white/30',
-                    
-                    // Smooth transitions with spring-like easing
-                    'transition-all duration-300 ease-out',
-                    
-                    // Enhanced typography
-                    'text-sm font-semibold tracking-wide',
-                    
-                    // Responsive sizing with better proportions
-                    'sm:min-w-[240px] md:min-w-[260px] lg:min-w-[280px]',
-                    
-                    // Additional glassmorphism effects
-                    'backdrop-saturate-150 backdrop-contrast-125'
-                  )}
-                >
-                  <option value="" className="bg-slate-900/95 text-white font-medium">
-                    🗺️ Select device to track
-                  </option>
-                  {devices.map((d) => (
-                    <option 
-                      key={d.imei} 
-                      value={d.imei} 
-                      className="bg-slate-900/95 text-white hover:bg-slate-800/95 font-medium py-2"
-                    >
-                      📱 Device: {d.imei}
-                    </option>
-                  ))}
-                </select>
-                
-                {/* Enhanced dropdown icon overlay with animation */}
-                <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none transition-transform duration-200 group-hover:scale-110">
-                  <svg 
-                    className="w-5 h-5 text-white/80 drop-shadow-lg" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
+              <div className="flex items-center gap-3">
+                {/* Map Provider Selector */}
+                <div className="relative group">
+                  <select
+                    value={mapProvider}
+                    onChange={(e) => setMapProvider(e.target.value)}
+                    className={cn(
+                      'px-4 py-2.5 min-w-[140px] rounded-xl',
+                      'bg-white/15 backdrop-blur-xl border border-white/30',
+                      'text-white placeholder-white/70',
+                      'shadow-xl shadow-black/30',
+                      'hover:bg-white/20 hover:border-white/40',
+                      'focus:bg-white/25 focus:border-blue-300/60 focus:outline-none',
+                      'transition-all duration-300 ease-out',
+                      'text-sm font-semibold tracking-wide'
+                    )}
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                  </svg>
+                    <option value="enhanced" className="bg-slate-900/95 text-white font-medium">
+                      🗺️ Enhanced Map
+                    </option>
+                    <option value="mapbox" className="bg-slate-900/95 text-white font-medium">
+                      🛰️ Satellite Map
+                    </option>
+                  </select>
                 </div>
-                
-                {/* Subtle glow effect on hover */}
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-400/0 via-cyan-400/0 to-teal-400/0 group-hover:from-blue-400/10 group-hover:via-cyan-400/5 group-hover:to-teal-400/10 transition-all duration-300 pointer-events-none" />
+
+                {/* Enhanced Device Selection Dropdown */}
+                <div className="relative group">
+                  <select
+                    value={selectedImei}
+                    onChange={(e) => loadHistory(e.target.value)}
+                    className={cn(
+                      'px-5 py-3.5 min-w-[200px] rounded-xl',
+                      'bg-white/15 backdrop-blur-xl border border-white/30',
+                      'text-white placeholder-white/70',
+                      'shadow-xl shadow-black/30',
+                      'hover:bg-white/20 hover:border-white/40 hover:shadow-2xl hover:shadow-blue-500/25',
+                      'focus:bg-white/25 focus:border-blue-300/60 focus:outline-none focus:ring-4 focus:ring-blue-400/20',
+                      'active:scale-[0.98] active:bg-white/30',
+                      'transition-all duration-300 ease-out',
+                      'text-sm font-semibold tracking-wide',
+                      'sm:min-w-[240px] md:min-w-[260px] lg:min-w-[280px]',
+                      'backdrop-saturate-150 backdrop-contrast-125'
+                    )}
+                  >
+                    <option value="" className="bg-slate-900/95 text-white font-medium">
+                      🗺️ Select device to track
+                    </option>
+                    {devices.map((d) => (
+                      <option 
+                        key={d.imei} 
+                        value={d.imei} 
+                        className="bg-slate-900/95 text-white hover:bg-slate-800/95 font-medium py-2"
+                      >
+                        📱 Device: {d.imei}
+                      </option>
+                    ))}
+                  </select>
+                  
+                  {/* Enhanced dropdown icon overlay with animation */}
+                  <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none transition-transform duration-200 group-hover:scale-110">
+                    <svg 
+                      className="w-5 h-5 text-white/80 drop-shadow-lg" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                  
+                  {/* Subtle glow effect on hover */}
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-400/0 via-cyan-400/0 to-teal-400/0 group-hover:from-blue-400/10 group-hover:via-cyan-400/5 group-hover:to-teal-400/10 transition-all duration-300 pointer-events-none" />
+                </div>
               </div>
             </div>
           </Card.Header>
@@ -472,156 +663,49 @@ export default function Dashboard() {
           <Card.Content className="pt-6 relative z-10">
             {selectedImei ? (
               <div className="relative">
-                {/* Enhanced gradient background for map container */}
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/15 via-cyan-500/10 to-teal-500/15 rounded-xl -z-10" />
-                
-                {/* Responsive Map Container with Proper Aspect Ratios */}
-                <div className={cn(
-                  'relative rounded-xl overflow-hidden',
-                  'border border-white/20 shadow-2xl shadow-blue-500/20',
-                  'backdrop-blur-sm',
-                  // Responsive aspect ratios
-                  'aspect-video sm:aspect-[4/3] md:aspect-video lg:aspect-[21/9]',
-                  // Minimum heights for usability
-                  'min-h-[280px] sm:min-h-[320px] md:min-h-[360px] lg:min-h-[400px]'
-                )}>
+                {/* Simple Map Container for debugging */}
+                <div className="relative rounded-xl overflow-hidden border border-white/20 shadow-xl min-h-[400px] bg-slate-800">
                   {locationLoading ? (
-                    /* Enhanced Loading States with Skeleton UI and Smooth Animations */
-                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-900/40 to-cyan-900/40 backdrop-blur-md">
-                      {/* Enhanced skeleton map background with animated elements */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-slate-800/50 to-slate-700/50 animate-pulse" />
-                      
-                      {/* Animated map grid overlay */}
-                      <div className="absolute inset-0 opacity-20">
-                        <div className="grid grid-cols-8 grid-rows-6 h-full w-full gap-1 p-4">
-                          {Array.from({ length: 48 }).map((_, i) => (
-                            <div
-                              key={i}
-                              className="bg-white/10 rounded animate-pulse"
-                              style={{
-                                animationDelay: `${(i * 0.05)}s`,
-                                animationDuration: '2s',
-                              }}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      
-                      {/* Loading spinner with enhanced styling and floating animation */}
-                      <div className="relative z-10 flex flex-col items-center gap-6 animate-bounce">
-                        <div className="relative">
-                          {/* Outer glow ring */}
-                          <div className="absolute inset-0 w-16 h-16 border-4 border-blue-400/30 rounded-full animate-ping" />
-                          {/* Inner spinner */}
-                          <Loading 
-                            type="spinner" 
-                            size="xl" 
-                            color="white"
-                            className="drop-shadow-2xl relative z-10"
-                          />
-                        </div>
-                        
-                        <div className="text-center space-y-2">
-                          <div className="text-white font-bold text-xl mb-2 animate-pulse">
-                            Loading location data...
-                          </div>
-                          <div className="text-blue-200/90 text-sm font-medium">
-                            Fetching device movement history
-                          </div>
-                          
-                          {/* Animated dots indicator */}
-                          <div className="flex justify-center items-center gap-1 mt-3">
-                            {[0, 1, 2].map((i) => (
-                              <div
-                                key={i}
-                                className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
-                                style={{
-                                  animationDelay: `${i * 0.2}s`,
-                                  animationDuration: '1s',
-                                }}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Enhanced animated loading bars with progress simulation */}
-                      <div className="absolute bottom-6 left-6 right-6 space-y-3">
-                        <div className="space-y-2">
-                          <div className="text-xs text-blue-200/80 font-medium">Loading progress</div>
-                          <div className="h-2 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
-                            <div 
-                              className="h-full bg-gradient-to-r from-blue-400 via-cyan-400 to-teal-400 rounded-full transition-all duration-1000 ease-out animate-pulse" 
-                              style={{ width: '75%' }} 
-                            />
-                          </div>
-                        </div>
-                        <div className="h-1.5 bg-white/15 rounded-full overflow-hidden backdrop-blur-sm">
-                          <div 
-                            className="h-full bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 rounded-full transition-all duration-1500 ease-out animate-pulse delay-300" 
-                            style={{ width: '60%' }} 
-                          />
-                        </div>
-                        
-                        {/* Status text */}
-                        <div className="text-xs text-blue-200/70 font-medium animate-pulse">
-                          Connecting to location services...
-                        </div>
+                    <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80">
+                      <Loading 
+                        type="spinner" 
+                        size="xl" 
+                        color="white"
+                        className="drop-shadow-2xl"
+                      />
+                      <div className="ml-4 text-white">
+                        Loading location data...
                       </div>
                     </div>
                   ) : (
-                    /* Enhanced Map Component */
                     <div className="w-full h-full relative">
-                      {/* Map overlay with subtle effects */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-black/5 pointer-events-none z-10 rounded-xl" />
+                      {/* Render map based on selected provider */}
+                      {mapProvider === 'enhanced' ? (
+                        <EnhancedMiniMap path={locationPath} />
+                      ) : (
+                        <MapboxStyleMap path={locationPath} />
+                      )}
                       
-                      <MiniMap path={locationPath} />
+                      {/* Map Provider Badge */}
+                      <div className="absolute top-4 left-4 z-20 bg-black/70 backdrop-blur-xl text-white px-3 py-2 rounded-lg text-xs font-semibold border border-white/20">
+                        {mapProvider === 'enhanced' ? '🗺️ Enhanced Leaflet' : '🛰️ Satellite View'}
+                        <div className="text-white/70 text-xs mt-1">
+                          Points: {locationPath.length}
+                        </div>
+                      </div>
                       
-                      {/* Enhanced map controls overlay with glassmorphism */}
-                      <div className="absolute top-4 right-4 z-20 flex flex-col gap-3">
+                      {/* Refresh button */}
+                      <div className="absolute top-4 right-4 z-20">
                         <button 
-                          className={cn(
-                            'p-3 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40',
-                            'hover:bg-white/30 hover:scale-110 hover:shadow-lg hover:shadow-blue-500/25',
-                            'active:scale-95 active:bg-white/40',
-                            'transition-all duration-200 ease-out',
-                            'text-white shadow-xl shadow-black/20',
-                            'group relative overflow-hidden'
-                          )}
+                          className="p-3 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40 hover:bg-white/30 hover:scale-110 text-white transition-all duration-200"
                           onClick={() => loadHistory(selectedImei)}
                           title="Refresh location data"
                         >
-                          {/* Button glow effect */}
-                          <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                          
-                          <svg className="w-5 h-5 relative z-10 group-hover:rotate-180 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                           </svg>
                         </button>
                       </div>
-                      
-                      {/* Enhanced path info overlay with glassmorphism */}
-                      {locationPath.length > 0 && (
-                        <div className="absolute bottom-4 left-4 z-20 bg-black/50 backdrop-blur-xl rounded-xl px-4 py-3 border border-white/30 shadow-xl shadow-black/30">
-                          <div className="flex items-center gap-3">
-                            {/* Path icon */}
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/30 to-cyan-500/30 flex items-center justify-center backdrop-blur-sm border border-white/20">
-                              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m0 0L9 7" />
-                              </svg>
-                            </div>
-                            
-                            <div className="flex-1">
-                              <div className="text-white text-sm font-bold mb-1">
-                                Journey Path: {locationPath.length} points
-                              </div>
-                              <div className="text-white/80 text-xs font-medium">
-                                {locationPath[0]?.time} → {locationPath[locationPath.length - 1]?.time}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
@@ -670,7 +754,7 @@ export default function Dashboard() {
                     No device selected
                   </div>
                   <div className="text-blue-200/90 text-base max-w-lg mx-auto leading-relaxed font-medium">
-                    Choose a device from the dropdown above to view its location history and movement patterns on the interactive map
+                    Choose a device from the dropdown above to view its detailed street-by-street location history with enhanced waypoint tracking and movement patterns
                   </div>
                   
                   {/* Enhanced call to action with glassmorphism */}
@@ -790,7 +874,7 @@ export default function Dashboard() {
                     {/* Enhanced Chart Component with Interactive Tooltips */}
                     <div className="relative rounded-xl overflow-hidden border border-white/20 backdrop-blur-sm">
                       <EnhancedBarChart
-                        data={memoizedChartData.speedChart}
+                        data={speedChart}
                         bars={[{ dataKey: 'count', name: 'Speed Count' }]}
                         height={320}
                         layout="vertical"
@@ -811,7 +895,7 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3">
                       <div className="w-3 h-3 bg-amber-400 rounded-full animate-pulse shadow-lg shadow-amber-400/50"></div>
                       <span className="text-amber-200/90 font-medium">
-                        {memoizedChartData.speedChart?.length || 0} speed ranges
+                        {speedChart?.length || 0} speed ranges
                       </span>
                     </div>
                     <div className="text-amber-200/70 font-medium">
@@ -894,7 +978,7 @@ export default function Dashboard() {
                     {/* Enhanced Chart Component with Interactive Tooltips */}
                     <div className="relative rounded-xl overflow-hidden border border-white/20 backdrop-blur-sm">
                       <EnhancedPieChart
-                        data={memoizedChartData.geoPie}
+                        data={geoPie}
                         height={320}
                         innerRadius={60}
                         outerRadius={110}
@@ -916,7 +1000,7 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3">
                       <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
                       <span className="text-green-200/90 font-medium">
-                        {memoizedChartData.geoPie?.length || 0} regions
+                        {geoPie?.length || 0} regions
                       </span>
                     </div>
                     <div className="text-green-200/70 font-medium">
@@ -988,7 +1072,7 @@ export default function Dashboard() {
               <div className="ml-6">
                 <StatusBadge 
                   type="info" 
-                  value={`${memoizedStats.recentCount} records`}
+                  value={`${stats.recentCount} records`}
                   size="md"
                 />
               </div>
@@ -1141,7 +1225,7 @@ export default function Dashboard() {
               
               <div className="flex items-center gap-3">
                 <StatusBadge type="success" value="Live" size="sm" />
-                <StatusBadge type="info" value={`${memoizedStats.recentCount} total`} size="sm" />
+                <StatusBadge type="info" value={`${stats.recentCount} total`} size="sm" />
               </div>
             </div>
           </div>
@@ -1180,7 +1264,7 @@ export default function Dashboard() {
               <div className="ml-6">
                 <StatusBadge 
                   type="success" 
-                  value={`${memoizedStats.devicesCount} devices`}
+                  value={`${stats.devicesCount} devices`}
                   size="md"
                 />
               </div>
@@ -1339,7 +1423,7 @@ export default function Dashboard() {
               
               <div className="flex items-center gap-3">
                 <StatusBadge type="success" value="All Connected" size="sm" />
-                <StatusBadge type="info" value={`${memoizedStats.devicesCount} total`} size="sm" />
+                <StatusBadge type="info" value={`${stats.devicesCount} total`} size="sm" />
               </div>
             </div>
           </div>
