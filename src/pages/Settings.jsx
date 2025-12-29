@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { logoutUser } from '../utils/auth'
 import { Card, Input, Select, Button } from '../design-system/components'
 import {
   SectionDivider,
@@ -9,6 +11,7 @@ import {
 import { cn } from "../design-system/utils/cn"
 
 export default function Settings() {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('account')
   const [displayName, setDisplayName] = useState('John Doe')
   const [email, setEmail] = useState('john.doe@example.com')
@@ -35,9 +38,9 @@ export default function Settings() {
   }
 
   const handleLogout = () => {
-    // Implement logout functionality
     console.log('Logging out...')
-    // Clear session, redirect to login, etc.
+    logoutUser()
+    navigate('/login')
   }
 
   const tabs = [

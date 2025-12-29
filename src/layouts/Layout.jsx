@@ -37,6 +37,15 @@ function Sidebar() {
     { to: "/settings", label: "Settings", icon: <FiSettings />, colorScheme: "pink", description: "User preferences" },
   ];
 
+  // Logout action item (separate from navigation links)
+  const logoutAction = {
+    label: "Logout",
+    icon: <FiLogOut />,
+    colorScheme: "red",
+    description: "Sign out of account",
+    onClick: handleLogout
+  };
+
   const userEmail = localStorage.getItem("userEmail") || "admin@example.com";
 
   return (
@@ -115,15 +124,28 @@ function Sidebar() {
             </NavLink>
           );
         })}
+
+        {/* Logout button styled as menu item */}
+        <button
+          onClick={logoutAction.onClick}
+          className="group flex items-center gap-3 px-3 py-3 rounded-lg font-medium text-sm transition-all duration-300 ease-out relative overflow-hidden text-slate-300 hover:text-white hover:bg-red-900/20 hover:border hover:border-red-500/30 w-full"
+        >
+          {/* Icon */}
+          <span className="text-lg transition-all duration-300 group-hover:scale-110 group-hover:text-red-400">
+            {logoutAction.icon}
+          </span>
+          
+          {/* Label */}
+          <div className="flex flex-col">
+            <span className="transition-colors duration-200">{logoutAction.label}</span>
+          </div>
+          
+          {/* Hover glow effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-red-700/0 via-red-600/5 to-red-700/0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        </button>
       </nav>
 
-      {/* Colorful section divider */}
-      <div className="my-6 relative">
-        <div className="h-px bg-gradient-to-r from-transparent via-slate-600/50 to-transparent" />
-        <div className="absolute inset-0 h-px bg-gradient-to-r from-violet-500/20 via-teal-400/20 to-violet-500/20 blur-sm" />
-      </div>
-
-      {/* Enhanced user section with gradient background */}
+      {/* Enhanced user section with just user info */}
       <div className="mt-auto pt-6 border-t border-slate-800/60 relative z-10">
         <div className="px-3 mb-4 p-3 rounded-lg bg-gradient-to-r from-slate-800/40 to-slate-700/40 border border-slate-700/30">
           <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1 flex items-center gap-2">
@@ -134,14 +156,6 @@ function Sidebar() {
             {userEmail}
           </div>
         </div>
-        
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-red-600/90 to-red-500/90 hover:from-red-600 hover:to-red-500 text-white font-medium text-sm transition-all duration-300 hover:shadow-lg hover:shadow-red-600/20 active:scale-95 border border-red-500/20"
-        >
-          <FiLogOut className="text-base" />
-          Logout
-        </button>
       </div>
     </aside>
   );

@@ -34,6 +34,14 @@ import {
   getAllAnalytics,
   getAnalyticsByImei,
 } from "../utils/analytics";
+
+// Enhanced API utilities for handling truncation
+import {
+  getAllAnalyticsSafe,
+  getAnalyticsByImeiSafe,
+  getRecentAnalyticsSafe,
+  EnhancedAnalyticsAPI
+} from "../utils/enhancedAnalytics";
 import { listDevices } from "../utils/device";
 
 // Design system utilities
@@ -266,6 +274,26 @@ export default function Dashboard() {
   const [locationLoading, setLocationLoading] = useState(false);
   const [error, setError] = useState(null);
   const [mapProvider, setMapProvider] = useState('enhanced'); // 'enhanced' or 'mapbox'
+  
+  // Enhanced analytics API instance
+  const [analyticsAPI] = useState(() => new EnhancedAnalyticsAPI({
+    maxRetries: 3,
+    fallbackPageSize: 500,
+    validation: {
+      maxResponseSize: 10 * 1024 * 1024, // 10MB
+      minExpectedSize: 50
+    },
+    pagination: {
+      defaultPageSize: 1000,
+      maxPages: 50
+    }
+  }));
+
+  // Progress tracking state
+  const [loadingProgress, setLoadingProgress] = useState({
+    analytics: { current: 0, total: 0, percentage: 0 },
+    location: { current: 0, total: 0, percentage: 0 }
+  });
 
   // Process speed chart data
   const speedChart = (() => {
@@ -319,19 +347,61 @@ export default function Dashboard() {
       setLoading(true);
       setError(null);
 
-      console.log("Loading dashboard data...");
+      console.log("🚀 Loading dashboard data with enhanced analytics...");
+      
+      // Progress callback for analytics loading
+      const analyticsProgress = (progress) => {
+        setLoadingProgress(prev => ({
+          ...prev,
+          analytics: {
+            current: progress.totalItems || 0,
+            total: progress.totalEstimated || 0,
+            percentage: progress.completionPercentage || 0
+          }
+        }));
+      };
+
+      // Load data with enhanced error handling and progress tracking
       const [countData, recentData, devicesData, allData] = await Promise.all([
-        getAnalyticsCount(),
-        getAnalyticsPaginated(0, 10),
-        listDevices(),
-        getAllAnalytics()
+        // Use basic count (usually small and fast)
+        getAnalyticsCount().catch(err => {
+          console.warn("Count query failed, using fallback:", err.message);
+          return 0;
+        }),
+        
+        // Use enhanced recent analytics with truncation protection
+        getRecentAnalyticsSafe(10).catch(err => {
+          console.warn("Recent analytics failed, using fallback:", err.message);
+          return getAnalyticsPaginated(0, 10).catch(() => []);
+        }),
+        
+        // Load devices (usually small dataset)
+        listDevices().catch(err => {
+          console.warn("Devices loading failed:", err.message);
+          return { devices: [], full: [] };
+        }),
+        
+        // Use enhanced analytics with progress tracking and chunking
+        getAllAnalyticsSafe({
+          pageSize: 1000,
+          maxPages: 20, // Limit to prevent excessive loading
+          onProgress: analyticsProgress,
+          includeRawData: false
+        }).catch(err => {
+          console.warn("Enhanced analytics failed, trying basic fallback:", err.message);
+          // Fallback to basic analytics with smaller limit
+          return getAllAnalytics().catch(fallbackErr => {
+            console.error("All analytics loading methods failed:", fallbackErr.message);
+            return [];
+          });
+        })
       ]);
 
-      console.log("Dashboard data loaded:", {
+      console.log("✅ Dashboard data loaded successfully:", {
         countData,
-        recentData,
-        devicesData,
-        allData: allData?.length
+        recentCount: recentData?.length,
+        devicesCount: Array.isArray(devicesData?.devices) ? devicesData.devices.length : 0,
+        analyticsCount: allData?.length
       });
 
       setTotalAnalytics(countData || 0);
@@ -343,13 +413,20 @@ export default function Dashboard() {
         ? devicesData.full
         : [];
       
-      console.log("Processed devices list:", devicesList);
+      console.log("📱 Processed devices list:", devicesList.length);
       setDevices(devicesList.slice(0, 10));
       
       setAllAnalytics(Array.isArray(allData) ? allData : []);
+      
+      // Reset progress
+      setLoadingProgress({
+        analytics: { current: 0, total: 0, percentage: 100 },
+        location: { current: 0, total: 0, percentage: 0 }
+      });
+      
     } catch (err) {
-      console.error("Dashboard data loading error:", err);
-      setError("Failed to load dashboard data");
+      console.error("❌ Dashboard data loading error:", err);
+      setError(`Failed to load dashboard data: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -357,11 +434,15 @@ export default function Dashboard() {
 
   // Load location history
   const loadHistory = async (imei) => {
-    console.log("loadHistory called with imei:", imei);
+    console.log("🗺️ loadHistory called with imei:", imei);
     
     if (!imei) {
       setSelectedImei("");
       setLocationPath([]);
+      setLoadingProgress(prev => ({
+        ...prev,
+        location: { current: 0, total: 0, percentage: 0 }
+      }));
       return;
     }
 
@@ -369,9 +450,34 @@ export default function Dashboard() {
     setLocationLoading(true);
     
     try {
-      console.log("Fetching location data for imei:", imei);
-      const locationData = await getAnalyticsByImei(imei);
-      console.log("Raw location data:", locationData);
+      console.log("🔍 Fetching location data for imei:", imei);
+      
+      // Progress callback for location loading
+      const locationProgress = (progress) => {
+        setLoadingProgress(prev => ({
+          ...prev,
+          location: {
+            current: progress.totalItems || 0,
+            total: progress.totalEstimated || progress.totalItems || 0,
+            percentage: progress.completionPercentage || 
+                       (progress.totalItems && progress.totalEstimated ? 
+                        (progress.totalItems / progress.totalEstimated) * 100 : 0)
+          }
+        }));
+      };
+
+      // Use enhanced analytics API for location data with chunking
+      const locationData = await getAnalyticsByImeiSafe(imei, {
+        chunkSize: 1000,
+        maxChunks: 10, // Limit chunks to prevent excessive loading
+        onProgress: locationProgress
+      }).catch(err => {
+        console.warn("Enhanced IMEI query failed, trying basic fallback:", err.message);
+        // Fallback to basic IMEI query
+        return getAnalyticsByImei(imei);
+      });
+      
+      console.log("📍 Raw location data received:", locationData?.length || 0, "points");
       
       const processedPath = Array.isArray(locationData) 
         ? locationData
@@ -383,19 +489,52 @@ export default function Dashboard() {
             .filter((p) => !isNaN(p.lat) && !isNaN(p.lng))
         : [];
       
-      console.log("Processed location path:", processedPath);
+      console.log("✅ Processed location path:", processedPath.length, "valid points");
       setLocationPath(processedPath);
+      
+      // Update progress to complete
+      setLoadingProgress(prev => ({
+        ...prev,
+        location: { 
+          current: processedPath.length, 
+          total: processedPath.length, 
+          percentage: 100 
+        }
+      }));
+      
     } catch (e) {
-      console.error("Location loading error:", e);
+      console.error("❌ Location loading error:", e);
       setLocationPath([]);
+      setError(`Failed to load location data: ${e.message}`);
+      
+      // Reset progress on error
+      setLoadingProgress(prev => ({
+        ...prev,
+        location: { current: 0, total: 0, percentage: 0 }
+      }));
     } finally {
       setLocationLoading(false);
     }
   };
 
   // Refresh dashboard
-  const refreshDashboard = () => {
-    loadDashboardData();
+  const refreshDashboard = async () => {
+    console.log("🔄 Refreshing dashboard...");
+    
+    // Perform health check first
+    try {
+      const healthStatus = await analyticsAPI.healthCheck();
+      console.log("🏥 API Health Status:", healthStatus);
+      
+      if (healthStatus.status === 'unhealthy') {
+        console.warn("⚠️ API health check failed, but proceeding with refresh");
+      }
+    } catch (healthError) {
+      console.warn("Health check failed:", healthError.message);
+    }
+    
+    // Proceed with data refresh
+    await loadDashboardData();
   };
 
   // Load data on component mount
@@ -409,19 +548,87 @@ export default function Dashboard() {
   if (loading)
     return (
       <div className="flex items-center justify-center h-screen">
-        <Loading 
-          type="spinner" 
-          size="xl" 
-          text="Loading dashboard..." 
-          textPosition="bottom"
-        />
+        <div className="text-center space-y-6">
+          <Loading 
+            type="spinner" 
+            size="xl" 
+            text="Loading dashboard..." 
+            textPosition="bottom"
+          />
+          
+          {/* Enhanced Progress Indicators */}
+          {(loadingProgress.analytics.percentage > 0 || loadingProgress.location.percentage > 0) && (
+            <div className="max-w-md mx-auto space-y-4">
+              {/* Analytics Loading Progress */}
+              {loadingProgress.analytics.percentage > 0 && loadingProgress.analytics.percentage < 100 && (
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-white">Loading Analytics</span>
+                    <span className="text-xs text-white/70">
+                      {loadingProgress.analytics.current} / {loadingProgress.analytics.total}
+                    </span>
+                  </div>
+                  <div className="w-full bg-white/20 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(loadingProgress.analytics.percentage, 100)}%` }}
+                    />
+                  </div>
+                  <div className="text-xs text-white/60 mt-1">
+                    {loadingProgress.analytics.percentage.toFixed(1)}% complete
+                  </div>
+                </div>
+              )}
+              
+              {/* Location Loading Progress */}
+              {loadingProgress.location.percentage > 0 && loadingProgress.location.percentage < 100 && (
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-white">Loading Location Data</span>
+                    <span className="text-xs text-white/70">
+                      {loadingProgress.location.current} / {loadingProgress.location.total}
+                    </span>
+                  </div>
+                  <div className="w-full bg-white/20 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-green-500 to-teal-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(loadingProgress.location.percentage, 100)}%` }}
+                    />
+                  </div>
+                  <div className="text-xs text-white/60 mt-1">
+                    {loadingProgress.location.percentage.toFixed(1)}% complete
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     );
 
   if (error)
     return (
-      <div className="flex items-center justify-center h-screen text-red-400">
-        {error}
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center max-w-md mx-auto p-8">
+          <div className="bg-red-500/20 backdrop-blur-md rounded-2xl p-8 border border-red-500/40">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/30 flex items-center justify-center">
+              <svg className="w-8 h-8 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-red-300 mb-2">Dashboard Error</h3>
+            <p className="text-red-200/90 mb-6 text-sm leading-relaxed">{error}</p>
+            <button 
+              onClick={() => {
+                setError(null);
+                loadDashboardData();
+              }}
+              className="px-6 py-3 bg-red-500/30 hover:bg-red-500/40 text-red-200 rounded-xl border border-red-500/50 transition-all duration-200 hover:scale-105 font-medium"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
       </div>
     );
 
@@ -667,14 +874,37 @@ export default function Dashboard() {
                 <div className="relative rounded-xl overflow-hidden border border-white/20 shadow-xl min-h-[400px] bg-slate-800">
                   {locationLoading ? (
                     <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80">
-                      <Loading 
-                        type="spinner" 
-                        size="xl" 
-                        color="white"
-                        className="drop-shadow-2xl"
-                      />
-                      <div className="ml-4 text-white">
-                        Loading location data...
+                      <div className="text-center space-y-4">
+                        <Loading 
+                          type="spinner" 
+                          size="xl" 
+                          color="white"
+                          className="drop-shadow-2xl"
+                        />
+                        <div className="text-white font-medium">
+                          Loading location data...
+                        </div>
+                        
+                        {/* Location Loading Progress */}
+                        {loadingProgress.location.percentage > 0 && (
+                          <div className="max-w-xs mx-auto">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs text-white/80">Progress</span>
+                              <span className="text-xs text-white/60">
+                                {loadingProgress.location.current} / {loadingProgress.location.total || '?'}
+                              </span>
+                            </div>
+                            <div className="w-full bg-white/20 rounded-full h-2">
+                              <div 
+                                className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${Math.min(loadingProgress.location.percentage, 100)}%` }}
+                              />
+                            </div>
+                            <div className="text-xs text-white/60 mt-1">
+                              {loadingProgress.location.percentage.toFixed(1)}% complete
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ) : (

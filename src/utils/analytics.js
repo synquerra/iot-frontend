@@ -4,11 +4,13 @@ const API_BASE_URL =
 /* ---------------------------------------------------------
    Send GraphQL Query (POST)
 --------------------------------------------------------- */
-async function sendQuery(queryString) {
+export async function sendQuery(queryString) {
   if (!queryString || !queryString.trim()) {
     throw new Error("Missing GraphQL query");
   }
 
+  console.log("🔍 Analytics Query:", queryString.substring(0, 200) + "...");
+  
   const res = await fetch(`${API_BASE_URL}/analytics/analytics-query`, {
     method: "POST",
     headers: {
@@ -18,13 +20,36 @@ async function sendQuery(queryString) {
     body: JSON.stringify({ query: queryString }),
   });
 
-  const json = await res.json();
+  // Check response status and headers
+  console.log("📡 Response Status:", res.status, res.statusText);
+  console.log("📏 Response Size:", res.headers.get('content-length') || 'unknown');
+  
+  const responseText = await res.text();
+  console.log("📄 Response Length:", responseText.length, "characters");
+  
+  // Check if response is truncated (incomplete JSON)
+  const isTruncated = !responseText.trim().endsWith('}') && !responseText.trim().endsWith(']');
+  if (isTruncated) {
+    console.error("⚠️ TRUNCATED RESPONSE DETECTED!");
+    console.error("Last 100 chars:", responseText.slice(-100));
+    throw new Error("API Response was truncated - data incomplete");
+  }
+
+  let json;
+  try {
+    json = JSON.parse(responseText);
+  } catch (parseError) {
+    console.error("❌ JSON Parse Error:", parseError.message);
+    console.error("Response preview:", responseText.substring(0, 500));
+    throw new Error("Invalid JSON response - likely truncated");
+  }
 
   if (json?.errors) {
-    console.error(json.errors);
+    console.error("GraphQL Errors:", json.errors);
     throw new Error(json.errors[0]?.message || "GraphQL Error");
   }
 
+  console.log("✅ Response parsed successfully");
   return json.data;
 }
 
@@ -53,7 +78,7 @@ export function extractTimestamp(p) {
 /* ---------------------------------------------------------
    SORT newest → oldest
 --------------------------------------------------------- */
-function sortPackets(arr) {
+export function sortPackets(arr) {
   if (!Array.isArray(arr)) return [];
 
   return [...arr].sort((a, b) => {
@@ -66,7 +91,7 @@ function sortPackets(arr) {
 /* ---------------------------------------------------------
    NORMALIZE PACKETS
 --------------------------------------------------------- */
-function normalize(list) {
+export function normalize(list) {
   if (!Array.isArray(list)) return [];
 
   return list.map((p) => ({
