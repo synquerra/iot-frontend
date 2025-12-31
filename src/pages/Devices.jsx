@@ -6,6 +6,7 @@ import { Button } from "../design-system/components";
 import { Loading } from "../design-system/components";
 import { EnhancedTable, EnhancedTableContainer, StatusBadge } from "../design-system/components/EnhancedTable";
 import { listDevices } from "../utils/device";
+import { getAnalyticsByImei } from "../utils/analytics";
 import { cn } from "../design-system/utils/cn";
 
 export default function Devices() {
@@ -23,19 +24,82 @@ export default function Devices() {
         setLoading(true);
         const { devices: items } = await listDevices();
 
-        const normalized = items.map((d) => ({
-          topic: d.topic || "-",
-          imei: d.imei || "-",
-          interval: d.interval ?? "-",
-          geoid: d.geoid || "-",
-          createdAt: d.createdAt || "-",
-          status: d.interval !== "-" ? "active" : "inactive",
-          lastSeen: d.createdAt || "-",
-          batteryLevel: Math.floor(Math.random() * 100), // Simulated for demo
-          signalStrength: Math.floor(Math.random() * 100), // Simulated for demo
-        }));
+        // For each device, fetch the latest normal packet to get battery and signal data
+        const devicesWithTelemetry = await Promise.all(
+          items.map(async (device) => {
+            try {
+              // Get all packets for this device
+              const packets = await getAnalyticsByImei(device.imei);
+              
+              // Filter for normal packets and get the latest one
+              const normalPackets = packets.filter(
+                (p) => p.packet === "N" || p.packetType === "N" || p.type === "N"
+              );
+              const latestNormal = normalPackets[0] || null;
 
-        setDevices(normalized);
+              // Extract battery, signal, and temperature values with validation
+              let batteryLevel = null;
+              let signalStrength = null;
+              let temperature = null;
+
+              if (latestNormal) {
+                // Parse battery value
+                if (latestNormal.battery !== null && latestNormal.battery !== undefined) {
+                  const batteryNum = Number(latestNormal.battery);
+                  if (!isNaN(batteryNum) && batteryNum >= 0 && batteryNum <= 100) {
+                    batteryLevel = Math.round(batteryNum);
+                  }
+                }
+
+                // Parse signal value
+                if (latestNormal.signal !== null && latestNormal.signal !== undefined) {
+                  const signalNum = Number(latestNormal.signal);
+                  if (!isNaN(signalNum) && signalNum >= 0 && signalNum <= 100) {
+                    signalStrength = Math.round(signalNum);
+                  }
+                }
+
+                // Parse temperature value
+                if (latestNormal.rawTemperature !== null && latestNormal.rawTemperature !== undefined) {
+                  // Extract numeric value from temperature string (remove non-numeric characters except decimal point and minus)
+                  const tempStr = String(latestNormal.rawTemperature).replace(/[^\d.-]/g, "");
+                  const tempNum = Number(tempStr);
+                  if (!isNaN(tempNum)) {
+                    temperature = Math.round(tempNum * 10) / 10; // Round to 1 decimal place
+                  }
+                }
+              }
+
+              return {
+                topic: device.topic || "-",
+                imei: device.imei || "-",
+                temperature: temperature,
+                geoid: device.geoid || "-",
+                createdAt: device.createdAt || "-",
+                status: device.interval !== "-" ? "active" : "inactive",
+                lastSeen: device.createdAt || "-",
+                batteryLevel,
+                signalStrength,
+              };
+            } catch (err) {
+              console.warn(`Failed to fetch telemetry for device ${device.imei}:`, err.message);
+              // Return device with null values if telemetry fetch fails
+              return {
+                topic: device.topic || "-",
+                imei: device.imei || "-",
+                temperature: null,
+                geoid: device.geoid || "-",
+                createdAt: device.createdAt || "-",
+                status: device.interval !== "-" ? "active" : "inactive",
+                lastSeen: device.createdAt || "-",
+                batteryLevel: null,
+                signalStrength: null,
+              };
+            }
+          })
+        );
+
+        setDevices(devicesWithTelemetry);
       } catch (err) {
         setError(err.message || "Failed to load devices");
       } finally {
@@ -63,6 +127,8 @@ export default function Devices() {
     active: devices.filter(d => d.status === "active").length,
     inactive: devices.filter(d => d.status === "inactive").length,
     online: devices.filter(d => d.status === "active").length, // Simplified for demo
+    highTemp: devices.filter(d => d.temperature !== null && d.temperature > 50).length,
+    normalTemp: devices.filter(d => d.temperature !== null && d.temperature <= 50).length,
   };
 
   if (loading && devices.length === 0) {
@@ -222,20 +288,20 @@ export default function Devices() {
           </Card.Content>
         </Card>
 
-        <Card variant="glass" colorScheme="purple" padding="lg" hover={true} className="group">
+        <Card variant="glass" colorScheme="red" padding="lg" hover={true} className="group">
           <Card.Content>
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <div className="text-purple-200/80 text-sm font-medium mb-1">Online Now</div>
-                <div className="text-white text-3xl font-bold mb-2">{stats.online}</div>
+                <div className="text-red-200/80 text-sm font-medium mb-1">High Temperature</div>
+                <div className="text-white text-3xl font-bold mb-2">{stats.highTemp}</div>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
-                  <span className="text-purple-200/70 text-xs">Live connection</span>
+                  <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                  <span className="text-red-200/70 text-xs">&gt;50°C</span>
                 </div>
               </div>
-              <div className="w-14 h-14 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <div className="w-14 h-14 bg-red-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-7 h-7 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
               </div>
             </div>
@@ -386,34 +452,56 @@ export default function Devices() {
                     <div className="bg-white/5 rounded-lg p-3">
                       <div className="text-white/60 text-xs font-medium mb-1">Battery</div>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-white/20 rounded-full h-2">
-                          <div 
-                            className={cn(
-                              'h-2 rounded-full transition-all duration-300',
-                              device.batteryLevel > 60 ? 'bg-green-400' :
-                              device.batteryLevel > 30 ? 'bg-amber-400' : 'bg-red-400'
-                            )}
-                            style={{ width: `${device.batteryLevel}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-white text-xs font-bold">{device.batteryLevel}%</span>
+                        {device.batteryLevel !== null ? (
+                          <>
+                            <div className="flex-1 bg-white/20 rounded-full h-2">
+                              <div 
+                                className={cn(
+                                  'h-2 rounded-full transition-all duration-300',
+                                  device.batteryLevel > 60 ? 'bg-green-400' :
+                                  device.batteryLevel > 30 ? 'bg-amber-400' : 'bg-red-400'
+                                )}
+                                style={{ width: `${device.batteryLevel}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-white text-xs font-bold">{device.batteryLevel}%</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex-1 bg-white/20 rounded-full h-2">
+                              <div className="h-2 rounded-full bg-gray-500 w-full opacity-50"></div>
+                            </div>
+                            <span className="text-white/60 text-xs font-medium">N/A</span>
+                          </>
+                        )}
                       </div>
                     </div>
 
                     <div className="bg-white/5 rounded-lg p-3">
                       <div className="text-white/60 text-xs font-medium mb-1">Signal</div>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-white/20 rounded-full h-2">
-                          <div 
-                            className={cn(
-                              'h-2 rounded-full transition-all duration-300',
-                              device.signalStrength > 70 ? 'bg-green-400' :
-                              device.signalStrength > 40 ? 'bg-amber-400' : 'bg-red-400'
-                            )}
-                            style={{ width: `${device.signalStrength}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-white text-xs font-bold">{device.signalStrength}%</span>
+                        {device.signalStrength !== null ? (
+                          <>
+                            <div className="flex-1 bg-white/20 rounded-full h-2">
+                              <div 
+                                className={cn(
+                                  'h-2 rounded-full transition-all duration-300',
+                                  device.signalStrength > 70 ? 'bg-green-400' :
+                                  device.signalStrength > 40 ? 'bg-amber-400' : 'bg-red-400'
+                                )}
+                                style={{ width: `${device.signalStrength}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-white text-xs font-bold">{device.signalStrength}%</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex-1 bg-white/20 rounded-full h-2">
+                              <div className="h-2 rounded-full bg-gray-500 w-full opacity-50"></div>
+                            </div>
+                            <span className="text-white/60 text-xs font-medium">N/A</span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -421,9 +509,9 @@ export default function Devices() {
                   {/* Device Info */}
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-white/60">Interval:</span>
+                      <span className="text-white/60">Temperature:</span>
                       <span className="text-white font-medium">
-                        {device.interval !== '-' ? `${device.interval}s` : 'Not set'}
+                        {device.temperature !== null ? `${device.temperature}°C` : 'N/A'}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -524,17 +612,28 @@ export default function Devices() {
                 sortable: true,
                 render: (value) => (
                   <div className="flex items-center gap-2">
-                    <div className="w-16 bg-white/20 rounded-full h-2">
-                      <div 
-                        className={cn(
-                          'h-2 rounded-full',
-                          value > 60 ? 'bg-green-400' :
-                          value > 30 ? 'bg-amber-400' : 'bg-red-400'
-                        )}
-                        style={{ width: `${value}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-xs font-medium">{value}%</span>
+                    {value !== null ? (
+                      <>
+                        <div className="w-16 bg-white/20 rounded-full h-2">
+                          <div 
+                            className={cn(
+                              'h-2 rounded-full',
+                              value > 60 ? 'bg-green-400' :
+                              value > 30 ? 'bg-amber-400' : 'bg-red-400'
+                            )}
+                            style={{ width: `${value}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs font-medium">{value}%</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-16 bg-white/20 rounded-full h-2">
+                          <div className="h-2 rounded-full bg-gray-500 w-full opacity-50"></div>
+                        </div>
+                        <span className="text-xs font-medium text-slate-400">N/A</span>
+                      </>
+                    )}
                   </div>
                 )
               },
@@ -544,27 +643,44 @@ export default function Devices() {
                 sortable: true,
                 render: (value) => (
                   <div className="flex items-center gap-2">
-                    <div className="w-16 bg-white/20 rounded-full h-2">
-                      <div 
-                        className={cn(
-                          'h-2 rounded-full',
-                          value > 70 ? 'bg-green-400' :
-                          value > 40 ? 'bg-amber-400' : 'bg-red-400'
-                        )}
-                        style={{ width: `${value}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-xs font-medium">{value}%</span>
+                    {value !== null ? (
+                      <>
+                        <div className="w-16 bg-white/20 rounded-full h-2">
+                          <div 
+                            className={cn(
+                              'h-2 rounded-full',
+                              value > 70 ? 'bg-green-400' :
+                              value > 40 ? 'bg-amber-400' : 'bg-red-400'
+                            )}
+                            style={{ width: `${value}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs font-medium">{value}%</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-16 bg-white/20 rounded-full h-2">
+                          <div className="h-2 rounded-full bg-gray-500 w-full opacity-50"></div>
+                        </div>
+                        <span className="text-xs font-medium text-slate-400">N/A</span>
+                      </>
+                    )}
                   </div>
                 )
               },
               {
-                key: 'interval',
-                header: 'Interval',
+                key: 'temperature',
+                header: 'Temperature',
                 sortable: true,
                 render: (value) => (
-                  <span className="text-slate-300">
-                    {value !== '-' ? `${value}s` : 'Not set'}
+                  <span className={cn(
+                    'text-sm font-medium',
+                    value !== null ? (
+                      value > 50 ? 'text-red-400' :
+                      value > 30 ? 'text-amber-400' : 'text-green-400'
+                    ) : 'text-slate-400'
+                  )}>
+                    {value !== null ? `${value}°C` : 'N/A'}
                   </span>
                 )
               },
