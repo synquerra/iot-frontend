@@ -1,39 +1,141 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Card } from "../design-system/components";
 import { Button } from "../design-system/components";
 import { Loading } from "../design-system/components";
 import { cn } from "../design-system/utils/cn";
+import { getAnalyticsByImei } from "../utils/analytics";
+import { 
+  transformDeviceInfo, 
+  transformLiveData, 
+  transformPacketData 
+} from "../utils/telemetryTransformers";
 
 export default function Telemetry() {
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("live");
-  const [telemetryData, setTelemetryData] = useState({
-    imei: "7984561481678167",
-    firmware: "516v151",
-    status: "Online",
-    lastSeen: "15-01-2025 03:56:41",
-    normalPacket: {
-      lat: 62.531135,
-      lng: 63.513135,
-      speed: 40,
-      temp: 27,
-      battery: 92
-    },
-    errorPacket: {
-      code: "E1002",
-      timestamp: "13-02-2011 12:53:49"
-    },
-    esim: {
-      sim1: "Active",
-      sim2: "Inactive"
+  const [deviceContext, setDeviceContext] = useState(null);
+  const [imeiError, setImeiError] = useState(null);
+  const [deviceImei, setDeviceImei] = useState(null);
+  
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Parse device IMEI from URL parameters with validation
+  const parseDeviceImei = useCallback(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const imeiParam = urlParams.get('imei');
+    
+    // Clear previous IMEI error
+    setImeiError(null);
+    
+    if (!imeiParam) {
+      // No IMEI provided - use default device behavior
+      const defaultImei = '862942074957887'; // Default IMEI for testing
+      setDeviceContext({
+        imei: defaultImei,
+        isDefault: true,
+        source: 'default'
+      });
+      setDeviceImei(defaultImei);
+      return;
     }
-  });
-
+    
+    // Validate IMEI format (15 digits)
+    const imeiRegex = /^\d{15}$/;
+    if (!imeiRegex.test(imeiParam)) {
+      setImeiError(`Invalid IMEI format: ${imeiParam}. IMEI must be 15 digits.`);
+      setDeviceContext({
+        imei: imeiParam,
+        isDefault: false,
+        source: 'url',
+        isValid: false
+      });
+      setDeviceImei(null); // Set null for invalid IMEI
+      return;
+    }
+    
+    // Valid IMEI from URL
+    setDeviceContext({
+      imei: imeiParam,
+      isDefault: false,
+      source: 'url',
+      isValid: true
+    });
+    setDeviceImei(imeiParam);
+  }, [location.search]);
+  
+  // Parse IMEI when URL changes
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => setLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
+    parseDeviceImei();
+  }, [parseDeviceImei]);
+  
+  // Device switching functionality
+  const switchDevice = useCallback((newImei) => {
+    if (!newImei) {
+      // Switch to default device
+      navigate('/telemetry', { replace: true });
+    } else {
+      // Switch to specific device
+      navigate(`/telemetry?imei=${newImei}`, { replace: true });
+    }
+    // Data clearing will happen automatically when the component re-renders with new IMEI
+  }, [navigate]);
+  
+  // State for telemetry data
+  const [telemetryData, setTelemetryData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Load telemetry data directly without caching (like DeviceDetails)
+  const loadTelemetryData = useCallback(async () => {
+    if (!deviceImei) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const analyticsData = await getAnalyticsByImei(deviceImei);
+      
+      if (analyticsData && analyticsData.length > 0) {
+        setTelemetryData({
+          deviceInfo: transformDeviceInfo(analyticsData, deviceImei),
+          liveData: transformLiveData(analyticsData),
+          packetData: transformPacketData(analyticsData)
+        });
+      } else {
+        setTelemetryData(null);
+      }
+    } catch (err) {
+      console.error('Failed to load telemetry data:', err);
+      setError(err);
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [deviceImei]);
+
+  // Load data when device IMEI changes
+  useEffect(() => {
+    loadTelemetryData();
+  }, [loadTelemetryData]);
+
+  // Refresh data function
+  const refreshData = useCallback(async () => {
+    setIsRefreshing(true);
+    await loadTelemetryData();
+  }, [loadTelemetryData]);
+
+  const hasData = !!telemetryData;
+
+  // Static E-SIM data (preserved as per requirements)
+  const esimData = {
+    sim1: "Active",
+    sim2: "Inactive"
+  };
 
   const tabs = [
     { id: "live", label: "Live Data", icon: "📡" },
@@ -42,6 +144,56 @@ export default function Telemetry() {
     { id: "controls", label: "Controls", icon: "🎛️" }
   ];
 
+  // Handle refresh button click
+  const handleRefresh = async () => {
+    await refreshData();
+  };
+
+  // Handle retry for failed requests
+  const handleRetry = async () => {
+    try {
+      await retryFailedRequests();
+    } catch (error) {
+      console.error('Retry failed:', error);
+      // Error is already handled by the hook, just log it
+    }
+  };
+
+  // Handle tab switching - maintain device context across tabs
+  const handleTabSwitch = useCallback((tabId) => {
+    setActiveTab(tabId);
+    // Device context is maintained automatically through URL parameters
+  }, []);
+
+  // Show IMEI validation error
+  if (imeiError) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card variant="glass" colorScheme="red" padding="lg">
+          <Card.Content>
+            <div className="text-center">
+              <div className="text-red-300 text-lg font-semibold mb-2">Invalid Device IMEI</div>
+              <div className="text-red-200/80 text-sm mb-4">{imeiError}</div>
+              <div className="space-y-2">
+                <Button
+                  variant="glass"
+                  colorScheme="blue"
+                  onClick={() => switchDevice(null)}
+                >
+                  Use Default Device
+                </Button>
+                <div className="text-red-200/60 text-xs">
+                  Or provide a valid 15-digit IMEI in the URL: /telemetry?imei=123456789012345
+                </div>
+              </div>
+            </div>
+          </Card.Content>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -52,6 +204,112 @@ export default function Telemetry() {
           text="Loading telemetry data..." 
           textPosition="bottom"
         />
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error && !hasData) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card variant="glass" colorScheme="red" padding="lg" className="max-w-2xl">
+          <Card.Content>
+            <div className="text-center">
+              <div className="text-red-300 text-lg font-semibold mb-2">Error Loading Data</div>
+              <div className="text-red-200/80 text-sm mb-2">
+                {error.userMessage || error.message || 'Failed to load telemetry data'}
+              </div>
+              {deviceContext && (
+                <div className="text-red-200/60 text-xs mb-4">
+                  Device: {deviceContext.imei} 
+                  {deviceContext.isDefault && " (default)"}
+                </div>
+              )}
+              
+              {/* Error details for debugging */}
+              {error.statusCode && (
+                <div className="text-red-200/50 text-xs mb-4">
+                  Error Code: {error.statusCode}
+                </div>
+              )}
+              
+              <div className="space-y-2">
+                <Button
+                  variant="glass"
+                  colorScheme="blue"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                >
+                  {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                </Button>
+                
+                {!deviceContext?.isDefault && (
+                  <Button
+                    variant="glass"
+                    colorScheme="slate"
+                    onClick={() => switchDevice(null)}
+                  >
+                    Try Default Device
+                  </Button>
+                )}
+              </div>
+              
+              {/* Network troubleshooting tips */}
+              <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-left">
+                <div className="text-red-300 text-sm font-semibold mb-1">Troubleshooting Tips:</div>
+                <ul className="text-red-200/70 text-xs space-y-1">
+                  <li>• Check your internet connection</li>
+                  <li>• Verify the device IMEI is correct</li>
+                  <li>• Try refreshing the page</li>
+                  <li>• Contact support if the problem persists</li>
+                </ul>
+              </div>
+            </div>
+          </Card.Content>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show no data state
+  if (!hasData) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card variant="glass" colorScheme="slate" padding="lg">
+          <Card.Content>
+            <div className="text-center">
+              <div className="text-white text-lg font-semibold mb-2">No Data Available</div>
+              <div className="text-white/70 text-sm mb-2">
+                No telemetry data found for device {deviceContext?.imei || 'unknown'}
+              </div>
+              {deviceContext && (
+                <div className="text-white/50 text-xs mb-4">
+                  Source: {deviceContext.source}
+                  {deviceContext.isDefault && " (default device)"}
+                </div>
+              )}
+              <div className="space-y-2">
+                <Button
+                  variant="glass"
+                  colorScheme="blue"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                >
+                  {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                </Button>
+                {!deviceContext?.isDefault && (
+                  <Button
+                    variant="glass"
+                    colorScheme="slate"
+                    onClick={() => switchDevice(null)}
+                  >
+                    Try Default Device
+                  </Button>
+                )}
+              </div>
+            </div>
+          </Card.Content>
+        </Card>
       </div>
     );
   }
@@ -75,25 +333,54 @@ export default function Telemetry() {
               <p className="text-blue-100/90 text-lg leading-relaxed max-w-2xl">
                 Real-time telemetry monitoring and packet analysis for IoT devices
               </p>
+              {deviceContext && (
+                <div className="mt-2 flex items-center gap-2 text-sm">
+                  <span className="text-blue-200/70">Device:</span>
+                  <span className="text-blue-100 font-mono">{deviceContext.imei}</span>
+                  {deviceContext.isDefault && (
+                    <span className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full">
+                      Default
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
             
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <div className="text-blue-200/80 text-sm">Device Status</div>
-                <div className="text-green-300 text-xl font-bold">{telemetryData.status}</div>
-                <div className="text-blue-200/70 text-xs">Last: {telemetryData.lastSeen}</div>
+                <div className={cn(
+                  "text-xl font-bold",
+                  telemetryData.deviceInfo?.status === 'Online' 
+                    ? "text-green-300" 
+                    : "text-red-300"
+                )}>
+                  {telemetryData.deviceInfo?.status || 'Unknown'}
+                </div>
+                <div className="text-blue-200/70 text-xs flex items-center gap-1">
+                  <span>Last: {telemetryData.deviceInfo?.lastSeen || 'Unknown'}</span>
+                  {telemetryData.deviceInfo?.isRecent && (
+                    <span className="px-1.5 py-0.5 bg-green-500/20 text-green-300 text-xs rounded-full">
+                      Recent
+                    </span>
+                  )}
+                </div>
               </div>
               <Button
                 variant="glass"
                 colorScheme="teal"
                 size="lg"
-                onClick={() => window.location.reload()}
+                onClick={handleRefresh}
+                disabled={isRefreshing}
                 className="backdrop-blur-xl"
               >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={cn(
+                  "w-5 h-5 mr-2",
+                  isRefreshing && "animate-spin"
+                )} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                Refresh
+                {isRefreshing ? 'Refreshing...' : 'Refresh'}
               </Button>
             </div>
           </div>
@@ -107,7 +394,7 @@ export default function Telemetry() {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabSwitch(tab.id)}
                 className={cn(
                   'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2',
                   activeTab === tab.id
@@ -133,7 +420,9 @@ export default function Telemetry() {
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="text-blue-200/80 text-sm font-medium mb-1">IMEI</div>
-                    <div className="text-white text-lg font-bold mb-2 font-mono">{telemetryData.imei}</div>
+                    <div className="text-white text-lg font-bold mb-2 font-mono">
+                      {telemetryData.deviceInfo?.imei || 'Unknown'}
+                    </div>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
                       <span className="text-blue-200/70 text-xs">Device ID</span>
@@ -148,7 +437,9 @@ export default function Telemetry() {
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="text-purple-200/80 text-sm font-medium mb-1">Firmware</div>
-                    <div className="text-white text-lg font-bold mb-2">{telemetryData.firmware}</div>
+                    <div className="text-white text-lg font-bold mb-2">
+                      {telemetryData.deviceInfo?.firmware || 'Unknown'}
+                    </div>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
                       <span className="text-purple-200/70 text-xs">Version</span>
@@ -158,15 +449,32 @@ export default function Telemetry() {
               </Card.Content>
             </Card>
 
-            <Card variant="glass" colorScheme="green" padding="lg" hover={true} className="group">
+            <Card variant="glass" colorScheme={telemetryData.deviceInfo?.status === 'Online' ? 'green' : telemetryData.deviceInfo?.status === 'Unknown' ? 'slate' : 'red'} padding="lg" hover={true} className="group">
               <Card.Content>
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <div className="text-green-200/80 text-sm font-medium mb-1">Status</div>
-                    <div className="text-white text-lg font-bold mb-2">{telemetryData.status}</div>
+                    <div className={cn(
+                      "text-sm font-medium mb-1",
+                      telemetryData.deviceInfo?.status === 'Online' ? 'text-green-200/80' : 
+                      telemetryData.deviceInfo?.status === 'Unknown' ? 'text-slate-200/80' : 'text-red-200/80'
+                    )}>Status</div>
+                    <div className="text-white text-lg font-bold mb-2">
+                      {telemetryData.deviceInfo?.status || 'Unknown'}
+                    </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                      <span className="text-green-200/70 text-xs">Connected</span>
+                      <div className={cn(
+                        "w-2 h-2 rounded-full animate-pulse",
+                        telemetryData.deviceInfo?.status === 'Online' ? 'bg-green-400' : 
+                        telemetryData.deviceInfo?.status === 'Unknown' ? 'bg-slate-400' : 'bg-red-400'
+                      )}></div>
+                      <span className={cn(
+                        "text-xs",
+                        telemetryData.deviceInfo?.status === 'Online' ? 'text-green-200/70' : 
+                        telemetryData.deviceInfo?.status === 'Unknown' ? 'text-slate-200/70' : 'text-red-200/70'
+                      )}>
+                        {telemetryData.deviceInfo?.status === 'Online' ? 'Connected' : 
+                         telemetryData.deviceInfo?.status === 'Unknown' ? 'Status Unknown' : 'Disconnected'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -178,10 +486,14 @@ export default function Telemetry() {
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="text-amber-200/80 text-sm font-medium mb-1">Last Seen</div>
-                    <div className="text-white text-sm font-bold mb-2">{telemetryData.lastSeen}</div>
+                    <div className="text-white text-sm font-bold mb-2">
+                      {telemetryData.deviceInfo?.lastSeen || 'Unknown'}
+                    </div>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
-                      <span className="text-amber-200/70 text-xs">Recent</span>
+                      <span className="text-amber-200/70 text-xs">
+                        {telemetryData.deviceInfo?.isRecent ? 'Recent' : 'Timestamp'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -196,38 +508,70 @@ export default function Telemetry() {
                 <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
                 Live Telemetry Data
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-white/5 rounded-lg p-4 text-center">
-                  <div className="text-green-200/80 text-xs font-medium mb-2">Latitude</div>
-                  <div className="text-white font-bold text-lg">{telemetryData.normalPacket.lat}</div>
-                </div>
-                <div className="bg-white/5 rounded-lg p-4 text-center">
-                  <div className="text-green-200/80 text-xs font-medium mb-2">Longitude</div>
-                  <div className="text-white font-bold text-lg">{telemetryData.normalPacket.lng}</div>
-                </div>
-                <div className="bg-white/5 rounded-lg p-4 text-center">
-                  <div className="text-green-200/80 text-xs font-medium mb-2">Speed</div>
-                  <div className="text-white font-bold text-lg">{telemetryData.normalPacket.speed} km/h</div>
-                </div>
-                <div className="bg-white/5 rounded-lg p-4 text-center">
-                  <div className="text-green-200/80 text-xs font-medium mb-2">Temperature</div>
-                  <div className="text-white font-bold text-lg">{telemetryData.normalPacket.temp}°C</div>
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t border-white/10">
-                <div className="flex items-center justify-between">
-                  <span className="text-green-200/80 text-sm">Battery Level</span>
-                  <div className="flex items-center gap-3">
-                    <div className="w-32 bg-white/20 rounded-full h-2">
-                      <div 
-                        className="h-2 rounded-full bg-green-400 transition-all duration-300"
-                        style={{ width: `${telemetryData.normalPacket.battery}%` }}
-                      ></div>
+              
+              {telemetryData.liveData ? (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-4 text-center">
+                      <div className="text-green-200/80 text-xs font-medium mb-2">Latitude</div>
+                      <div className="text-white font-bold text-lg">{telemetryData.liveData.latitude}</div>
                     </div>
-                    <span className="text-white font-bold">{telemetryData.normalPacket.battery}%</span>
+                    <div className="bg-white/5 rounded-lg p-4 text-center">
+                      <div className="text-green-200/80 text-xs font-medium mb-2">Longitude</div>
+                      <div className="text-white font-bold text-lg">{telemetryData.liveData.longitude}</div>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-4 text-center">
+                      <div className="text-green-200/80 text-xs font-medium mb-2">Speed</div>
+                      <div className={cn(
+                        "font-bold text-lg",
+                        telemetryData.liveData.hasHighSpeed ? "text-red-300" : "text-white"
+                      )}>
+                        {telemetryData.liveData.speed} km/h
+                      </div>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-4 text-center">
+                      <div className="text-green-200/80 text-xs font-medium mb-2">Temperature</div>
+                      <div className={cn(
+                        "font-bold text-lg",
+                        telemetryData.liveData.hasHighTemp ? "text-orange-300" : "text-white"
+                      )}>
+                        {telemetryData.liveData.temperature}°C
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-white/10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-green-200/80 text-sm">Battery Level</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-32 bg-white/20 rounded-full h-2">
+                          <div 
+                            className={cn(
+                              "h-2 rounded-full transition-all duration-300",
+                              telemetryData.liveData.battery >= 50 ? "bg-green-400" :
+                              telemetryData.liveData.battery >= 20 ? "bg-yellow-400" :
+                              "bg-red-400"
+                            )}
+                            style={{ width: `${telemetryData.liveData.battery}%` }}
+                          ></div>
+                        </div>
+                        <span className={cn(
+                          "font-bold",
+                          telemetryData.liveData.battery >= 50 ? "text-green-300" :
+                          telemetryData.liveData.battery >= 20 ? "text-yellow-300" :
+                          "text-red-300"
+                        )}>{telemetryData.liveData.battery}%</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-white/70 text-lg font-semibold mb-2">No Live Data Available</div>
+                  <div className="text-white/50 text-sm mb-4">
+                    Unable to load live telemetry data for this device
                   </div>
                 </div>
-              </div>
+              )}
             </Card.Content>
           </Card>
         </div>
@@ -244,24 +588,35 @@ export default function Telemetry() {
                 </svg>
                 Normal Packet (N)
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div className="flex justify-between items-center py-2 border-b border-white/10">
-                  <span className="text-green-200/80">Latitude</span>
-                  <span className="text-white font-mono">{telemetryData.normalPacket.lat}</span>
+              {telemetryData.packetData?.normalPacket ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-white/5 rounded-lg p-4">
+                    <div className="text-green-200/80 text-xs font-medium mb-2">Latitude</div>
+                    <div className="text-white font-mono text-lg">{telemetryData.packetData.normalPacket.lat.toFixed(6)}</div>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-4">
+                    <div className="text-green-200/80 text-xs font-medium mb-2">Longitude</div>
+                    <div className="text-white font-mono text-lg">{telemetryData.packetData.normalPacket.lng.toFixed(6)}</div>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-4">
+                    <div className="text-green-200/80 text-xs font-medium mb-2">Speed</div>
+                    <div className="text-white text-lg">{telemetryData.packetData.normalPacket.speed} km/h</div>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-4">
+                    <div className="text-green-200/80 text-xs font-medium mb-2">Temperature</div>
+                    <div className="text-white text-lg">{telemetryData.packetData.normalPacket.temp}°C</div>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-4">
+                    <div className="text-green-200/80 text-xs font-medium mb-2">Battery</div>
+                    <div className="text-white text-lg">{telemetryData.packetData.normalPacket.battery}%</div>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center py-2 border-b border-white/10">
-                  <span className="text-green-200/80">Longitude</span>
-                  <span className="text-white font-mono">{telemetryData.normalPacket.lng}</span>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-white/70 text-lg font-semibold mb-2">No Packet Data</div>
+                  <div className="text-white/50 text-sm mb-4">No normal packet data available for this device</div>
                 </div>
-                <div className="flex justify-between items-center py-2 border-b border-white/10">
-                  <span className="text-green-200/80">Speed</span>
-                  <span className="text-white">{telemetryData.normalPacket.speed} km/h</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-white/10">
-                  <span className="text-green-200/80">Temperature</span>
-                  <span className="text-white">{telemetryData.normalPacket.temp}°C</span>
-                </div>
-              </div>
+              )}
             </Card.Content>
           </Card>
 
@@ -274,16 +629,30 @@ export default function Telemetry() {
                 </svg>
                 Error Packet (E)
               </h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center py-2 border-b border-white/10">
-                  <span className="text-red-200/80">Error Code</span>
-                  <span className="text-white font-mono bg-red-500/20 px-2 py-1 rounded">{telemetryData.errorPacket.code}</span>
+              {telemetryData.packetData?.errorPacket ? (
+                <div className="space-y-4">
+                  <div className="bg-white/5 rounded-lg p-4">
+                    <div className="flex justify-between items-center py-2 border-b border-white/10">
+                      <span className="text-red-200/80 text-sm font-medium">Error Code</span>
+                      <span className="text-white font-mono bg-red-500/20 px-3 py-1 rounded text-sm">{telemetryData.packetData.errorPacket.code}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 mt-2">
+                      <span className="text-red-200/80 text-sm font-medium">Timestamp</span>
+                      <span className="text-white text-sm font-mono">{telemetryData.packetData.errorPacket.timestamp}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-red-200/80">Timestamp</span>
-                  <span className="text-white text-sm">{telemetryData.errorPacket.timestamp}</span>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-green-300 text-lg font-semibold mb-2 flex items-center justify-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    No Errors
+                  </div>
+                  <div className="text-white/70 text-sm">No error packets found for this device</div>
                 </div>
-              </div>
+              )}
             </Card.Content>
           </Card>
         </div>
@@ -305,13 +674,13 @@ export default function Telemetry() {
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-white font-semibold text-lg">SIM 1</h4>
                       <div className="px-3 py-1 bg-green-500/20 text-green-300 text-sm rounded-full">
-                        {telemetryData.esim.sim1}
+                        {esimData.sim1}
                       </div>
                     </div>
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between items-center py-2 border-b border-white/10">
                         <span className="text-white/70">Status</span>
-                        <span className="text-green-400 font-semibold">{telemetryData.esim.sim1}</span>
+                        <span className="text-green-400 font-semibold">{esimData.sim1}</span>
                       </div>
                       <div className="flex justify-between items-center py-2 border-b border-white/10">
                         <span className="text-white/70">Signal Strength</span>
@@ -330,13 +699,13 @@ export default function Telemetry() {
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-white font-semibold text-lg">SIM 2</h4>
                       <div className="px-3 py-1 bg-red-500/20 text-red-300 text-sm rounded-full">
-                        {telemetryData.esim.sim2}
+                        {esimData.sim2}
                       </div>
                     </div>
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between items-center py-2 border-b border-white/10">
                         <span className="text-white/70">Status</span>
-                        <span className="text-red-400 font-semibold">{telemetryData.esim.sim2}</span>
+                        <span className="text-red-400 font-semibold">{esimData.sim2}</span>
                       </div>
                       <div className="flex justify-between items-center py-2 border-b border-white/10">
                         <span className="text-white/70">Signal Strength</span>

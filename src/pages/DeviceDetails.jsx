@@ -55,7 +55,7 @@ function timeAgo(ts) {
   if (m < 60) return `${Math.floor(m)}m ago`;
   const h = m / 60;
   if (h < 24) return `${Math.floor(h)}h ago`;
-  return `${Math.floor(h / 24)}d ago}`;
+  return `${Math.floor(h / 24)}d ago`;
 }
 
 /* ------------------------------------
@@ -232,6 +232,78 @@ function computeBatteryRuntimeHours(packets) {
   const diffHrs = diffMs / (1000 * 60 * 60);
 
   return diffHrs < 0 ? "-" : diffHrs.toFixed(1);
+}
+
+function computeBatteryDrainTime(packets) {
+  if (!packets || packets.length === 0) return "-";
+
+  // Find the most recent occurrence of battery = 100%
+  let fullBatteryPacket = null;
+  let zeroBatteryPacket = null;
+
+  // Sort packets by timestamp (newest first)
+  const sortedPackets = [...packets].sort((a, b) => {
+    const aTime = new Date(a.deviceTimestamp || a.deviceRawTimestamp).getTime();
+    const bTime = new Date(b.deviceTimestamp || b.deviceRawTimestamp).getTime();
+    return bTime - aTime;
+  });
+
+  // Find the most recent 100% battery
+  for (let i = 0; i < sortedPackets.length; i++) {
+    const p = sortedPackets[i];
+    const battery = Number(String(p.battery || "").replace(/[^\d]/g, ""));
+    
+    if (battery === 100 && !fullBatteryPacket) {
+      fullBatteryPacket = p;
+    }
+    
+    // Find the first occurrence of 0% battery after 100%
+    if (fullBatteryPacket && battery === 0 && !zeroBatteryPacket) {
+      zeroBatteryPacket = p;
+      break;
+    }
+  }
+
+  // If we don't have both 100% and 0%, try to estimate based on current battery level
+  if (!fullBatteryPacket || !zeroBatteryPacket) {
+    if (!fullBatteryPacket) return "No 100% record";
+    
+    // Estimate based on current battery level and time elapsed
+    const currentBattery = Number(String(sortedPackets[0].battery || "").replace(/[^\d]/g, ""));
+    if (isNaN(currentBattery) || currentBattery === 100) return "-";
+    
+    const fullTime = new Date(fullBatteryPacket.deviceTimestamp || fullBatteryPacket.deviceRawTimestamp);
+    const currentTime = new Date(sortedPackets[0].deviceTimestamp || sortedPackets[0].deviceRawTimestamp);
+    
+    if (isNaN(fullTime) || isNaN(currentTime)) return "-";
+    
+    const elapsedMs = currentTime - fullTime;
+    const elapsedHours = elapsedMs / (1000 * 60 * 60);
+    const batteryDrained = 100 - currentBattery;
+    
+    if (batteryDrained <= 0 || elapsedHours <= 0) return "-";
+    
+    // Estimate total drain time: (elapsed time / battery drained) * 100
+    const estimatedTotalHours = (elapsedHours / batteryDrained) * 100;
+    
+    return `~${estimatedTotalHours.toFixed(1)}h (estimated)`;
+  }
+
+  // Calculate actual drain time from 100% to 0%
+  const fullTime = new Date(fullBatteryPacket.deviceTimestamp || fullBatteryPacket.deviceRawTimestamp);
+  const zeroTime = new Date(zeroBatteryPacket.deviceTimestamp || zeroBatteryPacket.deviceRawTimestamp);
+
+  if (isNaN(fullTime) || isNaN(zeroTime)) return "-";
+
+  const drainMs = Math.abs(zeroTime - fullTime);
+  const drainHours = drainMs / (1000 * 60 * 60);
+
+  if (drainHours < 1) {
+    const drainMinutes = drainMs / (1000 * 60);
+    return `${drainMinutes.toFixed(0)}m`;
+  }
+
+  return `${drainHours.toFixed(1)}h`;
 }
 
 
@@ -874,7 +946,7 @@ export default function DeviceDetails() {
                 </svg>
                 Battery Insights
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                 <div className="bg-white/5 rounded-lg p-4">
                   <div className="text-purple-200/80 text-xs font-medium mb-2">Health Status</div>
                   <div className="text-white text-lg font-bold">{getBatteryStatus(normal).text}</div>
@@ -882,6 +954,10 @@ export default function DeviceDetails() {
                 <div className="bg-white/5 rounded-lg p-4">
                   <div className="text-purple-200/80 text-xs font-medium mb-2">Runtime Left</div>
                   <div className="text-white text-lg font-bold">{computeBatteryRuntimeHours(packets)} hrs</div>
+                </div>
+                <div className="bg-white/5 rounded-lg p-4">
+                  <div className="text-purple-200/80 text-xs font-medium mb-2">Drain Time (100→0%)</div>
+                  <div className="text-white text-lg font-bold">{computeBatteryDrainTime(packets)}</div>
                 </div>
                 <div className="bg-white/5 rounded-lg p-4">
                   <div className="text-purple-200/80 text-xs font-medium mb-2">Last Update</div>
