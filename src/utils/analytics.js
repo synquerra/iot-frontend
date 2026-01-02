@@ -241,7 +241,9 @@ export function validateAnalyticsData(data) {
     }
     
     // Validate and normalize numeric fields
-    const numericFields = ['latitude', 'longitude', 'speed', 'battery', 'rawTemperature'];
+    // NOTE: rawTemperature is NOT included here because it comes as a string with units (e.g., "22.12 c")
+    // and needs to be parsed by parseTemperature() function in telemetryTransformers.js
+    const numericFields = ['latitude', 'longitude', 'speed', 'battery'];
     const normalizedPacket = { ...packet };
     
     numericFields.forEach(field => {

@@ -13,6 +13,50 @@
  */
 
 /**
+ * Parse temperature value from various formats
+ * Handles string formats with units (e.g., "34.14 c"), numeric values, and null/undefined
+ * 
+ * Requirements covered:
+ * - 1.1: Parse temperature strings with units
+ * - 1.2: Remove non-numeric characters
+ * - 1.3: Handle null/undefined inputs
+ * - 1.4: Handle invalid inputs
+ * - 3.1: Handle numeric inputs directly
+ * - 3.2: Handle strings without units
+ * - 3.3: Handle various unit formats
+ * 
+ * @param {string|number|null|undefined} rawTemp - Raw temperature value
+ * @returns {number} Parsed temperature as number, or 0 if invalid
+ */
+function parseTemperature(rawTemp) {
+  // Handle null, undefined, or empty string
+  if (rawTemp == null || rawTemp === '') {
+    return 0;
+  }
+
+  // If already a number, return it directly
+  if (typeof rawTemp === 'number') {
+    return rawTemp;
+  }
+
+  // If it's a string, parse it
+  if (typeof rawTemp === 'string') {
+    // Remove all non-numeric characters except decimal points and minus signs
+    // This handles formats like "34.14 c", "34.14°C", "34.14 C", etc.
+    const cleaned = rawTemp.replace(/[^\d.-]/g, '');
+    
+    // Convert to number
+    const parsed = Number(cleaned);
+    
+    // Return 0 if result is NaN, otherwise return the parsed value
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
+  // For any other type, return 0
+  return 0;
+}
+
+/**
  * Transform raw analytics data into device information structure
  * @param {Array} analyticsData - Array of analytics data from API
  * @param {string} imei - Device IMEI for fallback
@@ -75,7 +119,7 @@ function transformLiveData(analyticsData) {
   });
 
   const latestPacket = sortedData[0];
-  const temperature = Number(latestPacket.rawTemperature) || 0;
+  const temperature = parseTemperature(latestPacket.rawTemperature);
   const speed = Number(latestPacket.speed) || 0;
 
   return {
@@ -122,7 +166,7 @@ function transformPacketData(analyticsData) {
     lat: Number(latestPacket.latitude) || 0,
     lng: Number(latestPacket.longitude) || 0,
     speed: Number(latestPacket.speed) || 0,
-    temp: Number(latestPacket.rawTemperature) || 0,
+    temp: parseTemperature(latestPacket.rawTemperature),
     battery: Number(latestPacket.battery) || 0
   };
 
@@ -327,6 +371,7 @@ function filterPacketsByType(analyticsData, type = 'all') {
 
 // Export all functions
 export {
+  parseTemperature,
   transformDeviceInfo,
   transformLiveData,
   transformPacketData,

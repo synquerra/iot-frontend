@@ -7,6 +7,7 @@ import { Loading } from "../design-system/components";
 import { EnhancedTable, EnhancedTableContainer, StatusBadge } from "../design-system/components/EnhancedTable";
 import { listDevices } from "../utils/device";
 import { getAnalyticsByImei } from "../utils/analytics";
+import { parseTemperature } from "../utils/telemetryTransformers";
 import { cn } from "../design-system/utils/cn";
 
 export default function Devices() {
@@ -59,14 +60,17 @@ export default function Devices() {
                   }
                 }
 
-                // Parse temperature value
+                // Parse temperature value using centralized function
                 if (latestNormal.rawTemperature !== null && latestNormal.rawTemperature !== undefined) {
-                  // Extract numeric value from temperature string (remove non-numeric characters except decimal point and minus)
-                  const tempStr = String(latestNormal.rawTemperature).replace(/[^\d.-]/g, "");
-                  const tempNum = Number(tempStr);
-                  if (!isNaN(tempNum)) {
+                  console.log('[Devices.jsx] Raw temperature from API:', latestNormal.rawTemperature);
+                  const tempNum = parseTemperature(latestNormal.rawTemperature);
+                  console.log('[Devices.jsx] Parsed temperature:', tempNum);
+                  if (tempNum !== 0 || latestNormal.rawTemperature === 0 || latestNormal.rawTemperature === "0") {
                     temperature = Math.round(tempNum * 10) / 10; // Round to 1 decimal place
+                    console.log('[Devices.jsx] Final temperature:', temperature);
                   }
+                } else {
+                  console.log('[Devices.jsx] rawTemperature is null or undefined');
                 }
               }
 

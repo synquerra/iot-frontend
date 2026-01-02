@@ -6,6 +6,7 @@ import { Card } from "../design-system/components";
 import { Button } from "../design-system/components";
 import { Loading } from "../design-system/components";
 import { cn } from "../design-system/utils/cn";
+import { parseTemperature } from "../utils/telemetryTransformers";
 import TripSummary from "../components/TripSummary";
 /* ------------------------------------
    TIMESTAMP HELPERS (RAW TIMESTAMP LOGIC)
@@ -235,75 +236,88 @@ function computeBatteryRuntimeHours(packets) {
 }
 
 function computeBatteryDrainTime(packets) {
+  // Step 1: Validate input
   if (!packets || packets.length === 0) return "-";
-
-  // Find the most recent occurrence of battery = 100%
+  
+  // Step 2: Filter to normal packets only (type "N" or "PACKET_N")
+  const normalPackets = packets.filter(
+    (p) => p.packetType === "N" || p.packetType === "PACKET_N"
+  );
+  
+  if (normalPackets.length === 0) return "-";
+  
+  // Step 3: Find most recent 100% battery packet
   let fullBatteryPacket = null;
-  let zeroBatteryPacket = null;
-
-  // Sort packets by timestamp (newest first)
-  const sortedPackets = [...packets].sort((a, b) => {
-    const aTime = new Date(a.deviceTimestamp || a.deviceRawTimestamp).getTime();
-    const bTime = new Date(b.deviceTimestamp || b.deviceRawTimestamp).getTime();
-    return bTime - aTime;
-  });
-
-  // Find the most recent 100% battery
-  for (let i = 0; i < sortedPackets.length; i++) {
-    const p = sortedPackets[i];
-    const battery = Number(String(p.battery || "").replace(/[^\d]/g, ""));
+  
+  for (let i = 0; i < normalPackets.length; i++) {
+    const p = normalPackets[i];
+    const battery = extractBatteryValue(p.battery);
     
-    if (battery === 100 && !fullBatteryPacket) {
+    if (battery === 100) {
       fullBatteryPacket = p;
-    }
-    
-    // Find the first occurrence of 0% battery after 100%
-    if (fullBatteryPacket && battery === 0 && !zeroBatteryPacket) {
-      zeroBatteryPacket = p;
-      break;
+      break; // Found most recent, stop searching
     }
   }
-
-  // If we don't have both 100% and 0%, try to estimate based on current battery level
-  if (!fullBatteryPacket || !zeroBatteryPacket) {
-    if (!fullBatteryPacket) return "No 100% record";
-    
-    // Estimate based on current battery level and time elapsed
-    const currentBattery = Number(String(sortedPackets[0].battery || "").replace(/[^\d]/g, ""));
-    if (isNaN(currentBattery) || currentBattery === 100) return "-";
-    
-    const fullTime = new Date(fullBatteryPacket.deviceTimestamp || fullBatteryPacket.deviceRawTimestamp);
-    const currentTime = new Date(sortedPackets[0].deviceTimestamp || sortedPackets[0].deviceRawTimestamp);
-    
-    if (isNaN(fullTime) || isNaN(currentTime)) return "-";
-    
-    const elapsedMs = currentTime - fullTime;
-    const elapsedHours = elapsedMs / (1000 * 60 * 60);
-    const batteryDrained = 100 - currentBattery;
-    
-    if (batteryDrained <= 0 || elapsedHours <= 0) return "-";
-    
-    // Estimate total drain time: (elapsed time / battery drained) * 100
-    const estimatedTotalHours = (elapsedHours / batteryDrained) * 100;
-    
-    return `~${estimatedTotalHours.toFixed(1)}h (estimated)`;
+  
+  if (!fullBatteryPacket) return "No 100% record";
+  
+  // Step 4: Get current battery level (first normal packet)
+  const currentBattery = extractBatteryValue(normalPackets[0].battery);
+  
+  if (isNaN(currentBattery) || currentBattery === 100) return "-";
+  
+  // Step 5: Calculate time difference
+  const fullTime = parseTimestampWithFallback(fullBatteryPacket);
+  const currentTime = parseTimestampWithFallback(normalPackets[0]);
+  
+  if (!fullTime || !currentTime) return "-";
+  
+  const elapsedMs = currentTime - fullTime;
+  
+  if (elapsedMs < 0) return "-";
+  
+  // Step 6: Format output
+  const elapsedHours = elapsedMs / (1000 * 60 * 60);
+  
+  if (elapsedHours >= 1) {
+    return elapsedHours.toFixed(1) + "h";
+  } else {
+    const elapsedMinutes = Math.round(elapsedMs / (1000 * 60));
+    return elapsedMinutes + "m";
   }
+}
 
-  // Calculate actual drain time from 100% to 0%
-  const fullTime = new Date(fullBatteryPacket.deviceTimestamp || fullBatteryPacket.deviceRawTimestamp);
-  const zeroTime = new Date(zeroBatteryPacket.deviceTimestamp || zeroBatteryPacket.deviceRawTimestamp);
+// Helper function to extract numeric battery value from various formats
+function extractBatteryValue(batteryField) {
+  if (batteryField == null) return NaN;
+  
+  // Handle string formats like "85%", "85", or numbers
+  const batteryStr = String(batteryField).replace(/[^\d]/g, "");
+  const batteryNum = Number(batteryStr);
+  
+  return batteryNum;
+}
 
-  if (isNaN(fullTime) || isNaN(zeroTime)) return "-";
-
-  const drainMs = Math.abs(zeroTime - fullTime);
-  const drainHours = drainMs / (1000 * 60 * 60);
-
-  if (drainHours < 1) {
-    const drainMinutes = drainMs / (1000 * 60);
-    return `${drainMinutes.toFixed(0)}m`;
+// Helper function to parse timestamp with fallback
+function parseTimestampWithFallback(packet) {
+  if (!packet) return null;
+  
+  // Try deviceTimestamp first
+  let timestamp = packet.deviceTimestamp;
+  
+  // Fall back to deviceRawTimestamp if needed
+  if (!timestamp) {
+    timestamp = packet.deviceRawTimestamp;
   }
-
-  return `${drainHours.toFixed(1)}h`;
+  
+  if (!timestamp) return null;
+  
+  const date = new Date(timestamp);
+  
+  // Check if date is valid
+  if (isNaN(date.getTime())) return null;
+  
+  return date;
 }
 
 
@@ -752,7 +766,7 @@ export default function DeviceDetails() {
               </div>
               <div className="col-span-2 flex justify-between pt-2 border-t border-white/10">
                 <span className="text-green-200/80">Temperature</span>
-                <span className="text-white">{normal.rawTemperature ?? "-"}</span>
+                <span className="text-white">{parseTemperature(normal.rawTemperature)}°C</span>
               </div>
             </div>
           </Card.Content>
@@ -871,7 +885,7 @@ export default function DeviceDetails() {
                   </div>
                   <div className="flex justify-between items-center py-2 border-b border-white/10">
                     <span className="text-white/70">Temperature</span>
-                    <span className="text-white">{normal.rawTemperature || "-"}</span>
+                    <span className="text-white">{parseTemperature(normal.rawTemperature)}°C</span>
                   </div>
                   <div className="flex justify-between items-center py-2">
                     <span className="text-white/70">Last Update</span>
@@ -956,7 +970,7 @@ export default function DeviceDetails() {
                   <div className="text-white text-lg font-bold">{computeBatteryRuntimeHours(packets)} hrs</div>
                 </div>
                 <div className="bg-white/5 rounded-lg p-4">
-                  <div className="text-purple-200/80 text-xs font-medium mb-2">Drain Time (100→0%)</div>
+                  <div className="text-purple-200/80 text-xs font-medium mb-2">Drain Time (100→current%)</div>
                   <div className="text-white text-lg font-bold">{computeBatteryDrainTime(packets)}</div>
                 </div>
                 <div className="bg-white/5 rounded-lg p-4">
