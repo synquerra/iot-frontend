@@ -4,41 +4,130 @@ import { Card } from "../design-system/components";
 import { Button } from "../design-system/components";
 import { Loading } from "../design-system/components";
 import { cn } from "../design-system/utils/cn";
+import { sendDeviceCommand } from "../utils/deviceCommandAPI";
+import { ContactInput } from "../components/ContactInput";
+import { Notification } from "../components/Notification";
+
+/**
+ * Validates contact phone number fields
+ * @param {Object} contacts - Contact state object with phonenum1, phonenum2, controlroomnum
+ * @returns {Object} - { isValid: boolean, errors: Object }
+ */
+function validateContacts(contacts) {
+  const errors = {};
+  
+  if (!contacts.phonenum1 || contacts.phonenum1.trim() === '') {
+    errors.phonenum1 = 'Primary contact is required';
+  }
+  
+  if (!contacts.phonenum2 || contacts.phonenum2.trim() === '') {
+    errors.phonenum2 = 'Secondary contact is required';
+  }
+  
+  if (!contacts.controlroomnum || contacts.controlroomnum.trim() === '') {
+    errors.controlroomnum = 'Control room contact is required';
+  }
+  
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors
+  };
+}
 
 export default function DeviceSettings() {
-  const { imei } = useParams();
+  const { imei: routeImei } = useParams();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("general");
-  const [settings, setSettings] = useState({
-    phoneNumber1: "9473XXXXXX",
-    phoneNumber2: "9674XXXXXX",
-    temperatureLimit: 42,
-    speedLimit: 55,
-    reportingInterval: 30,
-    batteryThreshold: 20,
-    gpsAccuracy: "high",
-    dataEncryption: true,
-    autoRestart: true,
-    debugMode: false
+  
+  // Use route IMEI or default for testing
+  const imei = routeImei || "862942074957887";
+
+  // Contact state management
+  const [contacts, setContacts] = useState({
+    phonenum1: '',
+    phonenum2: '',
+    controlroomnum: ''
   });
 
-  const tabs = [
-    { id: "general", label: "General", icon: "⚙️" },
-    { id: "alerts", label: "Alerts", icon: "🚨" },
-    { id: "connectivity", label: "Connectivity", icon: "📡" },
-    { id: "security", label: "Security", icon: "🔒" }
-  ];
+  const [contactErrors, setContactErrors] = useState({
+    phonenum1: '',
+    phonenum2: '',
+    controlroomnum: ''
+  });
 
-  const handleSave = async () => {
-    setLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setLoading(false);
-  };
+  const [notification, setNotification] = useState({
+    type: '', // 'success' | 'error' | ''
+    message: ''
+  });
 
-  const handleSettingChange = (key, value) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+  const [isSaving, setIsSaving] = useState(false);
+
+  /**
+   * Handles saving contact settings to the device
+   * Validates contacts, calls device command API, and manages UI state
+   */
+  const handleSaveContacts = async () => {
+    // Step 1: Validate inputs
+    const { isValid, errors } = validateContacts(contacts);
+    
+    if (!isValid) {
+      setContactErrors(errors);
+      setNotification({
+        type: 'error',
+        message: 'Please fill in all required contact fields'
+      });
+      return;
+    }
+    
+    // Clear previous errors
+    setContactErrors({
+      phonenum1: '',
+      phonenum2: '',
+      controlroomnum: ''
+    });
+    
+    // Step 2: Set loading state
+    setIsSaving(true);
+    setNotification({ type: '', message: '' });
+    
+    try {
+      // Step 3: Call device command API
+      await sendDeviceCommand(imei, 'SET_CONTACTS', {
+        phonenum1: contacts.phonenum1.trim(),
+        phonenum2: contacts.phonenum2.trim(),
+        controlroomnum: contacts.controlroomnum.trim()
+      });
+      
+      // Step 4: Handle success
+      setNotification({
+        type: 'success',
+        message: `Contact settings saved successfully for device ${imei}`
+      });
+      
+      // Auto-dismiss success notification after 5 seconds
+      setTimeout(() => {
+        setNotification({ type: '', message: '' });
+      }, 5000);
+      
+    } catch (error) {
+      // Step 5: Handle errors
+      let errorMessage = 'Failed to save contact settings';
+      
+      if (error.code === 'VALIDATION_ERROR') {
+        errorMessage = `Validation error: ${error.message}`;
+      } else if (error.code === 'NETWORK_ERROR') {
+        errorMessage = 'Network error: Unable to reach the device. Please check your connection and try again.';
+      } else if (error.code === 'API_ERROR') {
+        errorMessage = `API error (${error.details?.statusCode || 'unknown'}): ${error.message}`;
+      }
+      
+      setNotification({
+        type: 'error',
+        message: errorMessage
+      });
+    } finally {
+      // Step 6: Clear loading state
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -68,19 +157,31 @@ export default function DeviceSettings() {
                 </Button>
                 <div className="w-1 h-6 bg-blue-400/50 rounded-full"></div>
                 <div className="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-xs font-medium">
-                  Settings
+                  Contact Settings
                 </div>
               </div>
               
               <h1 className="text-3xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent mb-2">
-                Device Settings
+                Emergency Contacts
               </h1>
-              <p className="text-blue-100/90 text-lg leading-relaxed">
-                Configure settings and parameters for device <span className="font-mono text-blue-200">{imei || "Device"}</span>
+              <p className="text-blue-100/90 text-lg leading-relaxed mb-3">
+                Configure emergency contact numbers for device
               </p>
+              <div className="flex items-center gap-2">
+                <span className="text-blue-200/70 text-sm">IMEI:</span>
+                <span className="font-mono text-blue-100 text-lg font-semibold bg-blue-500/20 px-3 py-1 rounded-lg">
+                  {imei || "N/A"}
+                </span>
+              </div>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
+              <div className="text-right">
+                <div className="text-blue-200/80 text-sm">IMEI Number</div>
+                <div className="text-white text-lg font-mono font-bold">{imei || "N/A"}</div>
+                <div className="text-blue-200/70 text-xs">Device Identifier</div>
+              </div>
+              <div className="w-px h-16 bg-blue-400/30"></div>
               <div className="text-right">
                 <div className="text-blue-200/80 text-sm">Device Status</div>
                 <div className="text-green-300 text-xl font-bold">Online</div>
@@ -91,339 +192,88 @@ export default function DeviceSettings() {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <Card variant="glass" colorScheme="slate" padding="sm" className="backdrop-blur-xl">
+      {/* Emergency Contacts Section */}
+      <Card variant="glass" colorScheme="blue" padding="lg">
         <Card.Content>
-          <div className="flex flex-wrap gap-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2',
-                  activeTab === tab.id
-                    ? 'bg-blue-500/80 text-white shadow-lg'
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
-                )}
+          <h3 className="text-blue-300 text-lg font-semibold mb-6 flex items-center gap-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+            Contact Numbers
+          </h3>
+
+          {/* Notification Display */}
+          {notification.message && (
+            <div className="mb-6">
+              <Notification
+                type={notification.type}
+                message={notification.message}
+                onDismiss={() => setNotification({ type: '', message: '' })}
+              />
+            </div>
+          )}
+
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <ContactInput
+                label="Primary Contact"
+                value={contacts.phonenum1}
+                onChange={(e) => setContacts({ ...contacts, phonenum1: e.target.value })}
+                error={contactErrors.phonenum1}
+                disabled={isSaving}
+                placeholder="Enter primary contact number"
+              />
+              <ContactInput
+                label="Secondary Contact"
+                value={contacts.phonenum2}
+                onChange={(e) => setContacts({ ...contacts, phonenum2: e.target.value })}
+                error={contactErrors.phonenum2}
+                disabled={isSaving}
+                placeholder="Enter secondary contact number"
+              />
+              <ContactInput
+                label="Control Room Contact"
+                value={contacts.controlroomnum}
+                onChange={(e) => setContacts({ ...contacts, controlroomnum: e.target.value })}
+                error={contactErrors.controlroomnum}
+                disabled={isSaving}
+                placeholder="Enter control room number"
+              />
+            </div>
+
+            <div className="flex justify-end gap-4">
+              <Button
+                variant="outline"
+                colorScheme="slate"
+                size="md"
+                onClick={() => navigate(`/devices/${imei}`)}
+                className="min-w-[150px]"
               >
-                <span>{tab.icon}</span>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </Card.Content>
-      </Card>
-
-      {/* Tab Content */}
-      {activeTab === "general" && (
-        <div className="space-y-6">
-          <Card variant="glass" colorScheme="blue" padding="lg">
-            <Card.Content>
-              <h3 className="text-blue-300 text-lg font-semibold mb-6 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
-                General Settings
-              </h3>
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="text-blue-200/80 text-sm font-medium block mb-3">
-                      Primary Phone Number
-                    </label>
-                    <input
-                      type="tel"
-                      value={settings.phoneNumber1}
-                      onChange={(e) => handleSettingChange('phoneNumber1', e.target.value)}
-                      className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:bg-white/15 focus:border-blue-400/60 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-blue-200/80 text-sm font-medium block mb-3">
-                      Secondary Phone Number
-                    </label>
-                    <input
-                      type="tel"
-                      value={settings.phoneNumber2}
-                      onChange={(e) => handleSettingChange('phoneNumber2', e.target.value)}
-                      className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:bg-white/15 focus:border-blue-400/60 focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="text-blue-200/80 text-sm font-medium block mb-3">
-                      Reporting Interval (seconds)
-                    </label>
-                    <input
-                      type="number"
-                      min="10"
-                      max="3600"
-                      value={settings.reportingInterval}
-                      onChange={(e) => handleSettingChange('reportingInterval', parseInt(e.target.value))}
-                      className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:bg-white/15 focus:border-blue-400/60 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-blue-200/80 text-sm font-medium block mb-3">
-                      GPS Accuracy
-                    </label>
-                    <select
-                      value={settings.gpsAccuracy}
-                      onChange={(e) => handleSettingChange('gpsAccuracy', e.target.value)}
-                      className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:bg-white/15 focus:border-blue-400/60 focus:outline-none"
-                    >
-                      <option value="high" className="bg-slate-900">High Accuracy</option>
-                      <option value="medium" className="bg-slate-900">Medium Accuracy</option>
-                      <option value="low" className="bg-slate-900">Low Accuracy</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-                    <div>
-                      <div className="text-white font-medium">Auto Restart</div>
-                      <div className="text-blue-200/70 text-sm">Automatically restart device on errors</div>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.autoRestart}
-                        onChange={(e) => handleSettingChange('autoRestart', e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-                    <div>
-                      <div className="text-white font-medium">Debug Mode</div>
-                      <div className="text-blue-200/70 text-sm">Enable detailed logging and diagnostics</div>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.debugMode}
-                        onChange={(e) => handleSettingChange('debugMode', e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </Card.Content>
-          </Card>
-        </div>
-      )}
-
-      {activeTab === "alerts" && (
-        <div className="space-y-6">
-          <Card variant="glass" colorScheme="amber" padding="lg">
-            <Card.Content>
-              <h3 className="text-amber-300 text-lg font-semibold mb-6 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                Alert Thresholds
-              </h3>
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="text-amber-200/80 text-sm font-medium block mb-3">
-                      Temperature Limit (°C)
-                    </label>
-                    <input
-                      type="number"
-                      min="-40"
-                      max="85"
-                      value={settings.temperatureLimit}
-                      onChange={(e) => handleSettingChange('temperatureLimit', parseInt(e.target.value))}
-                      className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:bg-white/15 focus:border-amber-400/60 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-amber-200/80 text-sm font-medium block mb-3">
-                      Speed Limit (km/h)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="200"
-                      value={settings.speedLimit}
-                      onChange={(e) => handleSettingChange('speedLimit', parseInt(e.target.value))}
-                      className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:bg-white/15 focus:border-amber-400/60 focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-amber-200/80 text-sm font-medium block mb-3">
-                    Battery Threshold (%)
-                  </label>
-                  <div className="space-y-4">
-                    <input
-                      type="range"
-                      min="5"
-                      max="50"
-                      value={settings.batteryThreshold}
-                      onChange={(e) => handleSettingChange('batteryThreshold', parseInt(e.target.value))}
-                      className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
-                    />
-                    <div className="flex justify-between text-xs text-amber-200/60">
-                      <span>5%</span>
-                      <span className="text-white font-bold">{settings.batteryThreshold}%</span>
-                      <span>50%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Card.Content>
-          </Card>
-        </div>
-      )}
-
-      {activeTab === "connectivity" && (
-        <div className="space-y-6">
-          <Card variant="glass" colorScheme="green" padding="lg">
-            <Card.Content>
-              <h3 className="text-green-300 text-lg font-semibold mb-6 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-                </svg>
-                Connectivity Settings
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-                  <div>
-                    <div className="text-white font-medium">Auto Reconnect</div>
-                    <div className="text-green-200/70 text-sm">Automatically reconnect on connection loss</div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" defaultChecked />
-                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-                  <div>
-                    <div className="text-white font-medium">Data Roaming</div>
-                    <div className="text-green-200/70 text-sm">Allow data usage when roaming</div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" />
-                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-                  <div>
-                    <div className="text-white font-medium">Low Power Mode</div>
-                    <div className="text-green-200/70 text-sm">Reduce connectivity to save battery</div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" />
-                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                  </label>
-                </div>
-              </div>
-            </Card.Content>
-          </Card>
-        </div>
-      )}
-
-      {activeTab === "security" && (
-        <div className="space-y-6">
-          <Card variant="glass" colorScheme="red" padding="lg">
-            <Card.Content>
-              <h3 className="text-red-300 text-lg font-semibold mb-6 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                Security Settings
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-                  <div>
-                    <div className="text-white font-medium">Data Encryption</div>
-                    <div className="text-red-200/70 text-sm">Encrypt all data transmissions</div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={settings.dataEncryption}
-                      onChange={(e) => handleSettingChange('dataEncryption', e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-                  <div>
-                    <div className="text-white font-medium">Remote Lock</div>
-                    <div className="text-red-200/70 text-sm">Allow remote device locking</div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" defaultChecked />
-                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-                  <div>
-                    <div className="text-white font-medium">Secure Boot</div>
-                    <div className="text-red-200/70 text-sm">Verify firmware integrity on startup</div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" defaultChecked />
-                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
-                  </label>
-                </div>
-              </div>
-            </Card.Content>
-          </Card>
-        </div>
-      )}
-
-      {/* Action Buttons */}
-      <Card variant="glass" colorScheme="slate" padding="lg">
-        <Card.Content>
-          <div className="flex flex-wrap gap-4 justify-center">
-            <Button
-              variant="glass"
-              colorScheme="green"
-              size="lg"
-              onClick={handleSave}
-              disabled={loading}
-              className="min-w-[150px]"
-            >
-              {loading ? (
-                <Loading type="spinner" size="sm" color="white" />
-              ) : (
-                <>
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Save Settings
-                </>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              colorScheme="amber"
-              size="lg"
-              onClick={() => navigate(`/devices/${imei}`)}
-              className="min-w-[150px]"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Cancel
-            </Button>
+                Cancel
+              </Button>
+              <Button
+                variant="glass"
+                colorScheme="green"
+                size="md"
+                onClick={handleSaveContacts}
+                disabled={isSaving}
+                className="min-w-[180px]"
+              >
+                {isSaving ? (
+                  <Loading type="spinner" size="sm" color="white" />
+                ) : (
+                  <>
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Save Contacts
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </Card.Content>
       </Card>

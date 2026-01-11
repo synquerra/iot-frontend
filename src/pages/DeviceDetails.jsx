@@ -237,14 +237,22 @@ function computeBatteryRuntimeHours(packets) {
 
 function computeBatteryDrainTime(packets) {
   // Step 1: Validate input
-  if (!packets || packets.length === 0) return "-";
+  if (!packets || packets.length === 0) {
+    console.log("🔋 Battery Drain: No packets");
+    return "-";
+  }
   
   // Step 2: Filter to normal packets only (type "N" or "PACKET_N")
   const normalPackets = packets.filter(
     (p) => p.packetType === "N" || p.packetType === "PACKET_N"
   );
   
-  if (normalPackets.length === 0) return "-";
+  console.log(`🔋 Battery Drain: ${normalPackets.length} normal packets out of ${packets.length} total`);
+  
+  if (normalPackets.length === 0) {
+    console.log("🔋 Battery Drain: No normal packets");
+    return "-";
+  }
   
   // Step 3: Find most recent 100% battery packet
   let fullBatteryPacket = null;
@@ -255,35 +263,72 @@ function computeBatteryDrainTime(packets) {
     
     if (battery === 100) {
       fullBatteryPacket = p;
+      console.log(`🔋 Battery Drain: Found 100% at index ${i}, battery value:`, p.battery);
       break; // Found most recent, stop searching
     }
   }
   
-  if (!fullBatteryPacket) return "No 100% record";
+  if (!fullBatteryPacket) {
+    console.log("🔋 Battery Drain: No 100% record found");
+    return "No 100% record";
+  }
   
   // Step 4: Get current battery level (first normal packet)
   const currentBattery = extractBatteryValue(normalPackets[0].battery);
+  console.log("🔋 Battery Drain: Current battery:", currentBattery, "from", normalPackets[0].battery);
   
-  if (isNaN(currentBattery) || currentBattery === 100) return "-";
+  if (isNaN(currentBattery)) {
+    console.log("🔋 Battery Drain: Current battery is NaN");
+    return "-";
+  }
+  
+  if (currentBattery === 100) {
+    console.log("🔋 Battery Drain: Current battery is 100%");
+    return "-";
+  }
   
   // Step 5: Calculate time difference
   const fullTime = parseTimestampWithFallback(fullBatteryPacket);
   const currentTime = parseTimestampWithFallback(normalPackets[0]);
   
-  if (!fullTime || !currentTime) return "-";
+  console.log("🔋 Battery Drain: Timestamps -", {
+    fullTime,
+    currentTime,
+    fullPacketFields: {
+      deviceRawTimestamp: fullBatteryPacket.deviceRawTimestamp,
+      deviceTimestamp: fullBatteryPacket.deviceTimestamp
+    },
+    currentPacketFields: {
+      deviceRawTimestamp: normalPackets[0].deviceRawTimestamp,
+      deviceTimestamp: normalPackets[0].deviceTimestamp
+    }
+  });
+  
+  if (!fullTime || !currentTime) {
+    console.log("🔋 Battery Drain: Invalid timestamps");
+    return "-";
+  }
   
   const elapsedMs = currentTime - fullTime;
+  console.log("🔋 Battery Drain: Elapsed ms:", elapsedMs);
   
-  if (elapsedMs < 0) return "-";
+  if (elapsedMs < 0) {
+    console.log("🔋 Battery Drain: Negative time difference");
+    return "-";
+  }
   
   // Step 6: Format output
   const elapsedHours = elapsedMs / (1000 * 60 * 60);
   
   if (elapsedHours >= 1) {
-    return elapsedHours.toFixed(1) + "h";
+    const result = elapsedHours.toFixed(1) + "h";
+    console.log("🔋 Battery Drain: Result:", result);
+    return result;
   } else {
     const elapsedMinutes = Math.round(elapsedMs / (1000 * 60));
-    return elapsedMinutes + "m";
+    const result = elapsedMinutes + "m";
+    console.log("🔋 Battery Drain: Result:", result);
+    return result;
   }
 }
 
@@ -300,19 +345,28 @@ function extractBatteryValue(batteryField) {
 
 // Helper function to parse timestamp with fallback
 function parseTimestampWithFallback(packet) {
-  if (!packet) return null;
-  
-  // Try deviceTimestamp first
-  let timestamp = packet.deviceTimestamp;
-  
-  // Fall back to deviceRawTimestamp if needed
-  if (!timestamp) {
-    timestamp = packet.deviceRawTimestamp;
+  if (!packet) {
+    console.log("⏰ parseTimestampWithFallback: packet is null/undefined");
+    return null;
   }
   
-  if (!timestamp) return null;
+  // Try deviceRawTimestamp first (PRIMARY field in normalized data)
+  let timestamp = packet.deviceRawTimestamp;
+  console.log("⏰ parseTimestampWithFallback: deviceRawTimestamp =", timestamp);
+  
+  // Fall back to deviceTimestamp for backward compatibility
+  if (!timestamp) {
+    timestamp = packet.deviceTimestamp;
+    console.log("⏰ parseTimestampWithFallback: falling back to deviceTimestamp =", timestamp);
+  }
+  
+  if (!timestamp) {
+    console.log("⏰ parseTimestampWithFallback: no timestamp available");
+    return null;
+  }
   
   const date = new Date(timestamp);
+  console.log("⏰ parseTimestampWithFallback: parsed date =", date, "valid =", !isNaN(date.getTime()));
   
   // Check if date is valid
   if (isNaN(date.getTime())) return null;

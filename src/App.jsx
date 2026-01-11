@@ -35,9 +35,10 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="devices" element={<Devices />} />
           <Route path="devices/:imei" element={<DeviceDetails />} />
+          <Route path="devices/:imei/settings" element={<DeviceSettings />} />
+          <Route path="device-settings" element={<DeviceSettings />} />
           <Route path="telemetry" element={<Telemetry />} />
           <Route path="configuration" element={<Configuration />} />
-          <Route path="device-settings" element={<DeviceSettings />} />
           <Route path="geofence" element={<Geofence />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="alerts" element={<Alerts />} />
