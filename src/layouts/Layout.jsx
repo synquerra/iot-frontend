@@ -29,7 +29,7 @@ function Sidebar() {
     { to: "/", label: "Overview", icon: <FiHome />, colorScheme: "violet", description: "Dashboard overview" },
     { to: "/devices", label: "Devices", icon: <FiCpu />, colorScheme: "blue", description: "Device management" },
     { to: "/telemetry", label: "Telemetry", icon: <FiActivity />, colorScheme: "cyan", description: "Real-time data" },
-    { to: "/configuration", label: "Configuration", icon: <FiSliders />, colorScheme: "teal", description: "System settings" },
+    // { to: "/configuration", label: "Configuration", icon: <FiSliders />, colorScheme: "teal", description: "System settings" },
     { to: "/device-settings", label: "Device Settings", icon: <FiTool />, colorScheme: "green", description: "Device configuration" },
     { to: "/geofence", label: "Geofence", icon: <FiMapPin />, colorScheme: "lime", description: "Location boundaries" },
     { to: "/analytics", label: "Analytics", icon: <FiBarChart2 />, colorScheme: "amber", description: "Data insights" },
