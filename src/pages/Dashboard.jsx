@@ -26,6 +26,8 @@ import {
 import { LeafletComponents } from "../components/LazyMap";
 import { EnhancedMiniMap } from "../components/EnhancedMap";
 import { MapboxStyleMap } from "../components/MapboxMap";
+import MapRenderer from "../components/MapRenderer";
+import { loadLocationDataProgressive } from "../utils/progressiveMapDataLoader";
 
 // API utilities
 import {
@@ -273,7 +275,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [locationLoading, setLocationLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [mapProvider, setMapProvider] = useState('enhanced'); // 'enhanced' or 'mapbox'
+  const [mapProvider, setMapProvider] = useState('optimized'); // 'optimized', 'enhanced', or 'mapbox'
   
   // Enhanced analytics API instance
   const [analyticsAPI] = useState(() => new EnhancedAnalyticsAPI({
@@ -432,7 +434,7 @@ export default function Dashboard() {
     }
   };
 
-  // Load location history
+  // Load location history with progressive loading
   const loadHistory = async (imei) => {
     console.log("🗺️ loadHistory called with imei:", imei);
     
@@ -454,30 +456,37 @@ export default function Dashboard() {
       
       // Progress callback for location loading
       const locationProgress = (progress) => {
+        console.log("📊 Location loading progress:", progress);
+        
         setLoadingProgress(prev => ({
           ...prev,
           location: {
-            current: progress.totalItems || 0,
-            total: progress.totalEstimated || progress.totalItems || 0,
-            percentage: progress.completionPercentage || 
-                       (progress.totalItems && progress.totalEstimated ? 
-                        (progress.totalItems / progress.totalEstimated) * 100 : 0)
+            current: progress.totalPoints || 0,
+            total: progress.estimatedTotal || progress.totalPoints || 0,
+            percentage: progress.progress || 0
           }
         }));
       };
 
-      // Use enhanced analytics API for location data with chunking
-      const locationData = await getAnalyticsByImeiSafe(imei, {
-        chunkSize: 1000,
-        maxChunks: 10, // Limit chunks to prevent excessive loading
-        onProgress: locationProgress
-      }).catch(err => {
-        console.warn("Enhanced IMEI query failed, trying basic fallback:", err.message);
-        // Fallback to basic IMEI query
-        return getAnalyticsByImei(imei);
-      });
+      // Use progressive data loader with chunked fetching (Requirement 2.1, 2.3)
+      const result = await loadLocationDataProgressive(
+        getAnalyticsByImei,
+        imei,
+        {
+          onProgress: locationProgress,
+          chunkSize: 100, // Load 100 points per chunk
+          enableSampling: true, // Enable sampling for large datasets (Requirement 2.2)
+          config: {
+            samplingThreshold: 500,
+            maxPoints: 1000,
+          }
+        }
+      );
+      
+      const locationData = result.data;
       
       console.log("📍 Raw location data received:", locationData?.length || 0, "points");
+      console.log("📊 Load metadata:", result.metadata);
       
       const processedPath = Array.isArray(locationData) 
         ? locationData
@@ -790,13 +799,13 @@ export default function Dashboard() {
               </div>
               
               <div className="flex items-center gap-3">
-                {/* Map Provider Selector */}
+                {/* Map Provider Selector with Optimized Option */}
                 <div className="relative group">
                   <select
                     value={mapProvider}
                     onChange={(e) => setMapProvider(e.target.value)}
                     className={cn(
-                      'px-4 py-2.5 min-w-[140px] rounded-xl',
+                      'px-4 py-2.5 min-w-[160px] rounded-xl',
                       'bg-white/15 backdrop-blur-xl border border-white/30',
                       'text-white placeholder-white/70',
                       'shadow-xl shadow-black/30',
@@ -806,6 +815,9 @@ export default function Dashboard() {
                       'text-sm font-semibold tracking-wide'
                     )}
                   >
+                    <option value="optimized" className="bg-slate-900/95 text-white font-medium">
+                      ⚡ Optimized Map
+                    </option>
                     <option value="enhanced" className="bg-slate-900/95 text-white font-medium">
                       🗺️ Enhanced Map
                     </option>
@@ -870,8 +882,9 @@ export default function Dashboard() {
           <Card.Content className="pt-6 relative z-10">
             {selectedImei ? (
               <div className="relative">
-                {/* Simple Map Container for debugging */}
-                <div className="relative rounded-xl overflow-hidden border border-white/20 shadow-xl min-h-[400px] bg-slate-800">
+                {/* Map Container with proper dimensions (Requirement 1.4) */}
+                <div className="relative rounded-xl overflow-hidden border border-white/20 shadow-xl bg-slate-800"
+                     style={{ width: '100%', height: '400px', minHeight: '400px' }}>
                   {locationLoading ? (
                     <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80">
                       <div className="text-center space-y-4">
@@ -909,8 +922,19 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <div className="w-full h-full relative">
-                      {/* Render map based on selected provider */}
-                      {mapProvider === 'enhanced' ? (
+                      {/* Render map based on selected provider (Requirement 4.2) */}
+                      {mapProvider === 'optimized' ? (
+                        // Use optimized MapRenderer with progressive enhancement (Requirement 1.1, 3.4)
+                        <MapRenderer
+                          path={locationPath}
+                          maxMarkers={20}
+                          simplifyPath={true}
+                          clusterMarkers={true}
+                          showMapTypeSelector={true}
+                          autoUpgrade={false}
+                          className="w-full h-full"
+                        />
+                      ) : mapProvider === 'enhanced' ? (
                         <EnhancedMiniMap path={locationPath} />
                       ) : (
                         <MapboxStyleMap path={locationPath} />
@@ -918,7 +942,7 @@ export default function Dashboard() {
                       
                       {/* Map Provider Badge */}
                       <div className="absolute top-4 left-4 z-20 bg-black/70 backdrop-blur-xl text-white px-3 py-2 rounded-lg text-xs font-semibold border border-white/20">
-                        {mapProvider === 'enhanced' ? '🗺️ Enhanced Leaflet' : '🛰️ Satellite View'}
+                        {mapProvider === 'optimized' ? '⚡ Optimized' : mapProvider === 'enhanced' ? '🗺️ Enhanced Leaflet' : '🛰️ Satellite View'}
                         <div className="text-white/70 text-xs mt-1">
                           Points: {locationPath.length}
                         </div>
