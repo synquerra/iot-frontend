@@ -3,14 +3,17 @@ import { Card } from "../design-system/components";
 import { Button } from "../design-system/components";
 import { Loading } from "../design-system/components";
 import { cn } from "../design-system/utils/cn";
-import { useGeofenceCommand } from "../hooks/useGeofenceCommand";
+import { useGeofenceCommand, createCircularGeofence } from "../hooks/useGeofenceCommand";
 import CustomPolygonInput from "../components/CustomPolygonInput";
 
 export default function Geofence() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [profileName, setProfileName] = useState("Home");
+  const [coordinates, setCoordinates] = useState({ x: 23.301624, y: 85.327065 });
+  const [radius, setRadius] = useState(100);
   const [imei, setImei] = useState("862942074957887");
+  const [geofenceMode, setGeofenceMode] = useState("circular");
   const [customPoints, setCustomPoints] = useState([
     { latitude: 23.301624, longitude: 85.327065 },
     { latitude: 23.301700, longitude: 85.327100 },
@@ -19,11 +22,11 @@ export default function Geofence() {
     { latitude: 23.301624, longitude: 85.327065 }
   ]);
   const [geofences, setGeofences] = useState([
-    { id: 1, name: "Home", status: "active", coordinates: "5 points", radius: null },
-    { id: 2, name: "Office", status: "active", coordinates: "5 points", radius: null },
-    { id: 3, name: "School", status: "inactive", coordinates: "5 points", radius: null },
-    { id: 4, name: "Mall", status: "active", coordinates: "5 points", radius: null },
-    { id: 5, name: "Hospital", status: "inactive", coordinates: "5 points", radius: null }
+    { id: 1, name: "Home", status: "active", coordinates: "62.531135, 63.513135", radius: 100 },
+    { id: 2, name: "Office", status: "active", coordinates: "62.541135, 63.523135", radius: 50 },
+    { id: 3, name: "School", status: "inactive", coordinates: "62.521135, 63.503135", radius: 75 },
+    { id: 4, name: "Mall", status: "active", coordinates: "62.561135, 63.543135", radius: 200 },
+    { id: 5, name: "Hospital", status: "inactive", coordinates: "62.511135, 63.493135", radius: 150 }
   ]);
 
   const { setGeofence, loading: commandLoading, error: commandError, response: commandResponse } = useGeofenceCommand();
@@ -40,13 +43,17 @@ export default function Geofence() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      let geofenceCoordinates = [...customPoints];
+      let geofenceCoordinates;
       
-      // Auto-close the polygon if needed
-      const first = geofenceCoordinates[0];
-      const last = geofenceCoordinates[geofenceCoordinates.length - 1];
-      if (first.latitude !== last.latitude || first.longitude !== last.longitude) {
-        geofenceCoordinates.push({ ...first });
+      if (geofenceMode === "circular") {
+        geofenceCoordinates = createCircularGeofence(coordinates.x, coordinates.y, radius, 16);
+      } else {
+        geofenceCoordinates = [...customPoints];
+        const first = geofenceCoordinates[0];
+        const last = geofenceCoordinates[geofenceCoordinates.length - 1];
+        if (first.latitude !== last.latitude || first.longitude !== last.longitude) {
+          geofenceCoordinates.push({ ...first });
+        }
       }
 
       await setGeofence(imei, {
@@ -59,8 +66,8 @@ export default function Geofence() {
         id: geofences.length + 1,
         name: profileName,
         status: "active",
-        coordinates: `${customPoints.length} points`,
-        radius: null
+        coordinates: geofenceMode === "circular" ? `${coordinates.x}, ${coordinates.y}` : `${customPoints.length} points`,
+        radius: geofenceMode === "circular" ? radius : null
       };
       setGeofences([...geofences, newGeofence]);
 
@@ -75,7 +82,6 @@ export default function Geofence() {
 
   return (
     <div className="space-y-8 p-6">
-      {/* Enhanced Header */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600/20 via-purple-600/20 to-teal-600/20 border border-blue-500/30 backdrop-blur-xl">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/10 via-transparent to-purple-500/10 animate-pulse" />
@@ -105,7 +111,6 @@ export default function Geofence() {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
       <Card variant="glass" colorScheme="slate" padding="sm" className="backdrop-blur-xl">
         <Card.Content>
           <div className="flex flex-wrap gap-2">
@@ -128,7 +133,6 @@ export default function Geofence() {
         </Card.Content>
       </Card>
 
-      {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card variant="glass" colorScheme="blue" padding="lg" hover={true} className="group">
           <Card.Content>
@@ -211,7 +215,6 @@ export default function Geofence() {
         </Card>
       </div>
 
-      {/* Tab Content */}
       {activeTab === "overview" && (
         <div className="space-y-6">
           <Card variant="glass" colorScheme="slate" padding="lg">
@@ -294,14 +297,101 @@ export default function Geofence() {
                   />
                 </div>
 
-                <CustomPolygonInput points={customPoints} onPointsChange={setCustomPoints} />
+                <div>
+                  <label className="text-blue-200/80 text-sm font-medium block mb-3">
+                    Geofence Type
+                  </label>
+                  <div className="flex gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setGeofenceMode("circular")}
+                      className={cn(
+                        'flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200',
+                        geofenceMode === "circular"
+                          ? 'bg-blue-500/80 text-white border-2 border-blue-400'
+                          : 'bg-white/10 text-white/70 border-2 border-white/20 hover:bg-white/15'
+                      )}
+                    >
+                      🔵 Circular (Center + Radius)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGeofenceMode("custom")}
+                      className={cn(
+                        'flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200',
+                        geofenceMode === "custom"
+                          ? 'bg-purple-500/80 text-white border-2 border-purple-400'
+                          : 'bg-white/10 text-white/70 border-2 border-white/20 hover:bg-white/15'
+                      )}
+                    >
+                      📐 Custom Polygon
+                    </button>
+                  </div>
+                </div>
+
+                {geofenceMode === "circular" && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="text-blue-200/80 text-sm font-medium block mb-3">
+                          Center Latitude
+                        </label>
+                        <input
+                          type="number"
+                          step="0.000001"
+                          value={coordinates.x}
+                          onChange={(e) => setCoordinates({...coordinates, x: parseFloat(e.target.value)})}
+                          className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:bg-white/15 focus:border-blue-400/60 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-blue-200/80 text-sm font-medium block mb-3">
+                          Center Longitude
+                        </label>
+                        <input
+                          type="number"
+                          step="0.000001"
+                          value={coordinates.y}
+                          onChange={(e) => setCoordinates({...coordinates, y: parseFloat(e.target.value)})}
+                          className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:bg-white/15 focus:border-blue-400/60 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-blue-200/80 text-sm font-medium block mb-3">
+                        Radius (meters)
+                      </label>
+                      <input
+                        type="number"
+                        min="10"
+                        max="10000"
+                        value={radius}
+                        onChange={(e) => setRadius(parseInt(e.target.value))}
+                        className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:bg-white/15 focus:border-blue-400/60 focus:outline-none"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {geofenceMode === "custom" && (
+                  <CustomPolygonInput points={customPoints} onPointsChange={setCustomPoints} />
+                )}
 
                 <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
                   <h4 className="text-blue-300 font-medium mb-2">Current Configuration</h4>
                   <div className="text-blue-200 text-sm space-y-1">
                     <div><span className="font-semibold">IMEI:</span> {imei}</div>
                     <div><span className="font-semibold">Name:</span> {profileName}</div>
-                    <div><span className="font-semibold">Points:</span> {customPoints.length} coordinates</div>
+                    <div><span className="font-semibold">Type:</span> {geofenceMode === "circular" ? "Circular" : "Custom Polygon"}</div>
+                    {geofenceMode === "circular" ? (
+                      <>
+                        <div><span className="font-semibold">Center:</span> {coordinates.x.toFixed(6)}, {coordinates.y.toFixed(6)}</div>
+                        <div><span className="font-semibold">Radius:</span> {radius}m</div>
+                      </>
+                    ) : (
+                      <div><span className="font-semibold">Points:</span> {customPoints.length} coordinates</div>
+                    )}
                   </div>
                 </div>
 
@@ -369,7 +459,6 @@ export default function Geofence() {
         </div>
       )}
 
-      {/* Action Buttons */}
       <Card variant="glass" colorScheme="slate" padding="lg">
         <Card.Content>
           <div className="flex flex-wrap gap-4 justify-center">

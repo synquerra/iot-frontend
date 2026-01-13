@@ -8,7 +8,7 @@ module.exports = {
       // Enhanced comprehensive color system
       colors: {
         // Maintain existing colors for backward compatibility
-        bg: '#071021',
+        bg: '#0f1115ff',
         card: '#0f1b2a',
         muted: '#9aa7b2',
         accent: '#5eead4',

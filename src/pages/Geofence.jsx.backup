@@ -3,34 +3,24 @@ import { Card } from "../design-system/components";
 import { Button } from "../design-system/components";
 import { Loading } from "../design-system/components";
 import { cn } from "../design-system/utils/cn";
-import { useGeofenceCommand } from "../hooks/useGeofenceCommand";
-import CustomPolygonInput from "../components/CustomPolygonInput";
 
 export default function Geofence() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [profileName, setProfileName] = useState("Home");
-  const [imei, setImei] = useState("862942074957887");
-  const [customPoints, setCustomPoints] = useState([
-    { latitude: 23.301624, longitude: 85.327065 },
-    { latitude: 23.301700, longitude: 85.327100 },
-    { latitude: 23.301750, longitude: 85.327150 },
-    { latitude: 23.301700, longitude: 85.327200 },
-    { latitude: 23.301624, longitude: 85.327065 }
-  ]);
+  const [coordinates, setCoordinates] = useState({ x: 62.531135, y: 63.513135 });
   const [geofences, setGeofences] = useState([
-    { id: 1, name: "Home", status: "active", coordinates: "5 points", radius: null },
-    { id: 2, name: "Office", status: "active", coordinates: "5 points", radius: null },
-    { id: 3, name: "School", status: "inactive", coordinates: "5 points", radius: null },
-    { id: 4, name: "Mall", status: "active", coordinates: "5 points", radius: null },
-    { id: 5, name: "Hospital", status: "inactive", coordinates: "5 points", radius: null }
+    { id: 1, name: "Home", status: "active", coordinates: "62.531135, 63.513135", radius: 100 },
+    { id: 2, name: "Office", status: "active", coordinates: "62.541135, 63.523135", radius: 50 },
+    { id: 3, name: "School", status: "inactive", coordinates: "62.521135, 63.503135", radius: 75 },
+    { id: 4, name: "Mall", status: "active", coordinates: "62.561135, 63.543135", radius: 200 },
+    { id: 5, name: "Hospital", status: "inactive", coordinates: "62.511135, 63.493135", radius: 150 }
   ]);
-
-  const { setGeofence, loading: commandLoading, error: commandError, response: commandResponse } = useGeofenceCommand();
 
   const tabs = [
     { id: "overview", label: "Overview", icon: "🗺️" },
     { id: "create", label: "Create", icon: "➕" },
+    { id: "manage", label: "Manage", icon: "⚙️" },
     { id: "alerts", label: "Alerts", icon: "🚨" }
   ];
 
@@ -39,38 +29,9 @@ export default function Geofence() {
 
   const handleSave = async () => {
     setLoading(true);
-    try {
-      let geofenceCoordinates = [...customPoints];
-      
-      // Auto-close the polygon if needed
-      const first = geofenceCoordinates[0];
-      const last = geofenceCoordinates[geofenceCoordinates.length - 1];
-      if (first.latitude !== last.latitude || first.longitude !== last.longitude) {
-        geofenceCoordinates.push({ ...first });
-      }
-
-      await setGeofence(imei, {
-        geofence_number: "GEO1",
-        geofence_id: profileName,
-        coordinates: geofenceCoordinates
-      });
-
-      const newGeofence = {
-        id: geofences.length + 1,
-        name: profileName,
-        status: "active",
-        coordinates: `${customPoints.length} points`,
-        radius: null
-      };
-      setGeofences([...geofences, newGeofence]);
-
-      alert(`Geofence "${profileName}" set successfully!`);
-    } catch (error) {
-      console.error('Failed to set geofence:', error);
-      alert(`Failed to set geofence: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setLoading(false);
   };
 
   return (
@@ -270,20 +231,7 @@ export default function Geofence() {
               <div className="space-y-6">
                 <div>
                   <label className="text-blue-200/80 text-sm font-medium block mb-3">
-                    Device IMEI
-                  </label>
-                  <input
-                    type="text"
-                    value={imei}
-                    onChange={(e) => setImei(e.target.value)}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:bg-white/15 focus:border-blue-400/60 focus:outline-none"
-                    placeholder="Enter device IMEI"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-blue-200/80 text-sm font-medium block mb-3">
-                    Geofence Name
+                    Profile Name
                   </label>
                   <input
                     type="text"
@@ -294,30 +242,113 @@ export default function Geofence() {
                   />
                 </div>
 
-                <CustomPolygonInput points={customPoints} onPointsChange={setCustomPoints} />
-
-                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                  <h4 className="text-blue-300 font-medium mb-2">Current Configuration</h4>
-                  <div className="text-blue-200 text-sm space-y-1">
-                    <div><span className="font-semibold">IMEI:</span> {imei}</div>
-                    <div><span className="font-semibold">Name:</span> {profileName}</div>
-                    <div><span className="font-semibold">Points:</span> {customPoints.length} coordinates</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="text-blue-200/80 text-sm font-medium block mb-3">
+                      Latitude (X)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={coordinates.x}
+                      onChange={(e) => setCoordinates({...coordinates, x: parseFloat(e.target.value)})}
+                      className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:bg-white/15 focus:border-blue-400/60 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-blue-200/80 text-sm font-medium block mb-3">
+                      Longitude (Y)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={coordinates.y}
+                      onChange={(e) => setCoordinates({...coordinates, y: parseFloat(e.target.value)})}
+                      className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:bg-white/15 focus:border-blue-400/60 focus:outline-none"
+                    />
                   </div>
                 </div>
 
-                {commandError && (
-                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-                    <h4 className="text-red-300 font-medium mb-2">Error</h4>
-                    <div className="text-red-200 text-sm">{commandError.message}</div>
-                  </div>
-                )}
+                <div>
+                  <label className="text-blue-200/80 text-sm font-medium block mb-3">
+                    Radius (meters)
+                  </label>
+                  <input
+                    type="number"
+                    min="10"
+                    max="10000"
+                    defaultValue="100"
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:bg-white/15 focus:border-blue-400/60 focus:outline-none"
+                  />
+                </div>
 
-                {commandResponse && (
-                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                    <h4 className="text-green-300 font-medium mb-2">Success</h4>
-                    <div className="text-green-200 text-sm">Geofence set successfully!</div>
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                  <h4 className="text-blue-300 font-medium mb-2">Current Coordinates</h4>
+                  <div className="text-blue-200 font-mono text-sm">
+                    {coordinates.x.toFixed(6)}, {coordinates.y.toFixed(6)}
                   </div>
-                )}
+                </div>
+              </div>
+            </Card.Content>
+          </Card>
+        </div>
+      )}
+
+      {activeTab === "manage" && (
+        <div className="space-y-6">
+          <Card variant="glass" colorScheme="amber" padding="lg">
+            <Card.Content>
+              <h3 className="text-amber-300 text-lg font-semibold mb-6 flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                </svg>
+                Manage Geofences
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Button
+                  variant="glass"
+                  colorScheme="blue"
+                  size="lg"
+                  className="h-20 flex-col"
+                >
+                  <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Create
+                </Button>
+                <Button
+                  variant="glass"
+                  colorScheme="amber"
+                  size="lg"
+                  className="h-20 flex-col"
+                >
+                  <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit
+                </Button>
+                <Button
+                  variant="glass"
+                  colorScheme="purple"
+                  size="lg"
+                  className="h-20 flex-col"
+                >
+                  <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Reset
+                </Button>
+                <Button
+                  variant="glass"
+                  colorScheme="red"
+                  size="lg"
+                  className="h-20 flex-col"
+                >
+                  <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Delete
+                </Button>
               </div>
             </Card.Content>
           </Card>
@@ -378,17 +409,17 @@ export default function Geofence() {
               colorScheme="green"
               size="lg"
               onClick={handleSave}
-              disabled={loading || commandLoading}
+              disabled={loading}
               className="min-w-[150px]"
             >
-              {(loading || commandLoading) ? (
+              {loading ? (
                 <Loading type="spinner" size="sm" color="white" />
               ) : (
                 <>
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  Save Geofence
+                  Save Changes
                 </>
               )}
             </Button>

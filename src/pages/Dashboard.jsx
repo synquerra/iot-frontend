@@ -23,10 +23,8 @@ import {
   EnhancedPieChart,
 } from "../components/LazyCharts";
 
-import { LeafletComponents } from "../components/LazyMap";
-import { EnhancedMiniMap } from "../components/EnhancedMap";
-import { MapboxStyleMap } from "../components/MapboxMap";
-import MapRenderer from "../components/MapRenderer";
+// Premium Journey Map - Ola/Uber style with timeline
+import PremiumJourneyMap from "../components/PremiumJourneyMap";
 import { loadLocationDataProgressive } from "../utils/progressiveMapDataLoader";
 
 // API utilities
@@ -49,217 +47,6 @@ import { listDevices } from "../utils/device";
 // Design system utilities
 import { cn } from "../design-system/utils/cn";
 
-/* ------------------------------------------------
-   FitBounds — proper auto zoom for device path
----------------------------------------------------*/
-function FitBounds({ path, useMap }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (!path || path.length === 0) return;
-
-    try {
-      const bounds = path.map((p) => [p.lat, p.lng]);
-      if (bounds.length > 0) {
-        map.fitBounds(bounds, { padding: [50, 50] });
-      }
-    } catch (error) {
-      console.error("FitBounds error:", error);
-    }
-  }, [path, map]);
-
-  return null;
-}
-
-/* ------------------------------------------------
-   MiniMap component with enhanced street-level detail
----------------------------------------------------*/
-function MiniMap({ path }) {
-  const fallback = [20.5937, 78.9629]; // India
-
-  console.log("MiniMap rendering with path:", path);
-
-  // Ensure path is always an array
-  const safePath = Array.isArray(path) ? path : [];
-  
-  // Path positions for map rendering
-  const pathPositions = safePath.map((p) => [p.lat, p.lng]);
-
-  // Enhanced map styles with better street-level detail
-  const mapStyles = {
-    height: "100%", 
-    width: "100%"
-  };
-
-  // Determine map center - use first path point or fallback
-  const mapCenter = safePath.length > 0 ? [safePath[0].lat, safePath[0].lng] : fallback;
-  
-  console.log("Map center:", mapCenter, "Path positions:", pathPositions.length);
-
-  return (
-    <div className={cn(
-      'rounded-xl overflow-hidden shadow-2xl',
-      'border border-white/20 backdrop-blur-sm',
-      'h-full w-full relative',
-      'min-h-[280px] sm:min-h-[320px] md:min-h-[360px] lg:min-h-[400px]'
-    )}>
-      <LeafletComponents>
-        {({ MapContainer, TileLayer, Marker, Polyline, Popup, useMap }) => (
-          <MapContainer
-            center={mapCenter}
-            zoom={safePath.length > 0 ? 15 : 5} // Higher zoom for better street detail
-            scrollWheelZoom
-            style={mapStyles}
-            className="rounded-xl"
-          >
-            <FitBounds path={safePath} useMap={useMap} />
-
-            {/* Enhanced Street-Level Tile Layer with better detail */}
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution="© OpenStreetMap contributors"
-              maxZoom={19} // Allow higher zoom for street-level detail
-              minZoom={3}
-            />
-
-            {/* Additional detailed tile layer for street names and features */}
-            <TileLayer
-              url="https://stamen-tiles-{s}.a.ssl.fastly.net/toner-labels/{z}/{x}/{y}{r}.png"
-              attribution="Map tiles by Stamen Design, CC BY 3.0 — Map data © OpenStreetMap contributors"
-              opacity={0.7}
-              maxZoom={18}
-            />
-
-            {/* Enhanced path rendering with street-by-street detail */}
-            {safePath.length > 1 && pathPositions.length > 1 && (
-              <>
-                {/* Shadow path for depth effect */}
-                <Polyline
-                  positions={pathPositions}
-                  color="#1e293b"
-                  weight={8}
-                  opacity={0.4}
-                  className="drop-shadow-xl"
-                />
-                {/* Main gradient path with enhanced visibility */}
-                <Polyline
-                  positions={pathPositions}
-                  color="#3b82f6"
-                  weight={5}
-                  opacity={0.95}
-                  className="drop-shadow-lg"
-                  dashArray="0"
-                />
-                {/* Animated overlay path for movement effect */}
-                <Polyline
-                  positions={pathPositions}
-                  color="#60a5fa"
-                  weight={3}
-                  opacity={0.8}
-                  dashArray="8, 4"
-                  className="animate-pulse"
-                />
-                {/* Direction indicators for street-by-street tracking */}
-                <Polyline
-                  positions={pathPositions}
-                  color="#ffffff"
-                  weight={1}
-                  opacity={0.6}
-                  dashArray="2, 8"
-                />
-              </>
-            )}
-
-            {/* Enhanced markers with street-level information */}
-            {safePath.map((point, index) => {
-              const isStart = index === 0;
-              const isEnd = index === safePath.length - 1;
-              const isWaypoint = !isStart && !isEnd;
-              
-              // Show markers for start, end, and every 5th waypoint for street-level detail
-              if (isStart || isEnd || (isWaypoint && index % 5 === 0)) {
-                return (
-                  <Marker key={index} position={[point.lat, point.lng]}>
-                    <Popup className="rounded-lg shadow-xl backdrop-blur-md">
-                      <div className="text-sm p-3 bg-white/95 backdrop-blur-sm rounded-lg border border-gray-200/50">
-                        <div className={cn(
-                          "font-bold mb-2 flex items-center gap-2",
-                          isStart ? "text-green-600" : isEnd ? "text-red-600" : "text-blue-600"
-                        )}>
-                          <div className={cn(
-                            "w-3 h-3 rounded-full animate-pulse shadow-lg",
-                            isStart ? "bg-green-500 shadow-green-500/50" : 
-                            isEnd ? "bg-red-500 shadow-red-500/50" : 
-                            "bg-blue-500 shadow-blue-500/50"
-                          )}></div>
-                          <span className={cn(
-                            "bg-gradient-to-r bg-clip-text text-transparent",
-                            isStart ? "from-green-600 to-emerald-600" : 
-                            isEnd ? "from-red-600 to-rose-600" : 
-                            "from-blue-600 to-cyan-600"
-                          )}>
-                            {isStart ? "Journey Start" : isEnd ? "Journey End" : `Waypoint ${Math.floor(index / 5) + 1}`}
-                          </span>
-                        </div>
-                        <div className="text-gray-600 text-xs font-medium mb-2">{point.time}</div>
-                        <div className="text-gray-500 text-xs font-mono bg-gray-100/80 px-2 py-1 rounded border mb-2">
-                          {point.lat.toFixed(6)}, {point.lng.toFixed(6)}
-                        </div>
-                        <div className={cn(
-                          "text-xs font-medium",
-                          isStart ? "text-green-600" : isEnd ? "text-red-600" : "text-blue-600"
-                        )}>
-                          {isStart ? "📍 Starting Point" : isEnd ? "🏁 Destination" : "🚩 Checkpoint"}
-                        </div>
-                        {/* Street-level context information */}
-                        <div className="mt-2 pt-2 border-t border-gray-200">
-                          <div className="text-xs text-gray-500">
-                            <div>Point {index + 1} of {safePath.length}</div>
-                            {index > 0 && (
-                              <div className="mt-1">
-                                Distance from previous: ~{
-                                  Math.round(
-                                    Math.sqrt(
-                                      Math.pow(point.lat - safePath[index - 1].lat, 2) + 
-                                      Math.pow(point.lng - safePath[index - 1].lng, 2)
-                                    ) * 111000 // Rough conversion to meters
-                                  )
-                                }m
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </Popup>
-                  </Marker>
-                );
-              }
-              return null;
-            })}
-
-            {/* Show a default marker when no path data */}
-            {safePath.length === 0 && (
-              <Marker position={fallback}>
-                <Popup>
-                  <div className="text-sm p-2">
-                    <div className="font-bold text-blue-600 mb-1">No Location Data</div>
-                    <div className="text-gray-600 text-xs">
-                      Select a device to view its street-by-street location history
-                    </div>
-                  </div>
-                </Popup>
-              </Marker>
-            )}
-          </MapContainer>
-        )}
-      </LeafletComponents>
-    </div>
-  );
-}
-
-/* ------------------------------------------------
-   Small UI components
----------------------------------------------------*/
 
 /* ------------------------------------------------
    MAIN DASHBOARD
@@ -275,7 +62,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [locationLoading, setLocationLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [mapProvider, setMapProvider] = useState('optimized'); // 'optimized', 'enhanced', or 'mapbox'
   
   // Enhanced analytics API instance
   const [analyticsAPI] = useState(() => new EnhancedAnalyticsAPI({
@@ -799,34 +585,6 @@ export default function Dashboard() {
               </div>
               
               <div className="flex items-center gap-3">
-                {/* Map Provider Selector with Optimized Option */}
-                <div className="relative group">
-                  <select
-                    value={mapProvider}
-                    onChange={(e) => setMapProvider(e.target.value)}
-                    className={cn(
-                      'px-4 py-2.5 min-w-[160px] rounded-xl',
-                      'bg-white/15 backdrop-blur-xl border border-white/30',
-                      'text-white placeholder-white/70',
-                      'shadow-xl shadow-black/30',
-                      'hover:bg-white/20 hover:border-white/40',
-                      'focus:bg-white/25 focus:border-blue-300/60 focus:outline-none',
-                      'transition-all duration-300 ease-out',
-                      'text-sm font-semibold tracking-wide'
-                    )}
-                  >
-                    <option value="optimized" className="bg-slate-900/95 text-white font-medium">
-                      ⚡ Optimized Map
-                    </option>
-                    <option value="enhanced" className="bg-slate-900/95 text-white font-medium">
-                      🗺️ Enhanced Map
-                    </option>
-                    <option value="mapbox" className="bg-slate-900/95 text-white font-medium">
-                      🛰️ Satellite Map
-                    </option>
-                  </select>
-                </div>
-
                 {/* Enhanced Device Selection Dropdown */}
                 <div className="relative group">
                   <select
@@ -922,44 +680,11 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <div className="w-full h-full relative">
-                      {/* Render map based on selected provider (Requirement 4.2) */}
-                      {mapProvider === 'optimized' ? (
-                        // Use optimized MapRenderer with progressive enhancement (Requirement 1.1, 3.4)
-                        <MapRenderer
-                          path={locationPath}
-                          maxMarkers={20}
-                          simplifyPath={true}
-                          clusterMarkers={true}
-                          showMapTypeSelector={true}
-                          autoUpgrade={false}
-                          className="w-full h-full"
-                        />
-                      ) : mapProvider === 'enhanced' ? (
-                        <EnhancedMiniMap path={locationPath} />
-                      ) : (
-                        <MapboxStyleMap path={locationPath} />
-                      )}
-                      
-                      {/* Map Provider Badge */}
-                      <div className="absolute top-4 left-4 z-20 bg-black/70 backdrop-blur-xl text-white px-3 py-2 rounded-lg text-xs font-semibold border border-white/20">
-                        {mapProvider === 'optimized' ? '⚡ Optimized' : mapProvider === 'enhanced' ? '🗺️ Enhanced Leaflet' : '🛰️ Satellite View'}
-                        <div className="text-white/70 text-xs mt-1">
-                          Points: {locationPath.length}
-                        </div>
-                      </div>
-                      
-                      {/* Refresh button */}
-                      <div className="absolute top-4 right-4 z-20">
-                        <button 
-                          className="p-3 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40 hover:bg-white/30 hover:scale-110 text-white transition-all duration-200"
-                          onClick={() => loadHistory(selectedImei)}
-                          title="Refresh location data"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                          </svg>
-                        </button>
-                      </div>
+                      {/* Premium Journey Map - Ola/Uber style */}
+                      <PremiumJourneyMap
+                        path={locationPath}
+                        className="w-full h-full"
+                      />
                     </div>
                   )}
                 </div>

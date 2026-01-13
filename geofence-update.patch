@@ -1,0 +1,81 @@
+--- a/src/pages/Geofence.jsx
++++ b/src/pages/Geofence.jsx
+@@ -3,12 +3,24 @@ import { Card } from "../design-system/components";
+ import { Button } from "../design-system/components";
+ import { Loading } from "../design-system/components";
+ import { cn } from "../design-system/utils/cn";
++import { useGeofenceCommand, createCircularGeofence } from "../hooks/useGeofenceCommand";
++import CustomPolygonInput from "../components/CustomPolygonInput";
+ 
+ export default function Geofence() {
+   const [loading, setLoading] = useState(false);
+   const [activeTab, setActiveTab] = useState("overview");
+   const [profileName, setProfileName] = useState("Home");
+-  const [coordinates, setCoordinates] = useState({ x: 62.531135, y: 63.513135 });
++  const [coordinates, setCoordinates] = useState({ x: 23.301624, y: 85.327065 });
++  const [radius, setRadius] = useState(100);
++  const [imei, setImei] = useState("862942074957887");
++  const [geofenceMode, setGeofenceMode] = useState("circular");
++  const [customPoints, setCustomPoints] = useState([
++    { latitude: 23.301624, longitude: 85.327065 },
++    { latitude: 23.301700, longitude: 85.327100 },
++    { latitude: 23.301750, longitude: 85.327150 },
++    { latitude: 23.301700, longitude: 85.327200 },
++    { latitude: 23.301624, longitude: 85.327065 }
++  ]);
+   const [geofences, setGeofences] = useState([
+     { id: 1, name: "Home", status: "active", coordinates: "62.531135, 63.513135", radius: 100 },
+     { id: 2, name: "Office", status: "active", coordinates: "62.541135, 63.523135", radius: 50 },
+@@ -17,10 +29,11 @@ export default function Geofence() {
+     { id: 5, name: "Hospital", status: "inactive", coordinates: "62.511135, 63.493135", radius: 150 }
+   ]);
+ 
++  const { setGeofence, loading: commandLoading, error: commandError, response: commandResponse } = useGeofenceCommand();
++
+   const tabs = [
+     { id: "overview", label: "Overview", icon: "🗺️" },
+     { id: "create", label: "Create", icon: "➕" },
+-    { id: "manage", label: "Manage", icon: "⚙️" },
+     { id: "alerts", label: "Alerts", icon: "🚨" }
+   ];
+ 
+@@ -29,9 +42,48 @@ export default function Geofence() {
+ 
+   const handleSave = async () => {
+     setLoading(true);
+-    // Simulate API call
+-    await new Promise(resolve => setTimeout(resolve, 1000));
+-    setLoading(false);
++    try {
++      let geofenceCoordinates;
++      if (geofenceMode === "circular") {
++        geofenceCoordinates = createCircularGeofence(coordinates.x, coordinates.y, radius, 16);
++      } else {
++        geofenceCoordinates = [...customPoints];
++        const first = geofenceCoordinates[0];
++        const last = geofenceCoordinates[geofenceCoordinates.length - 1];
++        if (first.latitude !== last.latitude || first.longitude !== last.longitude) {
++          geofenceCoordinates.push({ ...first });
++        }
++      }
++      await setGeofence(imei, {
++        geofence_number: "GEO1",
++        geofence_id: profileName,
++        coordinates: geofenceCoordinates
++      });
++      const newGeofence = {
++        id: geofences.length + 1,
++        name: profileName,
++        status: "active",
++        coordinates: geofenceMode === "circular" ? `${coordinates.x}, ${coordinates.y}` : `${customPoints.length} points`,
++        radius: geofenceMode === "circular" ? radius : null
++      };
++      setGeofences([...geofences, newGeofence]);
++      alert(`Geofence "${profileName}" set successfully!`);
++    } catch (error) {
++      console.error('Failed to set geofence:', error);
++      alert(`Failed to set geofence: ${error.message}`);
++    } finally {
++      setLoading(false);
++    }
+   };
