@@ -53,6 +53,7 @@ export async function authenticateUser(email, password) {
         firstName
         lastName
         email
+        imei
         mobile
         tokens {
           accessToken

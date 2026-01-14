@@ -32,7 +32,7 @@ function Sidebar() {
     // { to: "/configuration", label: "Configuration", icon: <FiSliders />, colorScheme: "teal", description: "System settings" },
     { to: "/device-settings", label: "Device Settings", icon: <FiTool />, colorScheme: "green", description: "Device configuration" },
     { to: "/geofence", label: "Geofence", icon: <FiMapPin />, colorScheme: "lime", description: "Location boundaries" },
-    { to: "/analytics", label: "Analytics", icon: <FiBarChart2 />, colorScheme: "amber", description: "Data insights" },
+    //{ to: "/analytics", label: "Analytics", icon: <FiBarChart2 />, colorScheme: "amber", description: "Data insights" },
     { to: "/alerts", label: "Alerts", icon: <FiBell />, colorScheme: "orange", description: "System notifications" },
     { to: "/settings", label: "Settings", icon: <FiSettings />, colorScheme: "pink", description: "User preferences" },
   ];
