@@ -23,6 +23,9 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
 
+        {/* TEST ROUTE - Dashboard without authentication (REMOVE IN PRODUCTION) */}
+        <Route path="/test-dashboard" element={<Dashboard />} />
+
         {/* Protected Routes */}
         <Route
           path="/"

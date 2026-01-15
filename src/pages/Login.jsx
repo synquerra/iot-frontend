@@ -14,26 +14,22 @@ export default function Login() {
   const [success, setSuccess] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
 
-  // Handle success message from signup
   useEffect(() => {
     if (location.state?.message) {
       setSuccess(location.state.message);
-      // Pre-fill email if provided
       if (location.state.email) {
         setEmail(location.state.email);
       }
-      // Clear the state to prevent showing message on refresh
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError(""); // Clear previous errors
-    setSuccess(""); // Clear success message
-    setFieldErrors({}); // Clear field errors
+    setError("");
+    setSuccess("");
+    setFieldErrors({});
 
-    // Validate fields
     const newFieldErrors = {};
     if (!email) {
       newFieldErrors.email = "Email is required";
@@ -54,7 +50,7 @@ export default function Login() {
       setLoading(true);
       const userData = await authenticateUser(email, password);
       console.log("Login successful:", userData);
-      navigate("/"); // Redirect to dashboard
+      navigate("/");
     } catch (error) {
       setError(error.message || "Login failed. Please check your credentials and try again.");
     } finally {
@@ -63,35 +59,67 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-900 to-surface-background px-4">
-      <div className="w-full max-w-md animate-fade-in">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
+        {/* Logo/Brand Section */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 shadow-2xl shadow-blue-500/50 mb-4">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-1">IoT Dashboard</h1>
+          <p className="text-slate-400 text-sm">Professional Device Management</p>
+        </div>
+
         {/* Login Card */}
-        <div className="bg-surface-primary border border-border-primary rounded-2xl p-8 shadow-xl">
+        <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-text-primary mb-2">
+            <h2 className="text-2xl font-bold text-white mb-2">
               Welcome back
-            </h1>
-            <p className="text-text-secondary">
-              Sign in to your Synquerra account
+            </h2>
+            <p className="text-slate-400">
+              Sign in to your account
             </p>
           </div>
 
           {/* Success Message */}
           {success && (
-            <div className="mb-6 p-4 bg-status-success/10 border border-status-success/20 rounded-lg">
-              <p className="text-status-success text-sm font-medium">
-                {success}
-              </p>
+            <div className="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-xl backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                  <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p className="text-green-400 text-sm font-medium">
+                  {success}
+                </p>
+              </div>
             </div>
           )}
 
           {/* Global Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-status-error/10 border border-status-error/20 rounded-lg">
-              <p className="text-status-error text-sm font-medium">
-                {error}
-              </p>
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center">
+                  <svg className="w-3 h-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
+                <p className="text-red-400 text-sm font-medium">
+                  {error}
+                </p>
+              </div>
             </div>
           )}
 
@@ -105,7 +133,6 @@ export default function Login() {
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
-                // Clear field error when user starts typing
                 if (fieldErrors.email) {
                   setFieldErrors(prev => ({ ...prev, email: undefined }));
                 }
@@ -113,7 +140,7 @@ export default function Login() {
               error={fieldErrors.email}
               size="lg"
               autoComplete="email"
-              autoFocus={!email} // Only autofocus if email is not pre-filled
+              autoFocus={!email}
             />
 
             {/* Password Field */}
@@ -124,7 +151,6 @@ export default function Login() {
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
-                // Clear field error when user starts typing
                 if (fieldErrors.password) {
                   setFieldErrors(prev => ({ ...prev, password: undefined }));
                 }
@@ -132,7 +158,7 @@ export default function Login() {
               error={fieldErrors.password}
               size="lg"
               autoComplete="current-password"
-              autoFocus={!!email} // Autofocus password if email is pre-filled
+              autoFocus={!!email}
             />
 
             {/* Submit Button */}
@@ -142,7 +168,7 @@ export default function Login() {
               size="lg"
               loading={loading}
               disabled={loading}
-              className="w-full"
+              className="w-full bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700"
             >
               {loading ? "Signing in..." : "Sign in"}
             </Button>
@@ -150,11 +176,11 @@ export default function Login() {
 
           {/* Footer */}
           <div className="mt-8 text-center">
-            <p className="text-text-tertiary text-sm">
+            <p className="text-slate-400 text-sm">
               Don't have an account?{" "}
               <Link 
                 to="/signup" 
-                className="text-accent hover:text-accent/80 font-medium transition-colors duration-200"
+                className="text-blue-400 hover:text-blue-300 font-medium transition-colors duration-200"
               >
                 Sign up
               </Link>
@@ -164,13 +190,12 @@ export default function Login() {
 
         {/* Additional Help Text */}
         <div className="mt-6 text-center">
-          <p className="text-text-tertiary text-xs">
+          <p className="text-slate-500 text-xs">
             Having trouble signing in?{" "}
             <button 
               type="button"
-              className="text-accent hover:text-accent/80 underline transition-colors duration-200"
+              className="text-blue-400 hover:text-blue-300 underline transition-colors duration-200"
               onClick={() => {
-                // This could be expanded to show a help modal or redirect to support
                 alert("Please contact support for assistance with your account.");
               }}
             >
