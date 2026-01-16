@@ -1,5 +1,5 @@
 // src/pages/Dashboard.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Card } from "../design-system/components/Card";
 import { KpiCard } from "../design-system/components/KpiCard";
 import { Table, TableContainer } from "../design-system/components/Table";
@@ -42,7 +42,10 @@ import {
   getRecentAnalyticsSafe,
   EnhancedAnalyticsAPI
 } from "../utils/enhancedAnalytics";
-import { listDevices } from "../utils/device";
+import { listDevicesFiltered } from "../utils/deviceFiltered";
+
+// Device filtering hook
+import { useDeviceFilter } from "../hooks/useDeviceFilter";
 
 // Design system utilities
 import { cn } from "../design-system/utils/cn";
@@ -52,6 +55,9 @@ import { cn } from "../design-system/utils/cn";
    MAIN DASHBOARD
 ---------------------------------------------------*/
 export default function Dashboard() {
+  // Device filtering hook (Requirement 4.2)
+  const { filterDevices, shouldFilterDevices } = useDeviceFilter();
+  
   // State management
   const [totalAnalytics, setTotalAnalytics] = useState(0);
   const [recentAnalytics, setRecentAnalytics] = useState([]);
@@ -83,7 +89,40 @@ export default function Dashboard() {
     location: { current: 0, total: 0, percentage: 0 }
   });
 
-  // Process speed chart data
+  // Apply device filtering (Requirement 4.2)
+  const filteredDevices = useMemo(() => {
+    return filterDevices(devices);
+  }, [devices, filterDevices]);
+
+  // Get allowed IMEIs for analytics filtering
+  const allowedIMEIs = useMemo(() => {
+    if (!shouldFilterDevices()) {
+      return null; // No filtering needed for ADMIN users
+    }
+    return filteredDevices.map(d => d.imei?.toLowerCase());
+  }, [filteredDevices, shouldFilterDevices]);
+
+  // Filter analytics data by allowed devices (Requirement 4.2)
+  const filteredAnalytics = useMemo(() => {
+    if (!allowedIMEIs) {
+      return allAnalytics; // No filtering for ADMIN users
+    }
+    return allAnalytics.filter(a => 
+      a.imei && allowedIMEIs.includes(a.imei.toLowerCase())
+    );
+  }, [allAnalytics, allowedIMEIs]);
+
+  // Filter recent analytics by allowed devices (Requirement 4.2)
+  const filteredRecentAnalytics = useMemo(() => {
+    if (!allowedIMEIs) {
+      return recentAnalytics; // No filtering for ADMIN users
+    }
+    return recentAnalytics.filter(a => 
+      a.imei && allowedIMEIs.includes(a.imei.toLowerCase())
+    );
+  }, [recentAnalytics, allowedIMEIs]);
+
+  // Process speed chart data with filtered analytics (Requirement 4.2)
   const speedChart = (() => {
     const ranges = {
       "0 - 20": 0,
@@ -93,7 +132,7 @@ export default function Dashboard() {
       "80+": 0,
     };
 
-    allAnalytics.forEach((a) => {
+    filteredAnalytics.forEach((a) => {
       const s = Number(a.speed || 0);
       if (s <= 20) ranges["0 - 20"]++;
       else if (s <= 40) ranges["20 - 40"]++;
@@ -108,10 +147,10 @@ export default function Dashboard() {
     }));
   })();
 
-  // Process geographic distribution
+  // Process geographic distribution with filtered devices (Requirement 4.2)
   const geoPie = (() => {
     const dist = {};
-    devices.forEach((d) => {
+    filteredDevices.forEach((d) => {
       const g = d.geoid ?? "Unknown";
       dist[g] = (dist[g] || 0) + 1;
     });
@@ -122,11 +161,11 @@ export default function Dashboard() {
     }));
   })();
 
-  // Calculate stats
+  // Calculate stats with filtered data (Requirement 4.2)
   const stats = {
-    devicesCount: devices.length,
-    recentCount: recentAnalytics.length,
-    totalAnalytics: Number(totalAnalytics) || 0
+    devicesCount: filteredDevices.length,
+    recentCount: filteredRecentAnalytics.length,
+    totalAnalytics: shouldFilterDevices() ? filteredAnalytics.length : Number(totalAnalytics) || 0
   };
 
   // Load dashboard data
@@ -164,7 +203,7 @@ export default function Dashboard() {
         }),
         
         // Load devices (usually small dataset)
-        listDevices().catch(err => {
+        listDevicesFiltered().catch(err => {
           console.warn("Devices loading failed:", err.message);
           return { devices: [], full: [] };
         }),
@@ -449,6 +488,7 @@ export default function Dashboard() {
         colorScheme="violet"
         size="lg"
         showStats={true}
+        showFilterIndicator={shouldFilterDevices()}
       />
 
       {/* Enhanced KPI Section with Gradient Backgrounds and Responsive Layout */}
@@ -607,7 +647,7 @@ export default function Dashboard() {
                     <option value="" className="bg-slate-900/95 text-white font-medium">
                       🗺️ Select device to track
                     </option>
-                    {devices.map((d) => (
+                    {filteredDevices.map((d) => (
                       <option 
                         key={d.imei} 
                         value={d.imei} 
@@ -1071,7 +1111,7 @@ export default function Dashboard() {
             loading={loading}
             loadingRows={5}
             loadingColumns={5}
-            data={recentAnalytics}
+            data={filteredRecentAnalytics}
             colorCoded={true}
             showBadges={true}
             responsive={true}
@@ -1263,7 +1303,7 @@ export default function Dashboard() {
             loading={loading}
             loadingRows={5}
             loadingColumns={4}
-            data={devices}
+            data={filteredDevices}
             colorCoded={true}
             showBadges={true}
             responsive={true}

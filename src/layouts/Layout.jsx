@@ -13,13 +13,18 @@ import {
   FiLogOut,
 } from "react-icons/fi";
 import { logoutUser } from "../utils/auth";
+import { useUserContext } from "../contexts/UserContext";
 import { spectrumColors, gradients } from "../design-system/tokens/colors";
 
 function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { clearUserContext } = useUserContext();
 
   const handleLogout = () => {
+    // Clear UserContext state
+    clearUserContext();
+    // Clear persistent storage and tokens
     logoutUser();
     navigate("/login");
   };

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { logoutUser } from '../utils/auth';
+import { useUserContext } from '../contexts/UserContext';
 
 /**
  * Hook to automatically log out users after 30 minutes of inactivity
@@ -8,6 +9,7 @@ import { logoutUser } from '../utils/auth';
  */
 export default function useSessionTimeout() {
   const navigate = useNavigate();
+  const { clearUserContext } = useUserContext();
   const timeoutRef = useRef(null);
   const lastActivityRef = useRef(Date.now());
   
@@ -16,6 +18,9 @@ export default function useSessionTimeout() {
 
   // Handle logout
   const handleLogout = () => {
+    // Clear UserContext state
+    clearUserContext();
+    // Clear persistent storage and tokens
     logoutUser();
     navigate('/login');
   };

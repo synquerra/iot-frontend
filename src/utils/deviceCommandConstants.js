@@ -9,7 +9,7 @@
  * Synquerra API endpoint for sending device commands
  * Uses environment variable or falls back to production URL
  */
-export const API_ENDPOINT = `${import.meta.env.VITE_BACKEND_API_BASE_URL || 'https://api.synquerra.com'}/send`;
+export const API_ENDPOINT = `${import.meta.env.VITE_BACKEND_API_BASE_URL}/send`;
 
 /**
  * Supported device command types

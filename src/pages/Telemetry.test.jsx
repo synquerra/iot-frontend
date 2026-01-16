@@ -21,6 +21,37 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+// Mock UserContext - provide default ADMIN user to avoid filtering issues in tests
+let mockUserContext = {
+  isAuthenticated: true,
+  userType: 'ADMIN',
+  imeis: [],
+  uniqueId: 'test-user-123',
+  email: 'test@example.com',
+  tokens: {
+    accessToken: 'test-token',
+    refreshToken: 'test-refresh-token',
+  },
+};
+
+vi.mock('../contexts/UserContext', () => ({
+  useUserContext: () => ({
+    ...mockUserContext,
+    setUserContext: vi.fn(),
+    updateTokens: vi.fn(),
+    clearUserContext: vi.fn(),
+    getUserContext: () => mockUserContext,
+    isAdmin: () => mockUserContext.userType === 'ADMIN',
+    isParent: () => mockUserContext.userType === 'PARENTS',
+  }),
+  UserContextProvider: ({ children }) => children,
+}));
+
+// Mock device API
+vi.mock('../utils/device', () => ({
+  listDevices: vi.fn(() => Promise.resolve({ devices: [] })),
+}));
+
 import { useTelemetryData } from '../hooks/useTelemetryData';
 
 // Helper function to render component with router context

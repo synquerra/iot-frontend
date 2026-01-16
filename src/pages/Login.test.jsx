@@ -4,10 +4,17 @@ import { vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import Login from './Login';
 import * as auth from '../utils/auth';
+import * as authResponseParser from '../utils/authResponseParser';
+import { UserContextProvider } from '../contexts/UserContext';
 
 // Mock the auth utility
 vi.mock('../utils/auth', () => ({
   authenticateUser: vi.fn(),
+}));
+
+// Mock the auth response parser
+vi.mock('../utils/authResponseParser', () => ({
+  persistUserContext: vi.fn(),
 }));
 
 // Mock react-router-dom navigate
@@ -20,11 +27,13 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-// Helper function to render Login with router context
+// Helper function to render Login with router context and UserContext
 const renderLogin = () => {
   return render(
     <BrowserRouter>
-      <Login />
+      <UserContextProvider>
+        <Login />
+      </UserContextProvider>
     </BrowserRouter>
   );
 };
@@ -147,14 +156,19 @@ describe('Login Page', () => {
 
   describe('Form Submission', () => {
     it('submits form with valid credentials', async () => {
-      const mockUserData = {
+      const mockParsedContext = {
         uniqueId: '123',
-        firstName: 'John',
-        lastName: 'Doe',
+        userType: 'ADMIN',
+        imeis: [],
         email: 'john@example.com',
+        tokens: {
+          accessToken: 'mock-access-token',
+          refreshToken: 'mock-refresh-token',
+        },
       };
       
-      auth.authenticateUser.mockResolvedValue(mockUserData);
+      auth.authenticateUser.mockResolvedValue(mockParsedContext);
+      authResponseParser.persistUserContext.mockReturnValue(true);
       
       renderLogin();
       
@@ -168,6 +182,10 @@ describe('Login Page', () => {
       
       await waitFor(() => {
         expect(auth.authenticateUser).toHaveBeenCalledWith('john@example.com', 'password123');
+      });
+      
+      await waitFor(() => {
+        expect(authResponseParser.persistUserContext).toHaveBeenCalledWith(mockParsedContext);
       });
       
       await waitFor(() => {
@@ -236,7 +254,18 @@ describe('Login Page', () => {
       });
       
       // Second submission should clear the error
-      auth.authenticateUser.mockResolvedValue({ email: 'john@example.com' });
+      const mockParsedContext = {
+        uniqueId: '123',
+        userType: 'ADMIN',
+        imeis: [],
+        email: 'john@example.com',
+        tokens: {
+          accessToken: 'mock-access-token',
+          refreshToken: 'mock-refresh-token',
+        },
+      };
+      auth.authenticateUser.mockResolvedValue(mockParsedContext);
+      authResponseParser.persistUserContext.mockReturnValue(true);
       fireEvent.click(submitButton);
       
       await waitFor(() => {

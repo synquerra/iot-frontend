@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import Settings from './Settings.jsx';
 import { sendDeviceCommand } from '../utils/deviceCommandAPI.js';
+import { UserContextProvider } from '../contexts/UserContext.jsx';
 
 // Mock the deviceCommandAPI module
 vi.mock('../utils/deviceCommandAPI.js', () => ({
@@ -23,6 +24,17 @@ vi.mock('react-router-dom', async () => {
 vi.mock('../utils/auth', () => ({
   logoutUser: vi.fn()
 }));
+
+// Helper function to render with UserContextProvider
+const renderWithContext = (component) => {
+  return render(
+    <UserContextProvider>
+      <BrowserRouter>
+        {component}
+      </BrowserRouter>
+    </UserContextProvider>
+  );
+};
 
 /**
  * Unit Tests for Settings Component

@@ -5,10 +5,11 @@ import { Card } from "../design-system/components";
 import { Button } from "../design-system/components";
 import { Loading } from "../design-system/components";
 import { EnhancedTable, EnhancedTableContainer, StatusBadge } from "../design-system/components/EnhancedTable";
-import { listDevices } from "../utils/device";
+import { listDevicesFiltered } from "../utils/deviceFiltered";
 import { getAnalyticsByImei } from "../utils/analytics";
 import { parseTemperature } from "../utils/telemetryTransformers";
 import { cn } from "../design-system/utils/cn";
+import { useDeviceFilter } from "../hooks/useDeviceFilter";
 
 export default function Devices() {
   const [devices, setDevices] = useState([]);
@@ -18,16 +19,22 @@ export default function Devices() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'table'
   const navigate = useNavigate();
+  
+  // Use device filter hook for user-based filtering
+  const { filterDevices, shouldFilterDevices } = useDeviceFilter();
 
   useEffect(() => {
     async function load() {
       try {
         setLoading(true);
-        const { devices: items } = await listDevices();
+        const { devices: items } = await listDevicesFiltered();
+        
+        // Apply user-based device filtering (PARENTS vs ADMIN)
+        const filteredItems = filterDevices(items);
 
         // For each device, fetch the latest normal packet to get battery and signal data
         const devicesWithTelemetry = await Promise.all(
-          items.map(async (device) => {
+          filteredItems.map(async (device) => {
             try {
               // Get all packets for this device
               const packets = await getAnalyticsByImei(device.imei);
@@ -116,7 +123,7 @@ export default function Devices() {
     // Auto-refresh every 30 seconds
     const interval = setInterval(load, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [filterDevices]);
 
   // Filter devices based on search and status
   const filteredDevices = devices.filter(device => {
@@ -192,9 +199,19 @@ export default function Devices() {
         <div className="relative z-10 p-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div className="flex-1">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent mb-3">
-                Device Management
-              </h1>
+              <div className="flex items-center gap-3 mb-3">
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent">
+                  Device Management
+                </h1>
+                {shouldFilterDevices() && (
+                  <span 
+                    className="px-3 py-1 bg-blue-500/30 border border-blue-400/50 rounded-full text-blue-200 text-xs font-medium cursor-help"
+                    title="You are viewing only devices assigned to your account"
+                  >
+                    Filtered View
+                  </span>
+                )}
+              </div>
               <p className="text-blue-100/90 text-lg leading-relaxed max-w-2xl">
                 Monitor, manage, and analyze your connected IoT devices with real-time insights and comprehensive analytics
               </p>
@@ -395,14 +412,49 @@ export default function Devices() {
 
           {/* Results Summary */}
           <div className="mt-4 pt-4 border-t border-white/10">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-white/70">
-                Showing {filteredDevices.length} of {devices.length} devices
-              </span>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-white/70">Auto-refresh enabled</span>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-4">
+                  <span className="text-white/70">
+                    Showing {filteredDevices.length} of {devices.length} devices
+                  </span>
+                  {shouldFilterDevices() && (
+                    <div 
+                      className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/20 border border-blue-400/30 rounded-lg cursor-help"
+                      title="Device filtering is active based on your account permissions"
+                    >
+                      <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                      </svg>
+                      <span className="text-blue-300 text-xs font-medium">Filtered View Active</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-white/70">Auto-refresh enabled</span>
+                </div>
               </div>
+              
+              {/* Filtering Info Box for PARENTS users */}
+              {shouldFilterDevices() && (
+                <div className="p-3 bg-blue-500/10 border border-blue-400/30 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <svg className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="flex-1">
+                      <div className="text-blue-200 font-medium text-sm mb-1">
+                        Viewing Assigned Devices Only
+                      </div>
+                      <div className="text-blue-200/70 text-xs leading-relaxed">
+                        You are viewing {devices.length} device{devices.length !== 1 ? 's' : ''} assigned to your account. 
+                        Contact your administrator to modify device assignments or view additional devices.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </Card.Content>

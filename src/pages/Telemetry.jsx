@@ -10,15 +10,43 @@ import {
   transformLiveData, 
   transformPacketData 
 } from "../utils/telemetryTransformers";
+import { listDevicesFiltered } from "../utils/deviceFiltered";
+import { useDeviceFilter } from "../hooks/useDeviceFilter";
 
 export default function Telemetry() {
   const [activeTab, setActiveTab] = useState("live");
   const [deviceContext, setDeviceContext] = useState(null);
   const [imeiError, setImeiError] = useState(null);
   const [deviceImei, setDeviceImei] = useState(null);
+  const [availableDevices, setAvailableDevices] = useState([]);
+  const [loadingDevices, setLoadingDevices] = useState(true);
   
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Use device filter hook for user-based filtering
+  const { filterDevices, shouldFilterDevices } = useDeviceFilter();
+  
+  // Load available devices with filtering
+  useEffect(() => {
+    async function loadDevices() {
+      try {
+        setLoadingDevices(true);
+        const { devices: items } = await listDevicesFiltered();
+        
+        // Apply user-based device filtering (PARENTS vs ADMIN)
+        const filteredItems = filterDevices(items);
+        setAvailableDevices(filteredItems);
+      } catch (err) {
+        console.error('Failed to load devices:', err);
+        setAvailableDevices([]);
+      } finally {
+        setLoadingDevices(false);
+      }
+    }
+    
+    loadDevices();
+  }, [filterDevices]);
   
   // Parse device IMEI from URL parameters with validation
   const parseDeviceImei = useCallback(() => {
@@ -29,14 +57,21 @@ export default function Telemetry() {
     setImeiError(null);
     
     if (!imeiParam) {
-      // No IMEI provided - use default device behavior
-      const defaultImei = '862942074957887'; // Default IMEI for testing
-      setDeviceContext({
-        imei: defaultImei,
-        isDefault: true,
-        source: 'default'
-      });
-      setDeviceImei(defaultImei);
+      // No IMEI provided - use first available device or default
+      if (availableDevices.length > 0) {
+        const firstDevice = availableDevices[0];
+        setDeviceContext({
+          imei: firstDevice.imei,
+          isDefault: true,
+          source: 'first-available'
+        });
+        setDeviceImei(firstDevice.imei);
+      } else if (!loadingDevices) {
+        // No devices available after loading
+        setImeiError('No authorized devices available for your account.');
+        setDeviceContext(null);
+        setDeviceImei(null);
+      }
       return;
     }
     
@@ -54,15 +89,36 @@ export default function Telemetry() {
       return;
     }
     
-    // Valid IMEI from URL
+    // Check if device is authorized (for PARENTS users)
+    if (shouldFilterDevices() && availableDevices.length > 0) {
+      const isAuthorized = availableDevices.some(
+        device => device.imei.toLowerCase() === imeiParam.toLowerCase()
+      );
+      
+      if (!isAuthorized) {
+        setImeiError(`Access denied: Device ${imeiParam} is not authorized for your account.`);
+        setDeviceContext({
+          imei: imeiParam,
+          isDefault: false,
+          source: 'url',
+          isValid: true,
+          isAuthorized: false
+        });
+        setDeviceImei(null);
+        return;
+      }
+    }
+    
+    // Valid and authorized IMEI from URL
     setDeviceContext({
       imei: imeiParam,
       isDefault: false,
       source: 'url',
-      isValid: true
+      isValid: true,
+      isAuthorized: true
     });
     setDeviceImei(imeiParam);
-  }, [location.search]);
+  }, [location.search, availableDevices, loadingDevices, shouldFilterDevices]);
   
   // Parse IMEI when URL changes
   useEffect(() => {
@@ -72,7 +128,7 @@ export default function Telemetry() {
   // Device switching functionality
   const switchDevice = useCallback((newImei) => {
     if (!newImei) {
-      // Switch to default device
+      // Switch to first available device
       navigate('/telemetry', { replace: true });
     } else {
       // Switch to specific device
@@ -169,22 +225,49 @@ export default function Telemetry() {
   if (imeiError) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Card variant="glass" colorScheme="red" padding="lg">
+        <Card variant="glass" colorScheme="red" padding="lg" className="max-w-2xl">
           <Card.Content>
             <div className="text-center">
-              <div className="text-red-300 text-lg font-semibold mb-2">Invalid Device IMEI</div>
+              <div className="text-red-300 text-lg font-semibold mb-2">
+                {deviceContext?.isAuthorized === false ? 'Unauthorized Device Access' : 'Invalid Device IMEI'}
+              </div>
               <div className="text-red-200/80 text-sm mb-4">{imeiError}</div>
-              <div className="space-y-2">
-                <Button
-                  variant="glass"
-                  colorScheme="blue"
-                  onClick={() => switchDevice(null)}
-                >
-                  Use Default Device
-                </Button>
-                <div className="text-red-200/60 text-xs">
-                  Or provide a valid 15-digit IMEI in the URL: /telemetry?imei=123456789012345
+              
+              {/* Device selector dropdown */}
+              {availableDevices.length > 0 && (
+                <div className="mb-4">
+                  <label className="block text-red-200/70 text-sm mb-2">
+                    Select an authorized device:
+                  </label>
+                  <select
+                    className="w-full px-4 py-2 bg-white/10 border border-red-500/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                    onChange={(e) => switchDevice(e.target.value)}
+                    defaultValue=""
+                  >
+                    <option value="" disabled>Choose a device...</option>
+                    {availableDevices.map((device) => (
+                      <option key={device.imei} value={device.imei} className="bg-slate-800">
+                        {device.imei} {device.topic ? `(${device.topic})` : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+              )}
+              
+              <div className="space-y-2">
+                {availableDevices.length > 0 ? (
+                  <Button
+                    variant="glass"
+                    colorScheme="blue"
+                    onClick={() => switchDevice(null)}
+                  >
+                    Use First Available Device
+                  </Button>
+                ) : (
+                  <div className="text-red-200/60 text-xs">
+                    No authorized devices available for your account.
+                  </div>
+                )}
               </div>
             </div>
           </Card.Content>
@@ -327,9 +410,19 @@ export default function Telemetry() {
         <div className="relative z-10 p-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div className="flex-1">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent mb-3">
-                Data Telemetry
-              </h1>
+              <div className="flex items-center gap-3 mb-3">
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent">
+                  Data Telemetry
+                </h1>
+                {shouldFilterDevices() && (
+                  <span 
+                    className="px-3 py-1 bg-blue-500/30 border border-blue-400/50 rounded-full text-blue-200 text-xs font-medium cursor-help"
+                    title="You are viewing only devices assigned to your account"
+                  >
+                    Filtered View
+                  </span>
+                )}
+              </div>
               <p className="text-blue-100/90 text-lg leading-relaxed max-w-2xl">
                 Real-time telemetry monitoring and packet analysis for IoT devices
               </p>
@@ -386,6 +479,26 @@ export default function Telemetry() {
           </div>
         </div>
       </div>
+
+      {/* Filtering Info Box for PARENTS users */}
+      {shouldFilterDevices() && (
+        <div className="p-4 bg-blue-500/10 border border-blue-400/30 rounded-xl backdrop-blur-sm">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="flex-1">
+              <div className="text-blue-200 font-medium text-sm mb-1">
+                Viewing Assigned Devices Only
+              </div>
+              <div className="text-blue-200/70 text-sm leading-relaxed">
+                You can only view telemetry data for {availableDevices.length} device{availableDevices.length !== 1 ? 's' : ''} assigned to your account. 
+                Contact your administrator to modify device assignments.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Navigation Tabs */}
       <Card variant="glass" colorScheme="slate" padding="sm" className="backdrop-blur-xl">

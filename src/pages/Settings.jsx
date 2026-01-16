@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { logoutUser } from '../utils/auth'
+import { useUserContext } from '../contexts/UserContext'
 import { Card, Input, Select, Button } from '../design-system/components'
 import {
   SectionDivider,
@@ -15,6 +16,7 @@ import { Notification } from '../components/Notification'
 
 export default function Settings() {
   const navigate = useNavigate()
+  const { clearUserContext } = useUserContext()
   const [activeTab, setActiveTab] = useState('account')
   const [displayName, setDisplayName] = useState('John Doe')
   const [email, setEmail] = useState('john.doe@example.com')
@@ -40,6 +42,9 @@ export default function Settings() {
 
   const handleLogout = () => {
     console.log('Logging out...')
+    // Clear UserContext state
+    clearUserContext()
+    // Clear persistent storage and tokens
     logoutUser()
     navigate('/login')
   }

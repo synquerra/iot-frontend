@@ -12,10 +12,21 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { BrowserRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import Telemetry from './Telemetry.jsx';
+import { UserContextProvider } from '../contexts/UserContext';
 
 // Mock the useTelemetryData hook
 vi.mock('../hooks/useTelemetryData', () => ({
   useTelemetryData: vi.fn(),
+}));
+
+// Mock device API
+vi.mock('../utils/device', () => ({
+  listDevices: vi.fn().mockResolvedValue({
+    devices: [
+      { imei: '798456148167816', topic: 'device1' },
+      { imei: '123456789012345', topic: 'device2' }
+    ]
+  })
 }));
 
 // Mock react-router-dom hooks
@@ -31,12 +42,21 @@ vi.mock('react-router-dom', async () => {
 
 import { useTelemetryData } from '../hooks/useTelemetryData';
 
-// Helper function to render component with router context
-const renderWithRouter = (component) => {
+// Helper function to render component with router and user context
+const renderWithRouter = (component, userContextValue = {}) => {
+  const defaultUserContext = {
+    userType: 'ADMIN',
+    imeis: [],
+    isAuthenticated: true,
+    ...userContextValue
+  };
+  
   return render(
-    <BrowserRouter>
-      {component}
-    </BrowserRouter>
+    <UserContextProvider value={defaultUserContext}>
+      <BrowserRouter>
+        {component}
+      </BrowserRouter>
+    </UserContextProvider>
   );
 };
 

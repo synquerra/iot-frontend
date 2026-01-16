@@ -138,6 +138,7 @@ export function DashboardHeader({
   colorScheme = 'violet',
   size = 'lg',
   showStats = true,
+  showFilterIndicator = false,
   className = ''
 }) {
   const {
@@ -157,7 +158,19 @@ export function DashboardHeader({
     <div className={`space-y-4 ${className}`}>
       {/* Main Header with Gradient Background */}
       <GradientHeader
-        title={title}
+        title={
+          <div className="flex items-center gap-3">
+            <span>{title}</span>
+            {showFilterIndicator && (
+              <span 
+                className="px-3 py-1 bg-blue-500/30 border border-blue-400/50 rounded-full text-blue-200 text-xs font-medium cursor-help"
+                title="You are viewing only devices assigned to your account"
+              >
+                Filtered View
+              </span>
+            )}
+          </div>
+        }
         subtitle={subtitle}
         variant="gradient"
         colorScheme={colorScheme}
@@ -275,6 +288,30 @@ export function DashboardHeader({
               </div>
             </div>
           )}
+        </div>
+      )}
+      
+      {/* Filtering Info Box for PARENTS users */}
+      {showFilterIndicator && (
+        <div className={`
+          relative p-4 rounded-xl border border-blue-500/30 
+          bg-gradient-to-r from-blue-900/20 via-slate-900/20 to-blue-900/20
+          backdrop-blur-sm
+        `}>
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="flex-1">
+              <div className="text-blue-200 font-medium text-sm mb-1">
+                Viewing Assigned Devices Only
+              </div>
+              <div className="text-blue-200/70 text-sm leading-relaxed">
+                You are viewing data for {devicesCount} device{devicesCount !== 1 ? 's' : ''} assigned to your account. 
+                Contact your administrator to modify device assignments or view additional devices.
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -7,7 +7,7 @@ import {
   getAllAnalytics,
   getAnalyticsByImei,
 } from "../utils/analytics";
-import { listDevices } from "../utils/device";
+import { listDevicesFiltered } from "../utils/deviceFiltered";
 
 /**
  * Custom hook for managing dashboard data with caching and optimizations
@@ -29,7 +29,7 @@ export function useDashboardData() {
       ttl: 1 * 60 * 1000 // 1 minute for recent data
     },
     devices: {
-      apiFn: listDevices,
+      apiFn: listDevicesFiltered,
       dependencies: [],
       ttl: 5 * 60 * 1000 // 5 minutes for device list
     },
@@ -59,7 +59,7 @@ export function useDashboardData() {
     data: devicesResponse, 
     loading: devicesLoading,
     refresh: refreshDevices 
-  } = useApiCache(listDevices, [], { ttl: 5 * 60 * 1000 });
+  } = useApiCache(listDevicesFiltered, [], { ttl: 5 * 60 * 1000 });
 
   const { 
     data: allAnalytics, 

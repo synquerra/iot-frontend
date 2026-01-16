@@ -3,24 +3,64 @@ import { Card } from "../design-system/components";
 import { Button } from "../design-system/components";
 import { Loading } from "../design-system/components";
 import { cn } from "../design-system/utils/cn";
+import { useDeviceFilter } from "../hooks/useDeviceFilter";
+import { listDevicesFiltered } from "../utils/deviceFiltered";
 
 export default function Analytics() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+  const [allDevices, setAllDevices] = useState([]);
   const [currentMetrics, setCurrentMetrics] = useState({
-    totalDevices: 4180,
-    activeDevices: 3935,
+    totalDevices: 0,
+    activeDevices: 0,
     totalThroughput: 4200,
     avgLatency: 125,
     errorRate: 2.8,
     uptime: 99.7,
   });
+  
+  // Use device filter hook for user-based filtering
+  const { filterDevices, shouldFilterDevices } = useDeviceFilter();
 
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => setLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
+    async function loadDevicesAndMetrics() {
+      try {
+        setLoading(true);
+        
+        // Fetch all devices from API
+        const { devices: fetchedDevices } = await listDevicesFiltered();
+        
+        // Apply user-based device filtering (PARENTS vs ADMIN)
+        const filteredDevices = filterDevices(fetchedDevices);
+        
+        setAllDevices(filteredDevices);
+        
+        // Calculate metrics based on filtered devices
+        const totalDevices = filteredDevices.length;
+        const activeDevices = filteredDevices.filter(
+          device => device.status === 'active' || device.interval !== '-'
+        ).length;
+        
+        setCurrentMetrics(prev => ({
+          ...prev,
+          totalDevices,
+          activeDevices,
+        }));
+      } catch (error) {
+        console.error('Failed to load devices for analytics:', error);
+        // Set default values on error
+        setCurrentMetrics(prev => ({
+          ...prev,
+          totalDevices: 0,
+          activeDevices: 0,
+        }));
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadDevicesAndMetrics();
+  }, [filterDevices]);
 
   const tabs = [
     { id: "overview", label: "Overview", icon: "📊" },
@@ -59,9 +99,16 @@ export default function Analytics() {
         <div className="relative z-10 p-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div className="flex-1">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent mb-3">
-                Analytics Dashboard
-              </h1>
+              <div className="flex items-center gap-3 mb-3">
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent">
+                  Analytics Dashboard
+                </h1>
+                {shouldFilterDevices() && (
+                  <span className="px-3 py-1 bg-blue-500/30 border border-blue-400/50 rounded-full text-blue-200 text-xs font-medium">
+                    Filtered View
+                  </span>
+                )}
+              </div>
               <p className="text-blue-100/90 text-lg leading-relaxed max-w-2xl">
                 Comprehensive analytics and performance metrics for your device network
               </p>
@@ -362,24 +409,34 @@ export default function Analytics() {
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white/5 rounded-lg p-4 text-center">
-                  <div className="text-cyan-200/80 text-sm font-medium mb-2">Sensors</div>
-                  <div className="text-white text-2xl font-bold">1,881</div>
-                  <div className="text-cyan-300 text-xs mt-1">45%</div>
+                  <div className="text-cyan-200/80 text-sm font-medium mb-2">Total Devices</div>
+                  <div className="text-white text-2xl font-bold">{currentMetrics.totalDevices.toLocaleString()}</div>
+                  <div className="text-cyan-300 text-xs mt-1">100%</div>
                 </div>
                 <div className="bg-white/5 rounded-lg p-4 text-center">
-                  <div className="text-cyan-200/80 text-sm font-medium mb-2">Gateways</div>
-                  <div className="text-white text-2xl font-bold">1,045</div>
-                  <div className="text-cyan-300 text-xs mt-1">25%</div>
+                  <div className="text-cyan-200/80 text-sm font-medium mb-2">Active</div>
+                  <div className="text-white text-2xl font-bold">{currentMetrics.activeDevices.toLocaleString()}</div>
+                  <div className="text-cyan-300 text-xs mt-1">
+                    {currentMetrics.totalDevices > 0 
+                      ? Math.round((currentMetrics.activeDevices / currentMetrics.totalDevices) * 100)
+                      : 0}%
+                  </div>
                 </div>
                 <div className="bg-white/5 rounded-lg p-4 text-center">
-                  <div className="text-cyan-200/80 text-sm font-medium mb-2">Controllers</div>
-                  <div className="text-white text-2xl font-bold">836</div>
-                  <div className="text-cyan-300 text-xs mt-1">20%</div>
+                  <div className="text-cyan-200/80 text-sm font-medium mb-2">Inactive</div>
+                  <div className="text-white text-2xl font-bold">
+                    {(currentMetrics.totalDevices - currentMetrics.activeDevices).toLocaleString()}
+                  </div>
+                  <div className="text-cyan-300 text-xs mt-1">
+                    {currentMetrics.totalDevices > 0 
+                      ? Math.round(((currentMetrics.totalDevices - currentMetrics.activeDevices) / currentMetrics.totalDevices) * 100)
+                      : 0}%
+                  </div>
                 </div>
                 <div className="bg-white/5 rounded-lg p-4 text-center">
-                  <div className="text-cyan-200/80 text-sm font-medium mb-2">Monitors</div>
-                  <div className="text-white text-2xl font-bold">418</div>
-                  <div className="text-cyan-300 text-xs mt-1">10%</div>
+                  <div className="text-cyan-200/80 text-sm font-medium mb-2">Authorized</div>
+                  <div className="text-white text-2xl font-bold">{allDevices.length.toLocaleString()}</div>
+                  <div className="text-cyan-300 text-xs mt-1">Visible</div>
                 </div>
               </div>
             </Card.Content>
@@ -395,32 +452,42 @@ export default function Analytics() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Regional Distribution
+                Device Overview
               </h3>
               <div className="space-y-4">
-                {[
-                  { name: 'North America', devices: 1250, active: 1180, percentage: 30 },
-                  { name: 'Asia Pacific', devices: 1450, active: 1380, percentage: 35 },
-                  { name: 'Europe', devices: 980, active: 920, percentage: 23 },
-                  { name: 'South America', devices: 320, active: 290, percentage: 8 },
-                  { name: 'Africa', devices: 180, active: 165, percentage: 4 }
-                ].map((region) => (
-                  <div key={region.name} className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-                    <div className="flex-1">
-                      <div className="text-white font-medium">{region.name}</div>
-                      <div className="text-teal-200/70 text-sm">{region.devices} devices • {region.active} active</div>
+                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
+                  <div className="flex-1">
+                    <div className="text-white font-medium">Total Authorized Devices</div>
+                    <div className="text-teal-200/70 text-sm">{currentMetrics.totalDevices} devices • {currentMetrics.activeDevices} active</div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-32 bg-white/20 rounded-full h-2">
+                      <div 
+                        className="h-2 rounded-full bg-teal-400 transition-all duration-300"
+                        style={{ width: currentMetrics.totalDevices > 0 ? `${(currentMetrics.activeDevices / currentMetrics.totalDevices) * 100}%` : '0%' }}
+                      />
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-32 bg-white/20 rounded-full h-2">
-                        <div 
-                          className="h-2 rounded-full bg-teal-400 transition-all duration-300"
-                          style={{ width: `${region.percentage}%` }}
-                        />
+                    <span className="text-white font-bold w-12 text-right">
+                      {currentMetrics.totalDevices > 0 ? Math.round((currentMetrics.activeDevices / currentMetrics.totalDevices) * 100) : 0}%
+                    </span>
+                  </div>
+                </div>
+                {shouldFilterDevices() && (
+                  <div className="p-4 bg-blue-500/10 border border-blue-400/30 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div>
+                        <div className="text-blue-200 font-medium mb-1">Filtered View Active</div>
+                        <div className="text-blue-200/70 text-sm">
+                          You are viewing analytics for devices assigned to your account. 
+                          Contact your administrator to modify device assignments.
+                        </div>
                       </div>
-                      <span className="text-white font-bold w-12 text-right">{region.percentage}%</span>
                     </div>
                   </div>
-                ))}
+                )}
               </div>
             </Card.Content>
           </Card>

@@ -25,6 +25,17 @@ import {
 } from '../design-system/tokens/spacing.js'
 
 // Mock the API and hooks
+vi.mock('../contexts/UserContext', () => ({
+  useUserContext: () => ({
+    userType: 'ADMIN',
+    imeis: [],
+    isAuthenticated: true,
+    uniqueId: 'test-user-123',
+    email: 'test@example.com'
+  }),
+  UserContextProvider: ({ children }) => children
+}))
+
 vi.mock('../hooks/useDashboardData', () => ({
   useDashboardData: () => ({
     totalAnalytics: 150,

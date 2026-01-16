@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { authenticateUser } from "../utils/auth";
+import { persistUserContext } from "../utils/authResponseParser";
+import { useUserContext } from "../contexts/UserContext";
 import { Input } from "../design-system/components/Input";
 import { Button } from "../design-system/components/Button";
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { setUserContext } = useUserContext();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -52,8 +55,20 @@ export default function Login() {
 
     try {
       setLoading(true);
-      const userData = await authenticateUser(email, password);
-      console.log("Login successful:", userData);
+      
+      // Authenticate and get parsed user context
+      const parsedContext = await authenticateUser(email, password);
+      console.log("Login successful:", parsedContext);
+      
+      // Store parsed user context in UserContext
+      setUserContext(parsedContext);
+      
+      // Persist user context to localStorage
+      const persisted = persistUserContext(parsedContext);
+      if (!persisted) {
+        console.warn("Failed to persist user context to storage");
+      }
+      
       navigate("/"); // Redirect to dashboard
     } catch (error) {
       setError(error.message || "Login failed. Please check your credentials and try again.");
