@@ -19,8 +19,50 @@ export default function Analytics() {
     uptime: 99.7,
   });
   
+  // New state variables for refresh functionality
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [error, setError] = useState(null);
+  
   // Use device filter hook for user-based filtering
   const { filterDevices, shouldFilterDevices } = useDeviceFilter();
+
+  // Refresh analytics data function
+  const refreshAnalyticsData = async () => {
+    setRefreshing(true);
+    setError(null);
+    
+    try {
+      // Fetch all devices from API
+      const { devices: fetchedDevices } = await listDevicesFiltered();
+      
+      // Apply user-based device filtering (PARENTS vs ADMIN)
+      const filteredDevices = filterDevices(fetchedDevices);
+      
+      setAllDevices(filteredDevices);
+      
+      // Calculate metrics based on filtered devices
+      const totalDevices = filteredDevices.length;
+      const activeDevices = filteredDevices.filter(
+        device => device.status === 'active' || device.interval !== '-'
+      ).length;
+      
+      setCurrentMetrics(prev => ({
+        ...prev,
+        totalDevices,
+        activeDevices,
+      }));
+      
+      // Update last updated timestamp
+      setLastUpdated(new Date());
+    } catch (error) {
+      console.error('Failed to refresh analytics data:', error);
+      setError('Failed to refresh data. Please try again.');
+      // Keep previous data on error
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     async function loadDevicesAndMetrics() {
@@ -62,6 +104,21 @@ export default function Analytics() {
     loadDevicesAndMetrics();
   }, [filterDevices]);
 
+  // Auto-refresh mechanism with visibility detection
+  useEffect(() => {
+    const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
+    
+    const intervalId = setInterval(() => {
+      // Only refresh if page is visible
+      if (document.visibilityState === 'visible' && !refreshing) {
+        refreshAnalyticsData();
+      }
+    }, AUTO_REFRESH_INTERVAL);
+    
+    // Clean up interval on component unmount
+    return () => clearInterval(intervalId);
+  }, [refreshing]); // Re-create interval if refreshing state changes
+
   const tabs = [
     { id: "overview", label: "Overview", icon: "📊" },
     { id: "performance", label: "Performance", icon: "⚡" },
@@ -88,6 +145,25 @@ export default function Analytics() {
 
   return (
     <div className="space-y-8 p-6">
+      {/* Error Notification */}
+      {error && (
+        <div className="p-4 bg-red-500/10 border border-red-400/30 rounded-lg">
+          <div className="flex items-center gap-3">
+            <svg className="w-5 h-5 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-red-200 flex-1">{error}</span>
+            <button 
+              onClick={refreshAnalyticsData} 
+              className="ml-auto px-3 py-1 text-red-300 hover:text-red-100 hover:bg-red-500/20 rounded transition-colors"
+              disabled={refreshing}
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Enhanced Header */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600/20 via-purple-600/20 to-teal-600/20 border border-blue-500/30 backdrop-blur-xl">
         <div className="absolute inset-0 pointer-events-none">
@@ -124,13 +200,19 @@ export default function Analytics() {
                 variant="glass"
                 colorScheme="teal"
                 size="lg"
-                onClick={() => window.location.reload()}
+                onClick={refreshAnalyticsData}
+                disabled={refreshing}
                 className="backdrop-blur-xl"
               >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg 
+                  className={cn("w-5 h-5 mr-2", refreshing && "animate-spin")}
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                Refresh
+                {refreshing ? 'Refreshing...' : 'Refresh'}
               </Button>
             </div>
           </div>
@@ -565,9 +647,9 @@ export default function Analytics() {
         <Card.Content>
           <div className="text-center">
             <p className="text-white/70">
-              Analytics data is updated every 5 minutes. Last updated:{' '}
+              Analytics data is updated every 30 seconds. Last updated:{' '}
               <span className="text-white font-medium">
-                {new Date().toLocaleTimeString()}
+                {lastUpdated.toLocaleTimeString()}
               </span>
             </p>
           </div>

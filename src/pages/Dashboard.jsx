@@ -68,6 +68,15 @@ import { useDeviceFilter } from "../hooks/useDeviceFilter";
 // Design system utilities
 import { cn } from "../design-system/utils/cn";
 
+// Trip Analytics Section
+import TripAnalyticsSection from "../components/analytics/TripAnalyticsSection";
+
+// Device Health Section
+import DeviceHealthSection from "../components/analytics/DeviceHealthSection";
+
+// Geofence Analytics Section
+import GeofenceAnalyticsSection from "../components/analytics/GeofenceAnalyticsSection";
+
 
 /* ------------------------------------------------
    MAIN DASHBOARD
@@ -86,6 +95,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [locationLoading, setLocationLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [geofences, setGeofences] = useState([]);
   
   // Enhanced analytics API instance
   const [analyticsAPI] = useState(() => new EnhancedAnalyticsAPI({
@@ -306,6 +316,30 @@ export default function Dashboard() {
       setDevices(devicesList.slice(0, 10));
       
       setAllAnalytics(Array.isArray(allData) ? allData : []);
+      
+      // Load sample geofences for analytics
+      // In a real app, this would come from an API
+      setGeofences([
+        {
+          id: "GEO1",
+          name: "Home Zone",
+          type: "polygon",
+          coordinates: [
+            { latitude: 23.301624, longitude: 85.327065 },
+            { latitude: 23.302624, longitude: 85.328065 },
+            { latitude: 23.303624, longitude: 85.327065 },
+            { latitude: 23.302624, longitude: 85.326065 },
+            { latitude: 23.301624, longitude: 85.327065 }
+          ]
+        },
+        {
+          id: "GEO2",
+          name: "Office Zone",
+          type: "circle",
+          center: { latitude: 23.305624, longitude: 85.330065 },
+          radius: 500 // meters
+        }
+      ]);
       
       // Reset progress
       setLoadingProgress({
@@ -1230,6 +1264,48 @@ export default function Dashboard() {
           </div>
         </EnhancedTableContainer>
       </ContentSection>
+
+      {/* Trip Analytics Section */}
+      <SectionDivider 
+        variant="rainbow" 
+        colorScheme="blue" 
+        spacing="lg" 
+        animated={true}
+      />
+
+      <TripAnalyticsSection
+        analyticsData={filteredAnalytics}
+        selectedDevice={selectedImei}
+        loading={loading}
+      />
+
+      {/* Device Health Section */}
+      <SectionDivider 
+        variant="gradient" 
+        colorScheme="green" 
+        spacing="lg" 
+        animated={true}
+      />
+
+      <DeviceHealthSection
+        devices={filteredDevices}
+        analyticsData={filteredAnalytics}
+        loading={loading}
+      />
+
+      {/* Geofence Analytics Section */}
+      <SectionDivider 
+        variant="gradient" 
+        colorScheme="teal" 
+        spacing="lg" 
+        animated={true}
+      />
+
+      <GeofenceAnalyticsSection
+        analyticsData={filteredAnalytics}
+        geofences={geofences}
+        loading={loading}
+      />
 
       {/* Final Section Divider */}
       <SectionDivider 

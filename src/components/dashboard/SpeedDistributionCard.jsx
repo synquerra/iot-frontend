@@ -202,7 +202,7 @@ function DataQualityAlert({ warnings }) {
     <div className="mb-6">
       {criticalWarnings.map((warning, idx) => (
         <div
-          key={idx}
+          key={`warning-${warning.level}-${warning.message.substring(0, 20)}-${idx}`}
           className={cn(
             'flex items-center gap-3 p-4 rounded-xl border-2 mb-2',
             warning.level === 'error' && 'bg-red-500/10 border-red-500/50 text-red-400',
@@ -270,7 +270,7 @@ export default function SpeedDistributionCard({ speedDistributionData }) {
             <span>Live data • Updated in real-time</span>
           </div>
           <div className="text-gray-600 dark:text-gray-400">
-            {validRecords}/{totalRecords} valid records ({((validRecords/totalRecords)*100).toFixed(1)}%)
+            {validRecords}/{totalRecords} valid records ({totalRecords > 0 ? ((validRecords/totalRecords)*100).toFixed(1) : '0.0'}%)
           </div>
         </div>
       </div>
