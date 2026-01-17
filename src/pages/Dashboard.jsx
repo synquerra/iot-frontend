@@ -23,8 +23,20 @@ import {
   EnhancedPieChart,
 } from "../components/LazyCharts";
 
+// Speed Distribution Card
+import SpeedDistributionCard from "../components/dashboard/SpeedDistributionCard";
+
+// Geo Distribution Card
+import GeoDistributionCard from "../components/dashboard/GeoDistributionCard";
+
 // Premium Journey Map - Ola/Uber style with timeline
 import PremiumJourneyMap from "../components/PremiumJourneyMap";
+// Detailed Journey Map - End-to-end street view
+import DetailedJourneyMap from "../components/DetailedJourneyMap";
+// Ola/Uber Style Map - Simple and clean
+import OlaUberStyleMap from "../components/OlaUberStyleMap";
+// Clean Journey Map - Realistic and smooth
+import CleanJourneyMap from "../components/CleanJourneyMap";
 import { loadLocationDataProgressive } from "../utils/progressiveMapDataLoader";
 
 // API utilities
@@ -43,6 +55,12 @@ import {
   EnhancedAnalyticsAPI
 } from "../utils/enhancedAnalytics";
 import { listDevicesFiltered } from "../utils/deviceFiltered";
+
+// Speed analytics utilities
+import {
+  processSpeedDistribution,
+  transformToChartData
+} from "../utils/speedAnalytics";
 
 // Device filtering hook
 import { useDeviceFilter } from "../hooks/useDeviceFilter";
@@ -122,30 +140,73 @@ export default function Dashboard() {
     );
   }, [recentAnalytics, allowedIMEIs]);
 
-  // Process speed chart data with filtered analytics (Requirement 4.2)
-  const speedChart = (() => {
-    const ranges = {
-      "0 - 20": 0,
-      "20 - 40": 0,
-      "40 - 60": 0,
-      "60 - 80": 0,
-      "80+": 0,
-    };
+  // Filter and limit recent analytics to show only 5 records with speed > 0
+  const displayRecentAnalytics = useMemo(() => {
+    console.log('🔍 ========== FILTERING RECENT ANALYTICS ==========');
+    console.log('📊 Total records received:', filteredRecentAnalytics.length);
+    
+    // Log first 10 records to see what we have
+    console.log('📋 First 10 records:', filteredRecentAnalytics.slice(0, 10).map((a, idx) => ({
+      index: idx,
+      imei: a.imei,
+      speed: a.speed,
+      type: a.type,
+      packet: a.packet,
+      timestamp: a.deviceTimestamp || a.timestamp,
+      rawData: a
+    })));
+    
+    const filtered = filteredRecentAnalytics
+      .filter(a => {
+        const speed = Number(a.speed || 0);
+        const isNormalPacket = a.type === 'packet_N';
+        const isValid = speed > 0 && isNormalPacket;
+        
+        console.log(`🔎 Record check: IMEI=${a.imei}, Speed=${speed}, Type=${a.type}, Valid=${isValid}`);
+        
+        if (!isValid) {
+          if (speed === 0) {
+            console.log(`  ❌ REJECTED: Speed is 0`);
+          } else if (!isNormalPacket) {
+            console.log(`  ❌ REJECTED: Type is not packet_N (got: ${a.type})`);
+          }
+        } else {
+          console.log(`  ✅ ACCEPTED`);
+        }
+        
+        return isValid;
+      })
+      .sort((a, b) => {
+        const timeA = new Date(a.deviceTimestamp || a.timestamp || 0).getTime();
+        const timeB = new Date(b.deviceTimestamp || b.timestamp || 0).getTime();
+        return timeB - timeA;
+      })
+      .slice(0, 5);
+    
+    console.log('✅ ========== FINAL FILTERED RESULTS ==========');
+    console.log('📊 Count:', filtered.length);
+    console.log('📋 Records:', filtered.map((a, idx) => ({
+      index: idx,
+      imei: a.imei,
+      speed: a.speed,
+      type: a.type,
+      timestamp: a.deviceTimestamp || a.timestamp,
+      fullRecord: a
+    })));
+    console.log('========================================');
+    
+    return filtered;
+  }, [filteredRecentAnalytics]);
 
-    filteredAnalytics.forEach((a) => {
-      const s = Number(a.speed || 0);
-      if (s <= 20) ranges["0 - 20"]++;
-      else if (s <= 40) ranges["20 - 40"]++;
-      else if (s <= 60) ranges["40 - 60"]++;
-      else if (s <= 80) ranges["60 - 80"]++;
-      else ranges["80+"]++;
-    });
+  // Process speed distribution data with enhanced analytics (Requirement 4.2)
+  const speedDistributionData = useMemo(() => {
+    return processSpeedDistribution(filteredAnalytics);
+  }, [filteredAnalytics]);
 
-    return Object.keys(ranges).map((key) => ({
-      name: key,
-      count: ranges[key],
-    }));
-  })();
+  // Transform speed data for chart rendering
+  const speedChart = useMemo(() => {
+    return transformToChartData(speedDistributionData.categories);
+  }, [speedDistributionData]);
 
   // Process geographic distribution with filtered devices (Requirement 4.2)
   const geoPie = (() => {
@@ -164,7 +225,7 @@ export default function Dashboard() {
   // Calculate stats with filtered data (Requirement 4.2)
   const stats = {
     devicesCount: filteredDevices.length,
-    recentCount: filteredRecentAnalytics.length,
+    recentCount: displayRecentAnalytics.length,
     totalAnalytics: shouldFilterDevices() ? filteredAnalytics.length : Number(totalAnalytics) || 0
   };
 
@@ -197,9 +258,10 @@ export default function Dashboard() {
         }),
         
         // Use enhanced recent analytics with truncation protection
-        getRecentAnalyticsSafe(10).catch(err => {
+        // Fetch 100 records to ensure we get enough recent Normal packets with speed > 0
+        getRecentAnalyticsSafe(100).catch(err => {
           console.warn("Recent analytics failed, using fallback:", err.message);
-          return getAnalyticsPaginated(0, 10).catch(() => []);
+          return getAnalyticsPaginated(0, 100).catch(() => []);
         }),
         
         // Load devices (usually small dataset)
@@ -318,9 +380,21 @@ export default function Dashboard() {
             .map((p) => ({
               lat: Number(p.latitude),
               lng: Number(p.longitude),
-              time: p.timestampIso || p.timestamp,
+              speed: Number(p.speed || 0),
+              time: p.deviceTimestamp || p.timestamp || p.deviceRawTimestamp,
             }))
-            .filter((p) => !isNaN(p.lat) && !isNaN(p.lng))
+            .filter((p) => {
+              // Filter out invalid data:
+              // 1. NaN coordinates
+              // 2. Zero coordinates (0.000000, 0.000000)
+              // 3. Speed must be greater than 0
+              const hasValidCoords = !isNaN(p.lat) && !isNaN(p.lng) && 
+                                     p.lat !== 0 && p.lng !== 0 &&
+                                     Math.abs(p.lat) > 0.0001 && Math.abs(p.lng) > 0.0001;
+              const hasValidSpeed = p.speed > 0;
+              
+              return hasValidCoords && hasValidSpeed;
+            })
         : [];
       
       console.log("✅ Processed location path:", processedPath.length, "valid points");
@@ -720,8 +794,8 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <div className="w-full h-full relative">
-                      {/* Premium Journey Map - Ola/Uber style */}
-                      <PremiumJourneyMap
+                      {/* Clean Journey Map - Realistic and smooth */}
+                      <CleanJourneyMap
                         path={locationPath}
                         className="w-full h-full"
                       />
@@ -819,215 +893,12 @@ export default function Dashboard() {
             <div className="absolute bottom-12 left-16 w-36 h-36 bg-teal-300/8 rounded-full blur-2xl animate-pulse delay-2100" />
           </div>
 
-          {/* Responsive Grid Layout: Side-by-side on desktop, stacked on mobile */}
-          <div className="relative z-10 grid grid-cols-1 xl:grid-cols-2 gap-8 p-8">
+          {/* Responsive Grid Layout: Full width for speed distribution, side column for geo */}
+          <div className="relative z-10 p-8">
 
-            {/* Enhanced Speed Chart with Advanced Glassmorphism */}
-            <div className="group relative overflow-hidden">
-              {/* Chart Container with Enhanced Glassmorphism Effects */}
-              <div className={cn(
-                'relative overflow-hidden rounded-2xl',
-                'bg-gradient-to-br from-amber-600/25 via-orange-600/20 to-red-600/25',
-                'backdrop-blur-2xl border border-amber-400/40',
-                'shadow-2xl shadow-amber-500/30',
-                'transition-all duration-500 ease-out',
-                'hover:shadow-amber-500/40 hover:border-amber-300/50 hover:scale-[1.02]',
-                'group-hover:bg-gradient-to-br group-hover:from-amber-600/30 group-hover:via-orange-600/25 group-hover:to-red-600/30'
-              )}>
-                {/* Enhanced Background Effects with Multiple Layers */}
-                <div className="absolute inset-0 pointer-events-none">
-                  {/* Primary animated gradient mesh */}
-                  <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-amber-500/12 via-transparent to-orange-500/12 animate-pulse" />
-                  
-                  {/* Secondary gradient layer for depth */}
-                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-amber-400/8 to-red-400/10 animate-pulse delay-1000" />
-                  
-                  {/* Enhanced glassmorphism overlay with noise texture */}
-                  <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" 
-                       style={{
-                         backgroundImage: `radial-gradient(circle at 25% 25%, rgba(255,255,255,0.15) 0%, transparent 50%), 
-                                          radial-gradient(circle at 75% 75%, rgba(245,158,11,0.15) 0%, transparent 50%)`,
-                       }} />
-                  
-                  {/* Floating glow effects with staggered animations */}
-                  <div className="absolute top-6 left-6 w-24 h-24 bg-amber-400/20 rounded-full blur-2xl animate-pulse" />
-                  <div className="absolute top-8 right-8 w-20 h-20 bg-orange-400/15 rounded-full blur-xl animate-pulse delay-700" />
-                  <div className="absolute bottom-6 right-6 w-28 h-28 bg-red-400/12 rounded-full blur-2xl animate-pulse delay-1400" />
-                  <div className="absolute bottom-8 left-8 w-22 h-22 bg-amber-300/10 rounded-full blur-xl animate-pulse delay-2100" />
-                  
-                  {/* Subtle animated border highlight */}
-                  <div className="absolute inset-0 rounded-2xl border border-white/15 animate-pulse delay-500" />
-                </div>
-
-                {/* Chart Header with Enhanced Typography */}
-                <div className="relative z-10 p-6 pb-4">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-bold mb-2 bg-gradient-to-r from-white via-amber-100 to-orange-100 bg-clip-text text-transparent">
-                        Speed Distribution
-                      </h3>
-                      <p className="text-amber-100/90 text-sm font-medium leading-relaxed">
-                        Distribution of vehicle speeds across all analytics data with enhanced visualization
-                      </p>
-                    </div>
-                    
-                    {/* Interactive Chart Icon with Hover Effects */}
-                    <div className="ml-4 p-3 rounded-xl bg-white/15 backdrop-blur-md border border-white/30 group-hover:bg-white/20 group-hover:scale-110 transition-all duration-300">
-                      <svg className="w-6 h-6 text-amber-200 group-hover:text-white transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Enhanced Chart Content with Glow Effects */}
-                <div className="relative z-10 px-6 pb-6">
-                  <div className="relative">
-                    {/* Chart background with enhanced gradient and glow */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/15 via-orange-500/12 to-red-500/15 rounded-xl -z-10" />
-                    <div className="absolute inset-0 bg-black/20 backdrop-blur-sm rounded-xl -z-10" />
-                    
-                    {/* Glow effect around chart */}
-                    <div className="absolute -inset-2 bg-gradient-to-br from-amber-400/20 via-orange-400/15 to-red-400/20 rounded-2xl blur-xl opacity-75 group-hover:opacity-100 transition-opacity duration-500 -z-20" />
-                    
-                    {/* Enhanced Chart Component with Interactive Tooltips */}
-                    <div className="relative rounded-xl overflow-hidden border border-white/20 backdrop-blur-sm">
-                      <EnhancedBarChart
-                        data={speedChart}
-                        bars={[{ dataKey: 'count', name: 'Speed Count' }]}
-                        height={320}
-                        layout="vertical"
-                        animated={true}
-                        colorVariant="vibrant"
-                        className="transition-all duration-300 group-hover:scale-[1.01]"
-                      />
-                    </div>
-                    
-                    {/* Interactive Overlay for Enhanced Hover States */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-black/5 pointer-events-none rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  </div>
-                </div>
-
-                {/* Enhanced Chart Footer with Statistics */}
-                <div className="relative z-10 px-6 pb-6">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 bg-amber-400 rounded-full animate-pulse shadow-lg shadow-amber-400/50"></div>
-                      <span className="text-amber-200/90 font-medium">
-                        {speedChart?.length || 0} speed ranges
-                      </span>
-                    </div>
-                    <div className="text-amber-200/70 font-medium">
-                      Real-time data
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Enhanced Geo Pie Chart with Advanced Glassmorphism */}
-            <div className="group relative overflow-hidden">
-              {/* Chart Container with Enhanced Glassmorphism Effects */}
-              <div className={cn(
-                'relative overflow-hidden rounded-2xl',
-                'bg-gradient-to-br from-green-600/25 via-teal-600/20 to-cyan-600/25',
-                'backdrop-blur-2xl border border-green-400/40',
-                'shadow-2xl shadow-green-500/30',
-                'transition-all duration-500 ease-out',
-                'hover:shadow-green-500/40 hover:border-green-300/50 hover:scale-[1.02]',
-                'group-hover:bg-gradient-to-br group-hover:from-green-600/30 group-hover:via-teal-600/25 group-hover:to-cyan-600/30'
-              )}>
-                {/* Enhanced Background Effects with Multiple Layers */}
-                <div className="absolute inset-0 pointer-events-none">
-                  {/* Primary animated gradient mesh */}
-                  <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-green-500/12 via-transparent to-teal-500/12 animate-pulse" />
-                  
-                  {/* Secondary gradient layer for depth */}
-                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-green-400/8 to-cyan-400/10 animate-pulse delay-1000" />
-                  
-                  {/* Enhanced glassmorphism overlay with noise texture */}
-                  <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" 
-                       style={{
-                         backgroundImage: `radial-gradient(circle at 25% 25%, rgba(255,255,255,0.15) 0%, transparent 50%), 
-                                          radial-gradient(circle at 75% 75%, rgba(34,197,94,0.15) 0%, transparent 50%)`,
-                       }} />
-                  
-                  {/* Floating glow effects with staggered animations */}
-                  <div className="absolute top-6 left-6 w-24 h-24 bg-green-400/20 rounded-full blur-2xl animate-pulse" />
-                  <div className="absolute top-8 right-8 w-20 h-20 bg-teal-400/15 rounded-full blur-xl animate-pulse delay-700" />
-                  <div className="absolute bottom-6 right-6 w-28 h-28 bg-cyan-400/12 rounded-full blur-2xl animate-pulse delay-1400" />
-                  <div className="absolute bottom-8 left-8 w-22 h-22 bg-green-300/10 rounded-full blur-xl animate-pulse delay-2100" />
-                  
-                  {/* Subtle animated border highlight */}
-                  <div className="absolute inset-0 rounded-2xl border border-white/15 animate-pulse delay-500" />
-                </div>
-
-                {/* Chart Header with Enhanced Typography */}
-                <div className="relative z-10 p-6 pb-4">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-bold mb-2 bg-gradient-to-r from-white via-green-100 to-teal-100 bg-clip-text text-transparent">
-                        Device Geo Distribution
-                      </h3>
-                      <p className="text-green-100/90 text-sm font-medium leading-relaxed">
-                        Geographic distribution of registered devices with interactive visualization
-                      </p>
-                    </div>
-                    
-                    {/* Interactive Chart Icon with Hover Effects */}
-                    <div className="ml-4 p-3 rounded-xl bg-white/15 backdrop-blur-md border border-white/30 group-hover:bg-white/20 group-hover:scale-110 transition-all duration-300">
-                      <svg className="w-6 h-6 text-green-200 group-hover:text-white transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Enhanced Chart Content with Glow Effects */}
-                <div className="relative z-10 px-6 pb-6">
-                  <div className="relative">
-                    {/* Chart background with enhanced gradient and glow */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-green-500/15 via-teal-500/12 to-cyan-500/15 rounded-xl -z-10" />
-                    <div className="absolute inset-0 bg-black/20 backdrop-blur-sm rounded-xl -z-10" />
-                    
-                    {/* Glow effect around chart */}
-                    <div className="absolute -inset-2 bg-gradient-to-br from-green-400/20 via-teal-400/15 to-cyan-400/20 rounded-2xl blur-xl opacity-75 group-hover:opacity-100 transition-opacity duration-500 -z-20" />
-                    
-                    {/* Enhanced Chart Component with Interactive Tooltips */}
-                    <div className="relative rounded-xl overflow-hidden border border-white/20 backdrop-blur-sm">
-                      <EnhancedPieChart
-                        data={geoPie}
-                        height={320}
-                        innerRadius={60}
-                        outerRadius={110}
-                        animated={true}
-                        colorCombination={0}
-                        paddingAngle={3}
-                        className="transition-all duration-300 group-hover:scale-[1.01]"
-                      />
-                    </div>
-                    
-                    {/* Interactive Overlay for Enhanced Hover States */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-black/5 pointer-events-none rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  </div>
-                </div>
-
-                {/* Enhanced Chart Footer with Statistics */}
-                <div className="relative z-10 px-6 pb-6">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
-                      <span className="text-green-200/90 font-medium">
-                        {geoPie?.length || 0} regions
-                      </span>
-                    </div>
-                    <div className="text-green-200/70 font-medium">
-                      Live distribution
-                    </div>
-                  </div>
-                </div>
-              </div>
+            {/* Enhanced Speed Distribution Card - Full Width */}
+            <div className="mb-8">
+              <SpeedDistributionCard speedDistributionData={speedDistributionData} />
             </div>
           </div>
 
@@ -1080,15 +951,30 @@ export default function Dashboard() {
             <div className="flex items-center justify-between w-full mb-4">
               <div className="flex-1">
                 <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-white via-purple-100 to-pink-100 bg-clip-text text-transparent">
-                  Latest Analytics
+                  Latest Analytics (Moving Device)
                 </h2>
                 <p className="text-purple-100/90 text-sm font-medium leading-relaxed">
-                  Most recent analytics data from all devices with enhanced color-coded formatting
+                  Last 5 Normal data (packet_N) with speed &gt; 0 km/h
                 </p>
               </div>
               
-              {/* Enhanced Statistics Badge */}
-              <div className="ml-6">
+              {/* Refresh Button and Statistics Badge */}
+              <div className="ml-6 flex items-center gap-3">
+                <button
+                  onClick={refreshDashboard}
+                  disabled={loading}
+                  className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl border border-white/20 transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Refresh Analytics"
+                >
+                  <svg 
+                    className={`w-5 h-5 text-white ${loading ? 'animate-spin' : ''}`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
                 <StatusBadge 
                   type="info" 
                   value={`${stats.recentCount} records`}
@@ -1110,8 +996,8 @@ export default function Dashboard() {
             striped={true}
             loading={loading}
             loadingRows={5}
-            loadingColumns={5}
-            data={filteredRecentAnalytics}
+            loadingColumns={6}
+            data={displayRecentAnalytics}
             colorCoded={true}
             showBadges={true}
             responsive={true}
@@ -1143,9 +1029,12 @@ export default function Dashboard() {
                   } else if (speed > 40) {
                     colorScheme = { bg: 'bg-amber-500/15', text: 'text-amber-300', border: 'border-amber-500/30' };
                     icon = '🚗';
-                  } else {
+                  } else if (speed > 0) {
                     colorScheme = { bg: 'bg-green-500/15', text: 'text-green-300', border: 'border-green-500/30' };
                     icon = '🚶';
+                  } else {
+                    colorScheme = { bg: 'bg-gray-500/15', text: 'text-gray-300', border: 'border-gray-500/30' };
+                    icon = '🅿️';
                   }
                   
                   return (
@@ -1185,6 +1074,119 @@ export default function Dashboard() {
                 )
               },
               {
+                key: 'timestamp',
+                header: 'Date & Time (IST)',
+                sortable: true,
+                render: (value, row) => {
+                  // Use deviceTimestamp first, then timestamp
+                  let timestampValue = row.deviceTimestamp || row.timestamp || value;
+                  
+                  if (!timestampValue) {
+                    return (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs opacity-70">❓</span>
+                        <span className="px-2.5 py-1.5 rounded-lg border font-medium text-xs backdrop-blur-sm bg-gray-500/15 text-gray-300 border-gray-500/30">
+                          No timestamp
+                        </span>
+                      </div>
+                    );
+                  }
+                  
+                  // Parse timestamp manually to extract components
+                  let dateStr, timeStr;
+                  if (typeof timestampValue === 'string') {
+                    // Extract date/time components from ISO string
+                    // Handles: 2026-01-17T19:37:39.940Z or 2026-01-17T19:37:39.940+00:00
+                    const match = timestampValue.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+                    if (match) {
+                      const [, year, month, day, hour, minute, second] = match;
+                      
+                      // Format date as "Jan 17, 2026"
+                      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                      dateStr = `${monthNames[parseInt(month) - 1]} ${parseInt(day)}, ${year}`;
+                      
+                      // Format time as "07:44:45 PM" (12-hour format)
+                      let hourNum = parseInt(hour);
+                      const ampm = hourNum >= 12 ? 'PM' : 'AM';
+                      hourNum = hourNum % 12 || 12; // Convert to 12-hour format
+                      timeStr = `${String(hourNum).padStart(2, '0')}:${minute}:${second} ${ampm}`;
+                    } else {
+                      // Fallback to standard parsing
+                      const date = new Date(timestampValue);
+                      if (!isNaN(date.getTime())) {
+                        dateStr = date.toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'short', 
+                          day: 'numeric'
+                        });
+                        timeStr = date.toLocaleTimeString('en-US', { 
+                          hour: '2-digit', 
+                          minute: '2-digit', 
+                          second: '2-digit',
+                          hour12: true
+                        });
+                      }
+                    }
+                  } else {
+                    const date = new Date(timestampValue);
+                    if (!isNaN(date.getTime())) {
+                      dateStr = date.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric'
+                      });
+                      timeStr = date.toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit', 
+                        second: '2-digit',
+                        hour12: true
+                      });
+                    }
+                  }
+                  
+                  // Check if parsing was successful
+                  if (!dateStr || !timeStr) {
+                    return (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs opacity-70">❓</span>
+                        <span className="px-2.5 py-1.5 rounded-lg border font-medium text-xs backdrop-blur-sm bg-gray-500/15 text-gray-300 border-gray-500/30">
+                          Invalid date
+                        </span>
+                      </div>
+                    );
+                  }
+                  
+                  // Check if recent (within 1 hour) - use rough comparison
+                  const now = new Date();
+                  const isRecent = false; // Simplified for now since we're doing manual parsing
+                  
+                  return (
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs opacity-70">📅</span>
+                        <span className={`px-2.5 py-1.5 rounded-lg border font-medium text-xs backdrop-blur-sm hover:scale-105 hover:shadow-lg transition-all duration-200 ${
+                          isRecent 
+                            ? 'bg-green-500/15 text-green-300 border-green-500/30' 
+                            : 'bg-slate-500/15 text-slate-300 border-slate-500/30'
+                        }`}>
+                          {dateStr}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs opacity-70">🕒</span>
+                        <span className={`px-2.5 py-1.5 rounded-lg border font-medium text-xs backdrop-blur-sm hover:scale-105 hover:shadow-lg transition-all duration-200 ${
+                          isRecent 
+                            ? 'bg-green-500/15 text-green-300 border-green-500/30' 
+                            : 'bg-slate-500/15 text-slate-300 border-slate-500/30'
+                        }`}>
+                          {timeStr}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+              },
+              {
                 key: 'type',
                 header: 'Data Type',
                 sortable: true,
@@ -1196,31 +1198,9 @@ export default function Dashboard() {
                     </span>
                   </div>
                 )
-              },
-              {
-                key: 'timestamp',
-                header: 'Timestamp',
-                sortable: true,
-                render: (value, row) => {
-                  const date = new Date(value);
-                  const isRecent = Date.now() - date.getTime() < 3600000; // Less than 1 hour
-                  
-                  return (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs opacity-70">🕒</span>
-                      <span className={`px-2.5 py-1.5 rounded-lg border font-medium text-xs backdrop-blur-sm hover:scale-105 hover:shadow-lg transition-all duration-200 ${
-                        isRecent 
-                          ? 'bg-green-500/15 text-green-300 border-green-500/30' 
-                          : 'bg-slate-500/15 text-slate-300 border-slate-500/30'
-                      }`}>
-                        {date.toLocaleTimeString()}
-                      </span>
-                    </div>
-                  );
-                }
               }
             ]}
-            emptyMessage="No recent analytics data available"
+            emptyMessage="No recent analytics data with speed > 0 available"
             onRowClick={(row) => {
               console.log('Selected analytics row:', row);
               // Could implement row selection or detail view
