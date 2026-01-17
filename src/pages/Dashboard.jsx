@@ -575,7 +575,7 @@ export default function Dashboard() {
     );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {/* Enhanced Dashboard Header with Gradient Design */}
       <DashboardHeader
         title="IoT Analytics Dashboard"
@@ -600,7 +600,7 @@ export default function Dashboard() {
       />
 
       {/* Enhanced KPI Section with Gradient Backgrounds and Responsive Layout */}
-      <HierarchySection level={1} colorScheme="violet" spacing="lg">
+      <HierarchySection level={1} colorScheme="violet" spacing="sm">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {/* Total Analytics KPI with Performance Styling */}
           <div className="transform transition-all duration-300 hover:scale-105 hover:shadow-2xl">
@@ -614,10 +614,10 @@ export default function Dashboard() {
               trendValue="+12%"
               size="lg"
               animated={true}
-              className="relative overflow-hidden group"
+              className="relative overflow-hidden group border-2 border-blue-500/50"
               style={{
                 background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.25) 100%)',
-                borderColor: 'rgba(59, 130, 246, 0.4)',
+                borderColor: 'rgba(59, 130, 246, 0.5)',
                 backdropFilter: 'blur(12px)',
               }}
             />
@@ -635,10 +635,10 @@ export default function Dashboard() {
               trendValue="100%"
               size="lg"
               animated={true}
-              className="relative overflow-hidden group"
+              className="relative overflow-hidden group border-2 border-green-500/50"
               style={{
                 background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.25) 100%)',
-                borderColor: 'rgba(34, 197, 94, 0.4)',
+                borderColor: 'rgba(34, 197, 94, 0.5)',
                 backdropFilter: 'blur(12px)',
               }}
             />
@@ -656,10 +656,10 @@ export default function Dashboard() {
               trendValue="+5%"
               size="lg"
               animated={true}
-              className="relative overflow-hidden group"
+              className="relative overflow-hidden group border-2 border-amber-500/50"
               style={{
                 background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.25) 100%)',
-                borderColor: 'rgba(245, 158, 11, 0.4)',
+                borderColor: 'rgba(245, 158, 11, 0.5)',
                 backdropFilter: 'blur(12px)',
               }}
             />
@@ -681,12 +681,12 @@ export default function Dashboard() {
       {/* Colorful Section Divider */}
       <SectionDivider 
         variant="rainbow" 
-        spacing="lg" 
+        spacing="sm" 
         animated={true}
       />
 
       {/* ENHANCED MAP SECTION with Glassmorphism and Improved Interactions */}
-      <ContentSection variant="accent" colorScheme="blue" padding="lg" spacing="md" bordered={true} elevated={true}>
+      <ContentSection variant="accent" colorScheme="blue" padding="md" spacing="sm" bordered={true} elevated={true}>
         {/* Enhanced Gradient Card Wrapper with Advanced Glassmorphism Effects */}
         <Card 
           variant="glass" 
@@ -694,7 +694,7 @@ export default function Dashboard() {
           colorScheme="blue" 
           glowEffect={true}
           hover={true}
-          className="relative overflow-hidden backdrop-blur-2xl bg-gradient-to-br from-blue-600/25 via-cyan-600/20 to-teal-600/25 border border-blue-400/40 shadow-2xl shadow-blue-500/30 transition-all duration-500 ease-out hover:shadow-blue-500/40 hover:border-blue-300/50"
+          className="relative overflow-hidden backdrop-blur-2xl bg-gradient-to-br from-blue-600/25 via-cyan-600/20 to-teal-600/25 border-2 border-blue-400/50 shadow-2xl shadow-blue-500/30 transition-all duration-500 ease-out hover:shadow-blue-500/40 hover:border-blue-300/60"
         >
           {/* Enhanced Background Effects with Multiple Layers */}
           <div className="absolute inset-0 pointer-events-none">
@@ -904,14 +904,14 @@ export default function Dashboard() {
       <SectionDivider 
         variant="gradient" 
         colorScheme="teal" 
-        spacing="md" 
+        spacing="sm" 
         animated={true}
       />
 
       {/* ENHANCED CHARTS SECTION with Advanced Visual Effects and Responsive Layout */}
-      <HierarchySection level={2} colorScheme="teal" spacing="lg">
+      <HierarchySection level={2} colorScheme="teal" spacing="sm">
         {/* Enhanced Charts Container with Advanced Glassmorphism and Gradient Effects */}
-        <div className="relative overflow-hidden rounded-2xl">
+        <div className="relative overflow-hidden rounded-2xl border-2 border-teal-500/50 bg-gradient-to-br from-teal-900/20 via-slate-900/20 to-teal-900/20 backdrop-blur-sm">
           {/* Multi-layered Background Effects */}
           <div className="absolute inset-0 pointer-events-none">
             {/* Primary animated gradient mesh */}
@@ -931,13 +931,13 @@ export default function Dashboard() {
           <div className="relative z-10 p-8">
 
             {/* Enhanced Speed Distribution Card - Full Width */}
-            <div className="mb-8">
+            <div className="mb-4">
               <SpeedDistributionCard speedDistributionData={speedDistributionData} />
             </div>
           </div>
 
           {/* Enhanced Section Footer with Interactive Elements */}
-          <div className="relative z-10 px-8 pb-8">
+          <div className="relative z-10 px-8 pb-4">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-white/10 backdrop-blur-md border border-white/20">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500/30 to-cyan-500/30 flex items-center justify-center backdrop-blur-sm border border-white/20">
@@ -968,20 +968,20 @@ export default function Dashboard() {
       <SectionDivider 
         variant="dotted" 
         colorScheme="pink" 
-        spacing="lg" 
+        spacing="sm" 
         animated={true}
       />
 
       {/* Recent Analytics Table with Enhanced Styling */}
-      <ContentSection variant="subtle" colorScheme="purple" padding="lg" spacing="md" bordered={true}>
+      <ContentSection variant="subtle" colorScheme="purple" padding="md" spacing="sm" bordered={true}>
         <EnhancedTableContainer 
           variant="enhanced" 
           colorScheme="purple" 
-          padding="lg"
-          className="relative overflow-hidden"
+          padding="md"
+          className="relative overflow-hidden border-2 border-purple-500/50 rounded-xl bg-gradient-to-br from-purple-900/20 via-slate-900/20 to-purple-900/20 backdrop-blur-sm"
         >
           {/* Enhanced Header with Gradient Design */}
-          <div className="mb-8">
+          <div className="mb-4">
             <div className="flex items-center justify-between w-full mb-4">
               <div className="flex-1">
                 <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-white via-purple-100 to-pink-100 bg-clip-text text-transparent">
@@ -1242,7 +1242,7 @@ export default function Dashboard() {
           />
           
           {/* Enhanced Table Footer with Statistics */}
-          <div className="mt-8 pt-6 border-t border-white/10">
+          <div className="mt-4 pt-4 border-t border-white/10">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
@@ -1269,7 +1269,7 @@ export default function Dashboard() {
       <SectionDivider 
         variant="rainbow" 
         colorScheme="blue" 
-        spacing="lg" 
+        spacing="sm" 
         animated={true}
       />
 
@@ -1283,7 +1283,7 @@ export default function Dashboard() {
       <SectionDivider 
         variant="gradient" 
         colorScheme="green" 
-        spacing="lg" 
+        spacing="sm" 
         animated={true}
       />
 
@@ -1297,7 +1297,7 @@ export default function Dashboard() {
       <SectionDivider 
         variant="gradient" 
         colorScheme="teal" 
-        spacing="lg" 
+        spacing="sm" 
         animated={true}
       />
 
@@ -1316,15 +1316,15 @@ export default function Dashboard() {
       />
 
       {/* Devices Table with Enhanced Styling and Status Indicators */}
-      <ContentSection variant="accent" colorScheme="red" padding="lg" spacing="md" bordered={true} elevated={true}>
+      <ContentSection variant="accent" colorScheme="red" padding="md" spacing="sm" bordered={true} elevated={true}>
         <EnhancedTableContainer 
           variant="enhanced" 
           colorScheme="red" 
-          padding="lg"
-          className="relative overflow-hidden"
+          padding="md"
+          className="relative overflow-hidden border-2 border-red-500/50 rounded-xl bg-gradient-to-br from-red-900/20 via-slate-900/20 to-red-900/20 backdrop-blur-sm"
         >
           {/* Enhanced Header with Gradient Design */}
-          <div className="mb-8">
+          <div className="mb-4">
             <div className="flex items-center justify-between w-full mb-4">
               <div className="flex-1">
                 <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-white via-red-100 to-pink-100 bg-clip-text text-transparent">
@@ -1482,7 +1482,7 @@ export default function Dashboard() {
           />
           
           {/* Enhanced Table Footer with Device Statistics */}
-          <div className="mt-8 pt-6 border-t border-white/10">
+          <div className="mt-4 pt-4 border-t border-white/10">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
