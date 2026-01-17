@@ -85,12 +85,14 @@ export function parseAuthResponse(response) {
     throw new Error('Invalid auth response: missing uniqueId');
   }
 
+  // Handle missing userType - default to PARENTS for safety
+  let validatedUserType = userType;
   if (!userType) {
-    throw new Error('Invalid auth response: missing userType');
-  }
-
-  if (userType !== 'PARENTS' && userType !== 'ADMIN') {
-    throw new Error(`Invalid auth response: userType must be "PARENTS" or "ADMIN", got "${userType}"`);
+    console.warn('Auth response missing userType, defaulting to PARENTS');
+    validatedUserType = 'PARENTS';
+  } else if (userType !== 'PARENTS' && userType !== 'ADMIN') {
+    console.warn(`Invalid userType "${userType}", defaulting to PARENTS`);
+    validatedUserType = 'PARENTS';
   }
 
   if (!email) {
@@ -136,7 +138,7 @@ export function parseAuthResponse(response) {
   // Return structured user context
   return {
     uniqueId,
-    userType,
+    userType: validatedUserType,
     imeis: validIMEIs,
     email,
     tokens: {

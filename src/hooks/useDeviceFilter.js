@@ -106,12 +106,70 @@ export const useDeviceFilter = () => {
     return [];
   }, [isAuthenticated, userType, imeis]);
 
+  /**
+   * Filter analytics based on user permissions
+   * 
+   * Filtering rules:
+   * - ADMIN users: Return all analytics unfiltered
+   * - PARENTS users: Return only analytics matching assigned IMEIs
+   * - PARENTS with no IMEIs: Return empty array
+   * - Case-insensitive IMEI matching
+   * 
+   * @param {Array<Object>} analytics - Array of analytics objects with imei property
+   * @returns {Array<Object>} Filtered analytics array
+   */
+  const filterAnalytics = useCallback((analytics) => {
+    // Validate input
+    if (!Array.isArray(analytics)) {
+      console.warn('useDeviceFilter: analytics parameter must be an array');
+      return [];
+    }
+
+    // If not authenticated, return empty array
+    if (!isAuthenticated) {
+      return [];
+    }
+
+    // ADMIN users see all analytics
+    if (userType === 'ADMIN') {
+      return analytics;
+    }
+
+    // PARENTS users see only assigned analytics
+    if (userType === 'PARENTS') {
+      // If no IMEIs assigned, return empty array
+      if (!imeis || imeis.length === 0) {
+        return [];
+      }
+
+      // Normalize allowed IMEIs to lowercase for case-insensitive matching
+      const normalizedAllowedIMEIs = imeis.map(imei => 
+        String(imei).toLowerCase()
+      );
+
+      // Filter analytics by IMEI matching
+      return analytics.filter(analytic => {
+        if (!analytic || !analytic.imei) {
+          return false;
+        }
+
+        const analyticIMEI = String(analytic.imei).toLowerCase();
+        return normalizedAllowedIMEIs.includes(analyticIMEI);
+      });
+    }
+
+    // Unknown user type - return empty array for safety
+    return [];
+  }, [isAuthenticated, userType, imeis]);
+
   // Memoize the return object to prevent unnecessary re-renders
   return useMemo(() => ({
     filterDevices,
+    filterAnalytics,
     getFilterConfig,
     shouldFilterDevices,
-  }), [filterDevices, getFilterConfig, shouldFilterDevices]);
+    allowedIMEIs: imeis || [],
+  }), [filterDevices, filterAnalytics, getFilterConfig, shouldFilterDevices, imeis]);
 };
 
 export default useDeviceFilter;

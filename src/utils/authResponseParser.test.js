@@ -162,20 +162,22 @@ describe('authResponseParser', () => {
       expect(() => parseAuthResponse(response)).toThrow('missing uniqueId');
     });
 
-    it('should throw error for missing userType', () => {
+    it('should default to PARENTS for missing userType', () => {
       const response = { ...validResponse };
       delete response.userType;
       
-      expect(() => parseAuthResponse(response)).toThrow('missing userType');
+      const result = parseAuthResponse(response);
+      expect(result.userType).toBe('PARENTS');
     });
 
-    it('should throw error for invalid userType', () => {
+    it('should default to PARENTS for invalid userType', () => {
       const response = {
         ...validResponse,
         userType: 'INVALID',
       };
       
-      expect(() => parseAuthResponse(response)).toThrow('userType must be "PARENTS" or "ADMIN"');
+      const result = parseAuthResponse(response);
+      expect(result.userType).toBe('PARENTS');
     });
 
     it('should throw error for missing email', () => {
