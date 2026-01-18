@@ -10,6 +10,10 @@ import { isTokenExpired } from '../utils/auth';
  * @property {string[]} imeis - Array of assigned IMEIs
  * @property {string|null} uniqueId - User's unique identifier
  * @property {string|null} email - User's email address
+ * @property {string|null} firstName - User's first name
+ * @property {string|null} middleName - User's middle name
+ * @property {string|null} lastName - User's last name
+ * @property {string|null} mobile - User's mobile number
  * @property {Object} tokens - Authentication tokens
  * @property {string|null} tokens.accessToken - Access token
  * @property {string|null} tokens.refreshToken - Refresh token
@@ -24,6 +28,10 @@ const initialState = {
   imeis: [],
   uniqueId: null,
   email: null,
+  firstName: null,
+  middleName: null,
+  lastName: null,
+  mobile: null,
   tokens: {
     accessToken: null,
     refreshToken: null,
@@ -52,6 +60,10 @@ export const UserContextProvider = ({ children }) => {
    * @param {"PARENTS"|"ADMIN"} context.userType - User type
    * @param {string[]} context.imeis - Array of validated IMEIs
    * @param {string} context.email - User's email
+   * @param {string} context.firstName - User's first name
+   * @param {string} context.middleName - User's middle name
+   * @param {string} context.lastName - User's last name
+   * @param {string} context.mobile - User's mobile number
    * @param {Object} context.tokens - Authentication tokens
    * @param {string} context.tokens.accessToken - Access token
    * @param {string} context.tokens.refreshToken - Refresh token
@@ -63,6 +75,10 @@ export const UserContextProvider = ({ children }) => {
       imeis: context.imeis || [],
       uniqueId: context.uniqueId,
       email: context.email,
+      firstName: context.firstName || null,
+      middleName: context.middleName || null,
+      lastName: context.lastName || null,
+      mobile: context.mobile || null,
       tokens: {
         accessToken: context.tokens.accessToken,
         refreshToken: context.tokens.refreshToken,
@@ -176,6 +192,10 @@ export const UserContextProvider = ({ children }) => {
           imeis: restoredContext.imeis || [],
           uniqueId: restoredContext.uniqueId,
           email: restoredContext.email,
+          firstName: restoredContext.firstName || null,
+          middleName: restoredContext.middleName || null,
+          lastName: restoredContext.lastName || null,
+          mobile: restoredContext.mobile || null,
           tokens: {
             accessToken: restoredContext.tokens.accessToken,
             refreshToken: restoredContext.tokens.refreshToken,

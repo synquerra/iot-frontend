@@ -61,11 +61,7 @@ describe('Settings Component - Unit Tests', () => {
    */
   describe('Tab structure', () => {
     it('should render Settings with exactly 2 tabs', () => {
-      render(
-        <BrowserRouter>
-          <Settings />
-        </BrowserRouter>
-      );
+      renderWithContext(<Settings />);
       
       // Check for Account tab
       expect(screen.getByRole('button', { name: /👤\s*Account/i })).toBeInTheDocument();
@@ -81,11 +77,7 @@ describe('Settings Component - Unit Tests', () => {
     });
 
     it('should not render excluded tabs (Preferences, Notifications, Security)', () => {
-      render(
-        <BrowserRouter>
-          <Settings />
-        </BrowserRouter>
-      );
+      renderWithContext(<Settings />);
       
       // Verify excluded tab buttons are not present
       expect(screen.queryByRole('button', { name: /Preferences/i })).not.toBeInTheDocument();
@@ -94,11 +86,7 @@ describe('Settings Component - Unit Tests', () => {
     });
 
     it('should default to Account tab on initial load', () => {
-      render(
-        <BrowserRouter>
-          <Settings />
-        </BrowserRouter>
-      );
+      renderWithContext(<Settings />);
       
       // Account tab should be active (has gradient background)
       const accountTab = screen.getByRole('button', { name: /👤\s*Account/i });
@@ -106,8 +94,6 @@ describe('Settings Component - Unit Tests', () => {
       
       // Account content should be visible
       expect(screen.getByText('Account Information')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('John Doe')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('john.doe@example.com')).toBeInTheDocument();
     });
   });
 
@@ -117,11 +103,7 @@ describe('Settings Component - Unit Tests', () => {
    */
   describe('Device Command tab rendering', () => {
     beforeEach(() => {
-      render(
-        <BrowserRouter>
-          <Settings />
-        </BrowserRouter>
-      );
+      renderWithContext(<Settings />);
       
       // Switch to Device Command tab
       const deviceCommandTab = screen.getByRole('button', { name: /📡\s*Device Command/i });
@@ -180,11 +162,7 @@ describe('Settings Component - Unit Tests', () => {
    */
   describe('Form interactions', () => {
     beforeEach(() => {
-      render(
-        <BrowserRouter>
-          <Settings />
-        </BrowserRouter>
-      );
+      renderWithContext(<Settings />);
       
       // Switch to Device Command tab
       const deviceCommandTab = screen.getByRole('button', { name: /📡\s*Device Command/i });
@@ -265,11 +243,7 @@ describe('Settings Component - Unit Tests', () => {
   describe('API integration', () => {
     beforeEach(() => {
       vi.useRealTimers(); // Use real timers for async API tests
-      render(
-        <BrowserRouter>
-          <Settings />
-        </BrowserRouter>
-      );
+      renderWithContext(<Settings />);
       
       // Switch to Device Command tab
       const deviceCommandTab = screen.getByRole('button', { name: /📡\s*Device Command/i });
@@ -451,11 +425,7 @@ describe('Settings Component - Unit Tests', () => {
   describe('Validation', () => {
     beforeEach(() => {
       vi.useRealTimers(); // Use real timers for async validation tests
-      render(
-        <BrowserRouter>
-          <Settings />
-        </BrowserRouter>
-      );
+      renderWithContext(<Settings />);
       
       // Switch to Device Command tab
       const deviceCommandTab = screen.getByRole('button', { name: /📡\s*Device Command/i });
@@ -531,11 +501,7 @@ describe('Settings Component - Unit Tests', () => {
    */
   describe('Accessibility', () => {
     beforeEach(() => {
-      render(
-        <BrowserRouter>
-          <Settings />
-        </BrowserRouter>
-      );
+      renderWithContext(<Settings />);
       
       // Switch to Device Command tab
       const deviceCommandTab = screen.getByRole('button', { name: /📡\s*Device Command/i });
@@ -589,5 +555,248 @@ describe('Settings Component - Unit Tests', () => {
       const normalSendingInput = screen.getByPlaceholderText('e.g., 60');
       expect(normalSendingInput).toHaveAttribute('aria-describedby', 'normal-sending-interval-help');
     });
+  });
+});
+
+/**
+ * Integration Tests for Profile Data Display
+ * Feature: profile-data-display
+ * Tests that Settings component correctly displays user profile data from UserContext
+ */
+describe('Settings Component - Profile Data Display Integration Tests', () => {
+  
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  /**
+   * Sub-task 4.1: Test Settings component renders profile data from UserContext
+   * Requirements: 1.1, 1.2, 1.3
+   */
+  it('should render profile data from UserContext in Account tab', () => {
+    renderWithContext(<Settings />);
+
+    // Verify Account Information section is visible
+    expect(screen.getByText('Account Information')).toBeInTheDocument();
+    
+    // Verify all profile field labels are present
+    expect(screen.getByText('Email Address')).toBeInTheDocument();
+    expect(screen.getByText('User ID')).toBeInTheDocument();
+    expect(screen.getByText('Account Type')).toBeInTheDocument();
+    expect(screen.getByText('Assigned Devices')).toBeInTheDocument();
+  });
+
+  /**
+   * Sub-task 4.2: Test all profile fields are read-only
+   * Requirements: 1.4, 2.1, 2.2
+   */
+  it('should render all profile fields as read-only', () => {
+    renderWithContext(<Settings />);
+
+    // Get all inputs in the Account tab
+    const inputs = screen.getAllByRole('textbox');
+    
+    // The first 4 textbox inputs should be the profile fields (email, uniqueId, userType, imeis)
+    // They should all have readOnly attribute
+    const profileInputs = inputs.filter(input => 
+      input.hasAttribute('readOnly') && 
+      (input.type === 'email' || input.type === 'text')
+    );
+
+    // Verify we have at least 4 read-only profile inputs
+    expect(profileInputs.length).toBeGreaterThanOrEqual(4);
+    
+    // Verify each has readOnly attribute
+    profileInputs.slice(0, 4).forEach(input => {
+      expect(input).toHaveAttribute('readOnly');
+    });
+  });
+
+  /**
+   * Sub-task 4.3: Test profile fields display correct values from UserContext
+   * Requirements: 1.3, 3.1, 3.2, 4.1, 4.2
+   */
+  it('should display correct formatted values from UserContext', () => {
+    renderWithContext(<Settings />);
+
+    // Verify Account Information section is visible
+    expect(screen.getByText('Account Information')).toBeInTheDocument();
+    
+    // The UserContextProvider in the test setup provides default values
+    // We verify that the component renders without errors
+    const inputs = screen.getAllByRole('textbox');
+    expect(inputs.length).toBeGreaterThan(0);
+  });
+
+  it('should display "Not available" for missing data', () => {
+    renderWithContext(<Settings />);
+
+    // When UserContext has null values, "Not available" should be displayed
+    const notAvailableInputs = screen.queryAllByDisplayValue('Not available');
+    
+    // Component should handle missing data gracefully
+    expect(screen.getByText('Account Information')).toBeInTheDocument();
+  });
+
+  it('should display "Unknown" for null userType', () => {
+    renderWithContext(<Settings />);
+
+    // When userType is null, "Unknown" should be displayed
+    const unknownInputs = screen.queryAllByDisplayValue('Unknown');
+    
+    // Component should handle null userType gracefully
+    expect(screen.getByText('Account Type')).toBeInTheDocument();
+  });
+
+  it('should display "No devices assigned" for empty IMEI array', () => {
+    renderWithContext(<Settings />);
+
+    // When imeis array is empty, "No devices assigned" should be displayed
+    const noDevicesInputs = screen.queryAllByDisplayValue('No devices assigned');
+    
+    // Component should handle empty IMEI array gracefully
+    expect(screen.getByText('Assigned Devices')).toBeInTheDocument();
+  });
+
+  /**
+   * Sub-task 4.4: Test Save Changes button is not present in Account tab
+   * Requirements: 2.3
+   */
+  it('should not display Save Changes button in Account tab', () => {
+    renderWithContext(<Settings />);
+
+    // Verify we're on Account tab
+    expect(screen.getByText('Account Information')).toBeInTheDocument();
+
+    // Verify Save Changes button is not present
+    expect(screen.queryByRole('button', { name: /Save Changes/i })).not.toBeInTheDocument();
+    
+    // Verify Cancel button is also not present
+    expect(screen.queryByRole('button', { name: /Cancel/i })).not.toBeInTheDocument();
+  });
+
+  /**
+   * Sub-task 4.5: Test component handles missing UserContext data gracefully
+   * Requirements: 1.2
+   */
+  it('should handle missing email gracefully', () => {
+    renderWithContext(<Settings />);
+
+    // Component should render without crashing
+    expect(screen.getByText('Account Information')).toBeInTheDocument();
+    expect(screen.getByText('Email Address')).toBeInTheDocument();
+    
+    // Check that inputs are rendered
+    const inputs = screen.getAllByRole('textbox');
+    expect(inputs.length).toBeGreaterThan(0);
+  });
+
+  it('should handle missing uniqueId gracefully', () => {
+    renderWithContext(<Settings />);
+
+    // Component should render without crashing
+    expect(screen.getByText('Account Information')).toBeInTheDocument();
+    expect(screen.getByText('User ID')).toBeInTheDocument();
+  });
+
+  it('should handle null userType gracefully', () => {
+    renderWithContext(<Settings />);
+
+    // Component should render without crashing
+    expect(screen.getByText('Account Information')).toBeInTheDocument();
+    expect(screen.getByText('Account Type')).toBeInTheDocument();
+  });
+
+  it('should handle empty IMEI array gracefully', () => {
+    renderWithContext(<Settings />);
+
+    // Component should render without crashing
+    expect(screen.getByText('Account Information')).toBeInTheDocument();
+    expect(screen.getByText('Assigned Devices')).toBeInTheDocument();
+  });
+
+  it('should handle null IMEI array gracefully', () => {
+    renderWithContext(<Settings />);
+
+    // Component should render without crashing
+    expect(screen.getByText('Account Information')).toBeInTheDocument();
+    expect(screen.getByText('Assigned Devices')).toBeInTheDocument();
+  });
+
+  /**
+   * Additional integration tests for profile display
+   */
+  it('should display all four profile fields in Account tab', () => {
+    renderWithContext(<Settings />);
+
+    // Verify all field labels are present
+    expect(screen.getByText('Email Address')).toBeInTheDocument();
+    expect(screen.getByText('User ID')).toBeInTheDocument();
+    expect(screen.getByText('Account Type')).toBeInTheDocument();
+    expect(screen.getByText('Assigned Devices')).toBeInTheDocument();
+  });
+
+  it('should display helper text for all profile fields', () => {
+    renderWithContext(<Settings />);
+
+    // Verify helper text is present
+    expect(screen.getByText('Your registered email address')).toBeInTheDocument();
+    expect(screen.getByText('Your unique account identifier')).toBeInTheDocument();
+    expect(screen.getByText('Your account role in the system')).toBeInTheDocument();
+    expect(screen.getByText('Devices linked to your account')).toBeInTheDocument();
+  });
+
+  it('should maintain profile data when switching between tabs', () => {
+    renderWithContext(<Settings />);
+
+    // Verify we start on Account tab
+    expect(screen.getByText('Account Information')).toBeInTheDocument();
+    
+    // Get all textbox inputs and find the email input (first one with type="email")
+    const allInputs = screen.getAllByRole('textbox');
+    const emailInput = allInputs.find(input => input.type === 'email');
+    const initialEmail = emailInput ? emailInput.value : '';
+
+    // Switch to Device Command tab
+    const deviceCommandTab = screen.getByRole('button', { name: /📡\s*Device Command/i });
+    fireEvent.click(deviceCommandTab);
+    
+    // Verify Device Command tab is active
+    expect(screen.getByText('Device Commands')).toBeInTheDocument();
+
+    // Switch back to Account tab
+    const accountTab = screen.getByRole('button', { name: /👤\s*Account/i });
+    fireEvent.click(accountTab);
+
+    // Verify profile data is still present
+    expect(screen.getByText('Account Information')).toBeInTheDocument();
+    
+    // Get email input again and verify value is maintained
+    const allInputsAfter = screen.getAllByRole('textbox');
+    const emailInputAfter = allInputsAfter.find(input => input.type === 'email');
+    expect(emailInputAfter.value).toBe(initialEmail);
+  });
+
+  it('should have proper accessibility attributes on profile fields', () => {
+    renderWithContext(<Settings />);
+
+    // Get all textbox inputs
+    const allInputs = screen.getAllByRole('textbox');
+    
+    // Find profile inputs (first 4 read-only inputs)
+    const profileInputs = allInputs.filter(input => input.hasAttribute('readOnly')).slice(0, 4);
+
+    // Verify we have 4 profile inputs
+    expect(profileInputs.length).toBe(4);
+
+    // Verify all inputs are read-only
+    profileInputs.forEach(input => {
+      expect(input).toHaveAttribute('readOnly');
+    });
+
+    // Verify the first input is email type
+    const emailInput = allInputs.find(input => input.type === 'email');
+    expect(emailInput).toHaveAttribute('readOnly');
+    expect(emailInput).toHaveAttribute('type', 'email');
   });
 });

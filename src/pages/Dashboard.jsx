@@ -160,11 +160,27 @@ export default function Dashboard() {
       index: idx,
       imei: a.imei,
       speed: a.speed,
+      speedType: typeof a.speed,
       type: a.type,
       packet: a.packet,
       timestamp: a.deviceTimestamp || a.timestamp,
-      rawData: a
     })));
+    
+    // Count records by type
+    const typeCount = {};
+    const speedCount = { zero: 0, positive: 0, negative: 0, null: 0 };
+    filteredRecentAnalytics.forEach(a => {
+      typeCount[a.type] = (typeCount[a.type] || 0) + 1;
+      const speed = Number(a.speed || 0);
+      if (speed === 0) speedCount.zero++;
+      else if (speed > 0) speedCount.positive++;
+      else if (speed < 0) speedCount.negative++;
+      else speedCount.null++;
+    });
+    console.log('📊 Type distribution:', typeCount);
+    console.log('📊 Speed distribution:', speedCount);
+    console.log(`💡 Note: ${speedCount.zero} records have speed=0 and will be filtered out`);
+    console.log(`💡 Note: ${speedCount.positive} records have speed>0 and are candidates for display`);
     
     const filtered = filteredRecentAnalytics
       .filter(a => {
@@ -172,16 +188,16 @@ export default function Dashboard() {
         const isNormalPacket = a.type === 'packet_N';
         const isValid = speed > 0 && isNormalPacket;
         
-        console.log(`🔎 Record check: IMEI=${a.imei}, Speed=${speed}, Type=${a.type}, Valid=${isValid}`);
-        
-        if (!isValid) {
-          if (speed === 0) {
-            console.log(`  ❌ REJECTED: Speed is 0`);
-          } else if (!isNormalPacket) {
-            console.log(`  ❌ REJECTED: Type is not packet_N (got: ${a.type})`);
+        if (!isValid && filteredRecentAnalytics.indexOf(a) < 5) {
+          // Only log first 5 rejections to avoid spam
+          console.log(`🔎 Record check: IMEI=${a.imei}, Speed=${speed} (${typeof a.speed}), Type="${a.type}", Packet="${a.packet}", Valid=${isValid}`);
+          
+          if (speed === 0 || speed <= 0) {
+            console.log(`  ❌ REJECTED: Speed is ${speed}`);
           }
-        } else {
-          console.log(`  ✅ ACCEPTED`);
+          if (!isNormalPacket) {
+            console.log(`  ❌ REJECTED: Type is not packet_N (got: "${a.type}")`);
+          }
         }
         
         return isValid;
@@ -195,14 +211,17 @@ export default function Dashboard() {
     
     console.log('✅ ========== FINAL FILTERED RESULTS ==========');
     console.log('📊 Count:', filtered.length);
-    console.log('📋 Records:', filtered.map((a, idx) => ({
-      index: idx,
-      imei: a.imei,
-      speed: a.speed,
-      type: a.type,
-      timestamp: a.deviceTimestamp || a.timestamp,
-      fullRecord: a
-    })));
+    if (filtered.length > 0) {
+      console.log('📋 Filtered Records (sorted by timestamp, newest first):');
+      filtered.forEach((a, idx) => {
+        const timestamp = a.deviceTimestamp || a.timestamp;
+        const date = new Date(timestamp);
+        console.log(`  ${idx + 1}. IMEI: ${a.imei}, Speed: ${a.speed} km/h, Time: ${date.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST`);
+      });
+    } else {
+      console.log('❌ NO RECORDS MATCHED THE FILTER CRITERIA');
+      console.log('💡 Check if your database has records with type="packet_N" AND speed > 0');
+    }
     console.log('========================================');
     
     return filtered;
@@ -268,10 +287,11 @@ export default function Dashboard() {
         }),
         
         // Use enhanced recent analytics with truncation protection
-        // Fetch 100 records to ensure we get enough recent Normal packets with speed > 0
-        getRecentAnalyticsSafe(100).catch(err => {
+        // Fetch 200 records to ensure we get enough recent Normal packets with speed > 0
+        // Since about 50% of records have speed=0, we need more records to get 5 with speed>0
+        getRecentAnalyticsSafe(200).catch(err => {
           console.warn("Recent analytics failed, using fallback:", err.message);
-          return getAnalyticsPaginated(0, 100).catch(() => []);
+          return getAnalyticsPaginated(0, 200).catch(() => []);
         }),
         
         // Load devices (usually small dataset)

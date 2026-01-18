@@ -95,6 +95,10 @@ describe('authResponseParser', () => {
         userType: 'PARENTS',
         imeis: ['123456789012345'],
         email: 'test@example.com',
+        firstName: null,
+        middleName: null,
+        lastName: null,
+        mobile: null,
         tokens: {
           accessToken: 'access-token',
           refreshToken: 'refresh-token',

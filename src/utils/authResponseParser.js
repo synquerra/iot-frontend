@@ -78,6 +78,10 @@ export function parseAuthResponse(response) {
     email,
     tokens,
     lastLoginAt,
+    firstName,
+    middleName,
+    lastName,
+    mobile,
   } = response;
 
   // Validate required fields
@@ -141,6 +145,10 @@ export function parseAuthResponse(response) {
     userType: validatedUserType,
     imeis: validIMEIs,
     email,
+    firstName: firstName || null,
+    middleName: middleName || null,
+    lastName: lastName || null,
+    mobile: mobile || null,
     tokens: {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -303,6 +311,10 @@ export function persistUserContext(userContext) {
         userType: userContext.userType,
         imeis: userContext.imeis,
         email: userContext.email,
+        firstName: userContext.firstName,
+        middleName: userContext.middleName,
+        lastName: userContext.lastName,
+        mobile: userContext.mobile,
         // Note: tokens are stored separately in existing localStorage keys
         // We don't duplicate them here for security
       },
@@ -399,6 +411,10 @@ export function loadUserContext() {
       userType: data.userType,
       imeis: data.imeis,
       email: data.email,
+      firstName: data.firstName || null,
+      middleName: data.middleName || null,
+      lastName: data.lastName || null,
+      mobile: data.mobile || null,
       // Tokens should be retrieved from existing localStorage keys
       tokens: null, // Caller should populate this
     };

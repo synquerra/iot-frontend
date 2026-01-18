@@ -16,11 +16,8 @@ import { Notification } from '../components/Notification'
 
 export default function Settings() {
   const navigate = useNavigate()
-  const { clearUserContext } = useUserContext()
+  const { email, uniqueId, userType, imeis, firstName, middleName, lastName, mobile, clearUserContext } = useUserContext()
   const [activeTab, setActiveTab] = useState('account')
-  const [displayName, setDisplayName] = useState('John Doe')
-  const [email, setEmail] = useState('john.doe@example.com')
-  const [isLoading, setIsLoading] = useState(false)
 
   // Device Command state management
   const [deviceCommand, setDeviceCommand] = useState({
@@ -33,11 +30,34 @@ export default function Settings() {
   const [imeiError, setImeiError] = useState('')
   const [paramErrors, setParamErrors] = useState({})
 
-  const handleSave = async () => {
-    setIsLoading(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setIsLoading(false)
+  // Helper function to format user type
+  const formatUserType = (userType) => {
+    const typeMap = {
+      'ADMIN': 'Administrator',
+      'PARENTS': 'Parent'
+    }
+    // Use hasOwnProperty to avoid prototype pollution
+    if (Object.prototype.hasOwnProperty.call(typeMap, userType)) {
+      return typeMap[userType]
+    }
+    return userType || 'Unknown'
+  }
+
+  // Helper function to format IMEI list
+  const formatImeiList = (imeis) => {
+    if (!imeis || imeis.length === 0) {
+      return 'No devices assigned'
+    }
+    if (imeis.length === 1) {
+      return `1 device: ${imeis[0]}`
+    }
+    return `${imeis.length} devices: ${imeis.join(', ')}`
+  }
+
+  // Helper function to format full name
+  const formatFullName = (firstName, middleName, lastName) => {
+    const parts = [firstName, middleName, lastName].filter(part => part && part.trim() !== '')
+    return parts.length > 0 ? parts.join(' ') : 'Not available'
   }
 
   const handleLogout = () => {
@@ -285,15 +305,14 @@ export default function Settings() {
         size="lg"
         className="relative overflow-hidden"
       >
-        {/* Enhanced Background Effects */}
+        {/* Subtle Background Effects */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-500/15 via-purple-500/10 to-pink-500/15 animate-pulse" />
-          <div className="absolute inset-0 bg-white/5 backdrop-blur-sm" />
+          {/* Soft gradient overlay */}
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5" />
           
-          {/* Floating glow effects */}
-          <div className="absolute top-6 left-6 w-32 h-32 bg-indigo-400/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute top-8 right-8 w-24 h-24 bg-purple-400/15 rounded-full blur-2xl animate-pulse delay-700" />
-          <div className="absolute bottom-6 right-6 w-40 h-40 bg-pink-400/12 rounded-full blur-3xl animate-pulse delay-1400" />
+          {/* Subtle floating glow effects */}
+          <div className="absolute top-6 left-6 w-24 h-24 bg-indigo-400/10 rounded-full blur-2xl" />
+          <div className="absolute bottom-6 right-6 w-32 h-32 bg-purple-400/8 rounded-full blur-3xl" />
         </div>
       </GradientHeader>
 
@@ -320,16 +339,14 @@ export default function Settings() {
       </ContentSection>
 
       {/* Tab Content */}
-      <HierarchySection level={1} colorScheme="indigo" spacing="lg">
-        {activeTab === 'account' && (
-          <ContentSection variant="glass" colorScheme="blue" padding="lg" spacing="md" bordered={true} elevated={true}>
-            <Card 
-              variant="glass" 
-              padding="lg" 
-              colorScheme="blue" 
-              glowEffect={true}
-              className="relative overflow-hidden backdrop-blur-2xl bg-gradient-to-br from-blue-600/25 via-indigo-600/20 to-purple-600/25 border border-blue-400/40"
-            >
+      {activeTab === 'account' && (
+        <Card 
+          variant="glass" 
+          padding="lg" 
+          colorScheme="blue" 
+          glowEffect={true}
+          className="relative overflow-hidden backdrop-blur-2xl bg-gradient-to-br from-blue-600/25 via-indigo-600/20 to-purple-600/25 border border-blue-400/40"
+        >
               <Card.Header>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/30 to-indigo-500/30 flex items-center justify-center backdrop-blur-md border border-white/30">
@@ -338,7 +355,7 @@ export default function Settings() {
                   <div>
                     <Card.Title className="text-white text-xl font-bold">Account Information</Card.Title>
                     <Card.Description className="text-blue-100/80">
-                      Manage your personal account details and profile information
+                      profile details
                     </Card.Description>
                   </div>
                 </div>
@@ -347,61 +364,153 @@ export default function Settings() {
               <Card.Content>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-white font-semibold text-sm">Display Name</label>
+                    <label className="text-white font-semibold text-sm">Full Name</label>
                     <input
                       type="text"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-white/15 backdrop-blur-xl border border-white/30 text-white placeholder-white/70 focus:bg-white/20 focus:border-blue-300/60 focus:outline-none transition-all duration-300"
-                      placeholder="Your display name"
+                      value={formatFullName(firstName, middleName, lastName)}
+                      readOnly
+                      className={cn(
+                        "w-full px-4 py-3 rounded-xl backdrop-blur-xl border text-white",
+                        "bg-white/10 border-white/20 cursor-not-allowed opacity-80",
+                        "focus:outline-none"
+                      )}
                     />
-                    <p className="text-blue-100/70 text-xs">This is how your name will appear to other users</p>
+                    <p className="text-blue-100/70 text-xs">Your complete name</p>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <label className="text-white font-semibold text-sm">Email Address</label>
                     <input
                       type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-white/15 backdrop-blur-xl border border-white/30 text-white placeholder-white/70 focus:bg-white/20 focus:border-blue-300/60 focus:outline-none transition-all duration-300"
-                      placeholder="your.email@example.com"
+                      value={email || 'Not available'}
+                      readOnly
+                      className={cn(
+                        "w-full px-4 py-3 rounded-xl backdrop-blur-xl border text-white",
+                        "bg-white/10 border-white/20 cursor-not-allowed opacity-80",
+                        "focus:outline-none"
+                      )}
                     />
-                    <p className="text-blue-100/70 text-xs">We'll use this email for important notifications</p>
+                    <p className="text-blue-100/70 text-xs">Your registered email address</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-white font-semibold text-sm">Mobile Number</label>
+                    <input
+                      type="text"
+                      value={mobile || 'Not available'}
+                      readOnly
+                      className={cn(
+                        "w-full px-4 py-3 rounded-xl backdrop-blur-xl border text-white",
+                        "bg-white/10 border-white/20 cursor-not-allowed opacity-80",
+                        "focus:outline-none"
+                      )}
+                    />
+                    <p className="text-blue-100/70 text-xs">Your contact number</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-white font-semibold text-sm">User ID</label>
+                    <input
+                      type="text"
+                      value={uniqueId || 'Not available'}
+                      readOnly
+                      className={cn(
+                        "w-full px-4 py-3 rounded-xl backdrop-blur-xl border text-white",
+                        "bg-white/10 border-white/20 cursor-not-allowed opacity-80",
+                        "focus:outline-none"
+                      )}
+                    />
+                    <p className="text-blue-100/70 text-xs">Your unique account identifier</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-white font-semibold text-sm">First Name</label>
+                    <input
+                      type="text"
+                      value={firstName || 'Not available'}
+                      readOnly
+                      className={cn(
+                        "w-full px-4 py-3 rounded-xl backdrop-blur-xl border text-white",
+                        "bg-white/10 border-white/20 cursor-not-allowed opacity-80",
+                        "focus:outline-none"
+                      )}
+                    />
+                    <p className="text-blue-100/70 text-xs">Your first name</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-white font-semibold text-sm">Middle Name</label>
+                    <input
+                      type="text"
+                      value={middleName || 'Not available'}
+                      readOnly
+                      className={cn(
+                        "w-full px-4 py-3 rounded-xl backdrop-blur-xl border text-white",
+                        "bg-white/10 border-white/20 cursor-not-allowed opacity-80",
+                        "focus:outline-none"
+                      )}
+                    />
+                    <p className="text-blue-100/70 text-xs">Your middle name</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-white font-semibold text-sm">Last Name</label>
+                    <input
+                      type="text"
+                      value={lastName || 'Not available'}
+                      readOnly
+                      className={cn(
+                        "w-full px-4 py-3 rounded-xl backdrop-blur-xl border text-white",
+                        "bg-white/10 border-white/20 cursor-not-allowed opacity-80",
+                        "focus:outline-none"
+                      )}
+                    />
+                    <p className="text-blue-100/70 text-xs">Your last name</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-white font-semibold text-sm">Account Type</label>
+                    <input
+                      type="text"
+                      value={formatUserType(userType)}
+                      readOnly
+                      className={cn(
+                        "w-full px-4 py-3 rounded-xl backdrop-blur-xl border text-white",
+                        "bg-white/10 border-white/20 cursor-not-allowed opacity-80",
+                        "focus:outline-none"
+                      )}
+                    />
+                    <p className="text-blue-100/70 text-xs">Your account role in the system</p>
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-white font-semibold text-sm">Assigned Devices</label>
+                    <input
+                      type="text"
+                      value={formatImeiList(imeis)}
+                      readOnly
+                      className={cn(
+                        "w-full px-4 py-3 rounded-xl backdrop-blur-xl border text-white",
+                        "bg-white/10 border-white/20 cursor-not-allowed opacity-80",
+                        "focus:outline-none"
+                      )}
+                    />
+                    <p className="text-blue-100/70 text-xs">Devices linked to your account</p>
                   </div>
                 </div>
               </Card.Content>
-              
-              <Card.Footer>
-                <div className="flex items-center gap-3">
-                  <button 
-                    onClick={handleSave}
-                    disabled={isLoading}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-indigo-600 hover:scale-105 transition-all duration-300 shadow-lg shadow-blue-500/30 disabled:opacity-50"
-                  >
-                    {isLoading ? 'Saving...' : 'Save Changes'}
-                  </button>
-                  <button className="px-6 py-3 bg-white/15 backdrop-blur-xl border border-white/30 text-white font-semibold rounded-xl hover:bg-white/20 transition-all duration-300">
-                    Cancel
-                  </button>
-                </div>
-              </Card.Footer>
             </Card>
-          </ContentSection>
         )}
-      </HierarchySection>
 
       {/* Device Command Tab */}
-      <HierarchySection level={1} colorScheme="orange" spacing="lg">
-        {activeTab === 'device-command' && (
-          <ContentSection variant="glass" colorScheme="orange" padding="lg" spacing="md" bordered={true} elevated={true}>
-            <Card 
-              variant="glass" 
-              padding="lg" 
-              colorScheme="orange" 
-              glowEffect={true}
-              className="relative overflow-hidden backdrop-blur-2xl bg-gradient-to-br from-orange-600/25 via-amber-600/20 to-yellow-600/25 border border-orange-400/40"
-            >
+      {activeTab === 'device-command' && (
+        <Card 
+          variant="glass" 
+          padding="lg" 
+          colorScheme="orange" 
+          glowEffect={true}
+          className="relative overflow-hidden backdrop-blur-2xl bg-gradient-to-br from-orange-600/25 via-amber-600/20 to-yellow-600/25 border border-orange-400/40"
+        >
               <Card.Header>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500/30 to-amber-500/30 flex items-center justify-center backdrop-blur-md border border-white/30">
@@ -670,21 +779,19 @@ export default function Settings() {
                   </button>
                 </div>
               </Card.Footer>
-            </Card>
 
-            {/* Notification Component */}
-            {notification && (
-              <div className="mt-4">
-                <Notification
-                  type={notification.type}
-                  message={notification.message}
-                  onDismiss={() => setNotification(null)}
-                />
-              </div>
-            )}
-          </ContentSection>
+              {/* Notification Component */}
+              {notification && (
+                <div className="mt-4">
+                  <Notification
+                    type={notification.type}
+                    message={notification.message}
+                    onDismiss={() => setNotification(null)}
+                  />
+                </div>
+              )}
+            </Card>
         )}
-      </HierarchySection>
 
       {/* Section Divider */}
       <SectionDivider 
