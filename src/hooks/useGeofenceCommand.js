@@ -63,6 +63,34 @@ export function useGeofenceCommand() {
   }, []);
 
   /**
+   * Send a DELETE_GEOFENCE command to a device
+   * 
+   * @param {string} imei - Device IMEI identifier
+   * @param {string} geofenceNumber - Geofence number to delete (e.g., 'GEO1')
+   * @returns {Promise<Object>} Response from the API
+   */
+  const deleteGeofence = useCallback(async (imei, geofenceNumber) => {
+    setLoading(true);
+    setError(null);
+    setResponse(null);
+
+    try {
+      // TODO: Update this when DELETE_GEOFENCE API is available
+      // For now, this is a placeholder that will throw an error
+      const result = await sendDeviceCommand(imei, 'DELETE_GEOFENCE', {
+        geofence_number: geofenceNumber
+      });
+      setResponse(result);
+      setLoading(false);
+      return result;
+    } catch (err) {
+      setError(err);
+      setLoading(false);
+      throw err;
+    }
+  }, []);
+
+  /**
    * Reset the hook state
    */
   const reset = useCallback(() => {
@@ -76,6 +104,7 @@ export function useGeofenceCommand() {
     error,
     response,
     setGeofence,
+    deleteGeofence,
     reset
   };
 }

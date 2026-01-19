@@ -1,16 +1,36 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card } from "../design-system/components";
 import { Button } from "../design-system/components";
 import { Loading } from "../design-system/components";
 import { cn } from "../design-system/utils/cn";
+import { useUserContext } from "../contexts/UserContext";
 import { useGeofenceCommand } from "../hooks/useGeofenceCommand";
+import { useGeofenceValidation } from "../hooks/useGeofenceValidation";
+import { useGeofenceList } from "../hooks/useGeofenceList";
 import CustomPolygonInput from "../components/CustomPolygonInput";
+import GeofenceMap from "../components/GeofenceMap";
+import GeofenceDeleteDialog from "../components/GeofenceDeleteDialog";
+import ValidationError from "../components/ValidationError";
+import ValidationWarning from "../components/ValidationWarning";
 
 export default function Geofence() {
+  const { imeis } = useUserContext();
+  
+  // IMEI mode detection logic (same as Settings.jsx)
+  const validImeis = (imeis || []).filter(imei => imei && imei.trim() !== '');
+  const imeiCount = validImeis.length;
+  const hasNoDevices = imeiCount === 0;
+  const hasSingleDevice = imeiCount === 1;
+  const hasMultipleDevices = imeiCount > 1;
+  
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [profileName, setProfileName] = useState("Home");
-  const [imei, setImei] = useState("862942074957887");
+  const [imei, setImei] = useState("");
+  const [showMap, setShowMap] = useState(true); // Toggle between map and manual input
+  const [editingGeofence, setEditingGeofence] = useState(null); // Geofence being edited
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null); // Geofence to delete
+  const [deleteLoading, setDeleteLoading] = useState(false); // Delete operation loading
   const [customPoints, setCustomPoints] = useState([
     { latitude: 23.301624, longitude: 85.327065 },
     { latitude: 23.301700, longitude: 85.327100 },
@@ -18,15 +38,35 @@ export default function Geofence() {
     { latitude: 23.301700, longitude: 85.327200 },
     { latitude: 23.301624, longitude: 85.327065 }
   ]);
-  const [geofences, setGeofences] = useState([
-    { id: 1, name: "Home", status: "active", coordinates: "5 points", radius: null },
-    { id: 2, name: "Office", status: "active", coordinates: "5 points", radius: null },
-    { id: 3, name: "School", status: "inactive", coordinates: "5 points", radius: null },
-    { id: 4, name: "Mall", status: "active", coordinates: "5 points", radius: null },
-    { id: 5, name: "Hospital", status: "inactive", coordinates: "5 points", radius: null }
-  ]);
 
   const { setGeofence, loading: commandLoading, error: commandError, response: commandResponse } = useGeofenceCommand();
+
+  // Fetch geofences from API
+  const { geofences, loading: geofencesLoading, error: geofencesError, count, refresh } = useGeofenceList(imei);
+
+  // Use validation hook for real-time validation
+  const { isValid, errors, warnings } = useGeofenceValidation(customPoints);
+
+  // Auto-populate IMEI for single device users
+  useEffect(() => {
+    console.log('[Geofence] IMEI useEffect triggered');
+    console.log('[Geofence] hasSingleDevice:', hasSingleDevice);
+    console.log('[Geofence] validImeis:', validImeis);
+    console.log('[Geofence] current imei:', imei);
+    
+    if (hasSingleDevice && validImeis.length > 0 && !imei) {
+      console.log('[Geofence] Setting IMEI to:', validImeis[0]);
+      setImei(validImeis[0]);
+    }
+  }, [hasSingleDevice, validImeis, imei]);
+
+  // Debug logging for geofences
+  useEffect(() => {
+    console.log('[Geofence] Geofences updated:', geofences);
+    console.log('[Geofence] Count:', count);
+    console.log('[Geofence] Loading:', geofencesLoading);
+    console.log('[Geofence] Error:', geofencesError);
+  }, [geofences, count, geofencesLoading, geofencesError]);
 
   const tabs = [
     { id: "overview", label: "Overview", icon: "🗺️" },
@@ -36,6 +76,114 @@ export default function Geofence() {
 
   const activeGeofences = geofences.filter(g => g.status === "active").length;
   const inactiveGeofences = geofences.filter(g => g.status === "inactive").length;
+
+  // Computed value for edit mode
+  const isEditMode = editingGeofence !== null;
+
+  // Handle edit button click
+  const handleEdit = (geofence) => {
+    setEditingGeofence(geofence);
+    setProfileName(geofence.name);
+    setImei(imei); // Keep current IMEI or load from geofence if stored
+    // Parse coordinates from geofence (assuming they're stored)
+    // For now, using default points as placeholder
+    setCustomPoints([
+      { latitude: 23.301624, longitude: 85.327065 },
+      { latitude: 23.301700, longitude: 85.327100 },
+      { latitude: 23.301750, longitude: 85.327150 },
+      { latitude: 23.301700, longitude: 85.327200 },
+      { latitude: 23.301624, longitude: 85.327065 }
+    ]);
+    setActiveTab("create");
+  };
+
+  // Handle cancel edit
+  const handleCancelEdit = () => {
+    setEditingGeofence(null);
+    setProfileName("Home");
+    setCustomPoints([
+      { latitude: 23.301624, longitude: 85.327065 },
+      { latitude: 23.301700, longitude: 85.327100 },
+      { latitude: 23.301750, longitude: 85.327150 },
+      { latitude: 23.301700, longitude: 85.327200 },
+      { latitude: 23.301624, longitude: 85.327065 }
+    ]);
+  };
+
+  // Handle view on map
+  const handleViewOnMap = (geofence) => {
+    if (!geofence.coordinates || geofence.coordinates.length === 0) {
+      alert('No coordinates available for this geofence');
+      return;
+    }
+
+    // Calculate center point of the polygon
+    const latSum = geofence.coordinates.reduce((sum, coord) => sum + coord.latitude, 0);
+    const lngSum = geofence.coordinates.reduce((sum, coord) => sum + coord.longitude, 0);
+    const centerLat = latSum / geofence.coordinates.length;
+    const centerLng = lngSum / geofence.coordinates.length;
+
+    // Create polygon path for Google Maps
+    const pathString = geofence.coordinates
+      .map(coord => `${coord.latitude},${coord.longitude}`)
+      .join('|');
+
+    // Google Maps URL with polygon overlay
+    // Format: https://www.google.com/maps/dir/?api=1&destination=lat,lng&travelmode=driving
+    // For polygon, we'll use the center and add a custom path parameter
+    const googleMapsUrl = `https://www.google.com/maps?q=${centerLat},${centerLng}&z=16`;
+    
+    // Open in new tab
+    window.open(googleMapsUrl, '_blank');
+  };
+
+  // Handle delete button click
+  const handleDeleteClick = (geofence) => {
+    setShowDeleteConfirm(geofence);
+  };
+
+  // Handle delete confirmation
+  const handleDeleteConfirm = async () => {
+    if (!showDeleteConfirm) return;
+    
+    setDeleteLoading(true);
+    try {
+      // TODO: Call DELETE_GEOFENCE API when available
+      // await deleteGeofence(imei, showDeleteConfirm.geofence_number);
+      
+      // For now, just remove from local state
+      const updatedGeofences = geofences.filter(g => g.id !== showDeleteConfirm.id);
+      setGeofences(updatedGeofences);
+      
+      alert(`✓ Geofence "${showDeleteConfirm.name}" deleted successfully!`);
+      setShowDeleteConfirm(null);
+    } catch (error) {
+      console.error('Failed to delete geofence:', error);
+      
+      // Distinguish between error types
+      let errorMessage = '';
+      if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        errorMessage = `Network error: Unable to reach the server. Please check your connection and try again.`;
+      } else if (error.response?.status === 404) {
+        errorMessage = `Geofence not found on device`;
+      } else if (error.response?.status === 401) {
+        errorMessage = `Authentication error: Please log in again`;
+      } else if (error.response?.status === 500) {
+        errorMessage = `Server error: Please try again later`;
+      } else {
+        errorMessage = `Failed to delete geofence: ${error.message}`;
+      }
+      
+      alert(`✗ ${errorMessage}`);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // Handle delete cancellation
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(null);
+  };
 
   const handleSave = async () => {
     setLoading(true);
@@ -55,19 +203,38 @@ export default function Geofence() {
         coordinates: geofenceCoordinates
       });
 
-      const newGeofence = {
-        id: geofences.length + 1,
-        name: profileName,
-        status: "active",
-        coordinates: `${customPoints.length} points`,
-        radius: null
-      };
-      setGeofences([...geofences, newGeofence]);
-
-      alert(`Geofence "${profileName}" set successfully!`);
+      if (isEditMode) {
+        // Update existing geofence
+        alert(`✓ Geofence "${profileName}" updated successfully!`);
+        handleCancelEdit();
+      } else {
+        // Create new geofence
+        alert(`✓ Geofence "${profileName}" created successfully!`);
+      }
+      
+      // Refresh the geofence list
+      refresh();
+      
     } catch (error) {
       console.error('Failed to set geofence:', error);
-      alert(`Failed to set geofence: ${error.message}`);
+      
+      // Distinguish between error types
+      let errorMessage = '';
+      if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        errorMessage = `Network error: Unable to reach the server. Please check your connection and try again.`;
+      } else if (error.message?.includes('validation')) {
+        errorMessage = `Validation error: ${error.message}`;
+      } else if (error.response?.status === 400) {
+        errorMessage = `Invalid request: ${error.response?.data?.message || 'Please check your input'}`;
+      } else if (error.response?.status === 401) {
+        errorMessage = `Authentication error: Please log in again`;
+      } else if (error.response?.status === 500) {
+        errorMessage = `Server error: Please try again later`;
+      } else {
+        errorMessage = `Failed to ${isEditMode ? 'update' : 'create'} geofence: ${error.message}`;
+      }
+      
+      alert(`✗ ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -135,7 +302,7 @@ export default function Geofence() {
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="text-blue-200/80 text-sm font-medium mb-1">Total Geofences</div>
-                <div className="text-white text-3xl font-bold mb-2">{geofences.length}</div>
+                <div className="text-white text-3xl font-bold mb-2">{count}</div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
                   <span className="text-blue-200/70 text-xs">Configured</span>
@@ -214,31 +381,164 @@ export default function Geofence() {
       {/* Tab Content */}
       {activeTab === "overview" && (
         <div className="space-y-6">
+          {/* IMEI Selector for Multiple Devices */}
+          {hasMultipleDevices && (
+            <Card variant="glass" colorScheme="blue" padding="lg">
+              <Card.Content>
+                <div className="space-y-3">
+                  <label className="text-blue-200/80 text-sm font-medium block">
+                    Select Device to View Geofences
+                  </label>
+                  <select
+                    value={imei}
+                    onChange={(e) => setImei(e.target.value)}
+                    className={cn(
+                      "w-full px-4 py-3 rounded-xl bg-white/15 backdrop-blur-xl border text-white",
+                      "focus:bg-white/20 focus:outline-none transition-all duration-300",
+                      "border-white/30 focus:border-blue-400/60"
+                    )}
+                  >
+                    <option value="" className="bg-gray-800 text-white">
+                      Select a device...
+                    </option>
+                    {validImeis.map((imeiOption) => (
+                      <option key={imeiOption} value={imeiOption} className="bg-gray-800 text-white">
+                        {imeiOption}
+                      </option>
+                    ))}
+                  </select>
+                  {!imei && (
+                    <p className="text-blue-200/70 text-xs">
+                      Please select a device to view its geofences
+                    </p>
+                  )}
+                </div>
+              </Card.Content>
+            </Card>
+          )}
+
+          {/* No Devices Warning */}
+          {hasNoDevices && (
+            <Card variant="glass" colorScheme="amber" padding="lg">
+              <Card.Content>
+                <div className="flex items-center gap-3 text-amber-200">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div>
+                    <p className="font-medium">No devices assigned</p>
+                    <p className="text-sm text-amber-200/70">Please contact your administrator to assign devices to your account.</p>
+                  </div>
+                </div>
+              </Card.Content>
+            </Card>
+          )}
+
           <Card variant="glass" colorScheme="slate" padding="lg">
             <Card.Content>
-              <h3 className="text-white text-lg font-semibold mb-6 flex items-center gap-2">
-                <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                </svg>
-                Geofence List
-              </h3>
-              <div className="space-y-3">
-                {geofences.map((geofence) => (
-                  <div key={geofence.id} className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors duration-200">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-white text-lg font-semibold flex items-center gap-2">
+                  <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                  </svg>
+                  Geofence List ({count})
+                  {hasSingleDevice && (
+                    <span className="text-xs text-blue-300/70 font-normal">
+                      - {validImeis[0]}
+                    </span>
+                  )}
+                </h3>
+                <button
+                  onClick={refresh}
+                  disabled={geofencesLoading || !imei}
+                  className="px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg className={cn("w-4 h-4", geofencesLoading && "animate-spin")} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh
+                </button>
+              </div>
+
+              {/* Loading State */}
+              {geofencesLoading && (
+                <div className="flex items-center justify-center py-12">
+                  <Loading type="spinner" size="lg" color="blue" />
+                  <span className="ml-3 text-blue-300">Loading geofences...</span>
+                </div>
+              )}
+
+              {/* Error State */}
+              {geofencesError && !geofencesLoading && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                  <div className="flex items-center gap-2 text-red-300">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Failed to load geofences: {geofencesError.message}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {!geofencesLoading && !geofencesError && geofences.length === 0 && imei && (
+                <div className="text-center py-12">
+                  <svg className="w-16 h-16 mx-auto text-white/20 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                  </svg>
+                  <p className="text-white/70 text-lg mb-2">No geofences found</p>
+                  <p className="text-white/50 text-sm">Create your first geofence to get started</p>
+                </div>
+              )}
+
+              {/* No IMEI Selected State */}
+              {!geofencesLoading && !geofencesError && !imei && hasMultipleDevices && (
+                <div className="text-center py-12">
+                  <svg className="w-16 h-16 mx-auto text-white/20 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-white/70 text-lg mb-2">Select a device</p>
+                  <p className="text-white/50 text-sm">Choose a device from the dropdown above to view its geofences</p>
+                </div>
+              )}
+
+              {/* Geofence List */}
+              {!geofencesLoading && !geofencesError && geofences.length > 0 && (
+                <div className="space-y-3">
+                  {geofences.map((geofence) => (
+                  <div 
+                    key={geofence.id} 
+                    className={cn(
+                      "flex items-center justify-between p-4 rounded-lg border transition-colors duration-200",
+                      editingGeofence?.id === geofence.id
+                        ? "bg-blue-500/20 border-blue-500/50"
+                        : "bg-white/5 border-white/10 hover:bg-white/10"
+                    )}
+                  >
                     <div className="flex items-center gap-4">
                       <div className={cn(
                         'w-3 h-3 rounded-full',
                         geofence.status === 'active' ? 'bg-green-400 animate-pulse' : 'bg-gray-500'
                       )}></div>
                       <div>
-                        <div className="text-white font-medium">{geofence.name}</div>
-                        <div className="text-white/70 text-sm">{geofence.coordinates}</div>
+                        <div className="text-white font-medium flex items-center gap-2">
+                          {geofence.name}
+                          {editingGeofence?.id === geofence.id && (
+                            <span className="text-xs bg-blue-500/30 text-blue-300 px-2 py-0.5 rounded">
+                              Editing
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-white/70 text-sm">{geofence.coordinatesCount} points</div>
+                        <div className="text-white/50 text-xs">{geofence.geofence_number}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <div className="text-white/70 text-xs">Radius</div>
-                        <div className="text-white font-medium">{geofence.radius}m</div>
+                        <div className="text-white/70 text-xs">Created</div>
+                        <div className="text-white font-medium text-sm">
+                          {new Date(geofence.createdAt).toLocaleDateString()}
+                        </div>
                       </div>
                       <div className={cn(
                         'px-3 py-1 rounded-full text-xs font-medium',
@@ -248,10 +548,40 @@ export default function Geofence() {
                       )}>
                         {geofence.status}
                       </div>
+                      <button
+                        onClick={() => handleViewOnMap(geofence)}
+                        className="px-3 py-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                        </svg>
+                        View on Map
+                      </button>
+                      <button
+                        onClick={() => handleEdit(geofence)}
+                        disabled={true}
+                        className="px-3 py-1.5 bg-blue-500/10 text-blue-300/50 rounded-lg text-sm font-medium cursor-not-allowed flex items-center gap-1 opacity-50"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(geofence)}
+                        disabled={true}
+                        className="px-3 py-1.5 bg-red-500/10 text-red-300/50 rounded-lg text-sm font-medium cursor-not-allowed flex items-center gap-1 opacity-50"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete
+                      </button>
                     </div>
                   </div>
                 ))}
-              </div>
+                </div>
+              )}
             </Card.Content>
           </Card>
         </div>
@@ -263,22 +593,86 @@ export default function Geofence() {
             <Card.Content>
               <h3 className="text-blue-300 text-lg font-semibold mb-6 flex items-center gap-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isEditMode ? "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" : "M12 6v6m0 0v6m0-6h6m-6 0H6"} />
                 </svg>
-                Create New Geofence
+                {isEditMode ? 'Edit Geofence' : 'Create New Geofence'}
               </h3>
               <div className="space-y-6">
                 <div>
                   <label className="text-blue-200/80 text-sm font-medium block mb-3">
                     Device IMEI
                   </label>
-                  <input
-                    type="text"
-                    value={imei}
-                    onChange={(e) => setImei(e.target.value)}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:bg-white/15 focus:border-blue-400/60 focus:outline-none"
-                    placeholder="Enter device IMEI"
-                  />
+                  {hasSingleDevice ? (
+                    <input
+                      type="text"
+                      value={validImeis[0]}
+                      readOnly
+                      disabled
+                      className={cn(
+                        "w-full px-4 py-3 rounded-xl bg-white/10 backdrop-blur-xl border text-white",
+                        "border-white/20 cursor-not-allowed opacity-70",
+                        "focus:outline-none"
+                      )}
+                      aria-label="Device IMEI (auto-filled)"
+                    />
+                  ) : hasMultipleDevices ? (
+                    <select
+                      value={imei}
+                      onChange={(e) => setImei(e.target.value)}
+                      className={cn(
+                        "w-full px-4 py-3 rounded-xl bg-white/15 backdrop-blur-xl border text-white",
+                        "focus:bg-white/20 focus:outline-none transition-all duration-300",
+                        imei.length === 0 || imei.length === 15
+                          ? "border-white/30 focus:border-blue-400/60"
+                          : "border-red-400/60 focus:border-red-400/80"
+                      )}
+                      aria-label="Select Device IMEI"
+                    >
+                      <option value="" className="bg-gray-800 text-white">
+                        Select a device...
+                      </option>
+                      {validImeis.map((imeiOption) => (
+                        <option key={imeiOption} value={imeiOption} className="bg-gray-800 text-white">
+                          {imeiOption}
+                        </option>
+                      ))}
+                    </select>
+                  ) : hasNoDevices ? (
+                    <>
+                      <input
+                        type="text"
+                        value=""
+                        readOnly
+                        disabled
+                        placeholder="No devices assigned"
+                        className={cn(
+                          "w-full px-4 py-3 rounded-xl bg-white/10 backdrop-blur-xl border text-white",
+                          "border-white/20 cursor-not-allowed opacity-70 placeholder-white/50",
+                          "focus:outline-none"
+                        )}
+                        aria-label="Device IMEI (no devices assigned)"
+                      />
+                      <p className="text-orange-200 text-sm font-medium mt-2">
+                        No devices are assigned to your account. Please contact your administrator to assign devices.
+                      </p>
+                    </>
+                  ) : (
+                    <input
+                      type="text"
+                      value={imei}
+                      onChange={(e) => setImei(e.target.value)}
+                      className={cn(
+                        "w-full bg-white/10 border rounded-lg px-4 py-3 text-white focus:bg-white/15 focus:outline-none",
+                        imei.length === 0 || imei.length === 15
+                          ? "border-white/20 focus:border-blue-400/60"
+                          : "border-red-500/50 focus:border-red-400/60"
+                      )}
+                      placeholder="Enter device IMEI"
+                    />
+                  )}
+                  {imei.length > 0 && imei.length !== 15 && !hasSingleDevice && !hasNoDevices && (
+                    <p className="text-red-300 text-xs mt-1">IMEI should be 15 digits</p>
+                  )}
                 </div>
 
                 <div>
@@ -289,21 +683,78 @@ export default function Geofence() {
                     type="text"
                     value={profileName}
                     onChange={(e) => setProfileName(e.target.value)}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:bg-white/15 focus:border-blue-400/60 focus:outline-none"
+                    className={cn(
+                      "w-full bg-white/10 border rounded-lg px-4 py-3 text-white focus:bg-white/15 focus:outline-none",
+                      profileName.length > 0
+                        ? "border-white/20 focus:border-blue-400/60"
+                        : "border-red-500/50 focus:border-red-400/60"
+                    )}
                     placeholder="Enter geofence name"
                   />
+                  {profileName.length === 0 && (
+                    <p className="text-red-300 text-xs mt-1">Geofence name is required</p>
+                  )}
                 </div>
 
-                <CustomPolygonInput points={customPoints} onPointsChange={setCustomPoints} />
-
-                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                  <h4 className="text-blue-300 font-medium mb-2">Current Configuration</h4>
-                  <div className="text-blue-200 text-sm space-y-1">
-                    <div><span className="font-semibold">IMEI:</span> {imei}</div>
-                    <div><span className="font-semibold">Name:</span> {profileName}</div>
-                    <div><span className="font-semibold">Points:</span> {customPoints.length} coordinates</div>
+                {/* Toggle between Map and Manual Input */}
+                <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg p-4">
+                  <span className="text-blue-200/80 text-sm font-medium">Input Method</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowMap(true)}
+                      className={cn(
+                        'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                        showMap
+                          ? 'bg-blue-500/80 text-white shadow-lg'
+                          : 'text-white/70 hover:text-white hover:bg-white/10'
+                      )}
+                    >
+                      🗺️ Map
+                    </button>
+                    <button
+                      onClick={() => setShowMap(false)}
+                      className={cn(
+                        'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                        !showMap
+                          ? 'bg-blue-500/80 text-white shadow-lg'
+                          : 'text-white/70 hover:text-white hover:bg-white/10'
+                      )}
+                    >
+                      ✏️ Manual
+                    </button>
                   </div>
                 </div>
+
+                {/* Map or Manual Input */}
+                {showMap ? (
+                  <div>
+                    <label className="text-blue-200/80 text-sm font-medium block mb-3">
+                      Draw Geofence on Map
+                    </label>
+                    <div className="bg-white/5 border border-white/10 rounded-lg overflow-hidden" style={{ height: '500px' }}>
+                      <GeofenceMap
+                        coordinates={customPoints}
+                        onCoordinatesChange={setCustomPoints}
+                        editable={true}
+                        center={{ lat: 23.3441, lng: 85.3096 }}
+                        zoom={13}
+                      />
+                    </div>
+                    <p className="text-blue-200/60 text-xs mt-2">
+                      Click on the map to add points. Drag markers to move them. Click markers to delete them.
+                    </p>
+                  </div>
+                ) : (
+                  <CustomPolygonInput points={customPoints} onPointsChange={setCustomPoints} />
+                )}
+
+                
+
+                {/* Validation Errors */}
+                <ValidationError errors={errors} />
+
+                {/* Validation Warnings */}
+                <ValidationWarning warnings={warnings} />
 
                 {commandError && (
                   <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
@@ -369,16 +820,17 @@ export default function Geofence() {
         </div>
       )}
 
-      {/* Action Buttons */}
-      <Card variant="glass" colorScheme="slate" padding="lg">
-        <Card.Content>
-          <div className="flex flex-wrap gap-4 justify-center">
+      {/* Action Buttons - Only show in Create tab */}
+      {activeTab === "create" && (
+        <Card variant="glass" colorScheme="slate" padding="lg">
+          <Card.Content>
+            <div className="flex flex-wrap gap-4 justify-center">
             <Button
               variant="glass"
               colorScheme="green"
               size="lg"
               onClick={handleSave}
-              disabled={loading || commandLoading}
+              disabled={loading || commandLoading || !isValid}
               className="min-w-[150px]"
             >
               {(loading || commandLoading) ? (
@@ -388,24 +840,37 @@ export default function Geofence() {
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  Save Geofence
+                  {isEditMode ? 'Update Geofence' : 'Save Geofence'}
                 </>
               )}
             </Button>
-            <Button
-              variant="outline"
-              colorScheme="blue"
-              size="lg"
-              className="min-w-[150px]"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
-              View on Map
-            </Button>
+            {isEditMode && (
+              <Button
+                variant="outline"
+                colorScheme="red"
+                size="lg"
+                onClick={handleCancelEdit}
+                className="min-w-[150px]"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Cancel Edit
+              </Button>
+            )}
           </div>
         </Card.Content>
       </Card>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <GeofenceDeleteDialog
+        geofence={showDeleteConfirm}
+        isOpen={showDeleteConfirm !== null}
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        loading={deleteLoading}
+      />
     </div>
   );
 }

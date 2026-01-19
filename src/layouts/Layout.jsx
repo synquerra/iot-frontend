@@ -168,6 +168,7 @@ function Sidebar() {
 
 function Topbar() {
   const location = useLocation();
+  const navigate = useNavigate();
   
   // Get page title and description based on current route
   const getPageInfo = (pathname) => {
@@ -234,39 +235,17 @@ function Topbar() {
           </div>
         </div>
         
-        {/* Right section with enhanced search and actions */}
+        {/* Right section with actions */}
         <div className="flex items-center gap-4">
-          {/* Enhanced search input with gradient focus */}
-          <div className="relative group">
-            <input
-              placeholder="Search devices..."
-              className="w-64 bg-slate-900/60 border border-slate-700/50 px-4 py-2.5 pl-10 rounded-lg outline-none text-sm text-slate-200 placeholder-slate-500 transition-all duration-300 focus:border-teal-400/50 focus:bg-slate-900/80 focus:shadow-lg focus:shadow-teal-400/10 hover:border-slate-600/50 group-focus-within:ring-2 group-focus-within:ring-teal-400/20"
-            />
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-teal-400 transition-colors duration-300">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            {/* Search input glow effect */}
-            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-teal-400/0 via-teal-400/5 to-teal-400/0 opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none" />
-          </div>
-          
-          {/* Enhanced upgrade button with gradient */}
-          <button className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-violet-600 to-teal-500 hover:from-violet-500 hover:to-teal-400 text-white font-semibold text-sm transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/20 hover:scale-105 active:scale-95 border border-violet-400/20">
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              Upgrade
-            </span>
-          </button>
-          
           {/* Action buttons with color-coded hover states */}
           <div className="flex items-center gap-2 ml-2 pl-4 border-l border-slate-800/50">
             <button className="p-2.5 rounded-lg bg-slate-800/60 border border-slate-700/50 text-slate-300 hover:text-orange-400 hover:bg-slate-800 hover:border-orange-500/30 hover:shadow-md hover:shadow-orange-500/10 transition-all duration-300 group">
               <FiBell className="w-4 h-4 group-hover:animate-pulse" />
             </button>
-            <button className="p-2.5 rounded-lg bg-slate-800/60 border border-slate-700/50 text-slate-300 hover:text-pink-400 hover:bg-slate-800 hover:border-pink-500/30 hover:shadow-md hover:shadow-pink-500/10 transition-all duration-300">
+            <button 
+              onClick={() => navigate('/settings')}
+              className="p-2.5 rounded-lg bg-slate-800/60 border border-slate-700/50 text-slate-300 hover:text-pink-400 hover:bg-slate-800 hover:border-pink-500/30 hover:shadow-md hover:shadow-pink-500/10 transition-all duration-300"
+            >
               <FiSettings className="w-4 h-4" />
             </button>
           </div>
