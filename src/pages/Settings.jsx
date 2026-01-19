@@ -615,21 +615,21 @@ export default function Settings() {
           glowEffect={true}
           className="relative overflow-hidden backdrop-blur-2xl bg-gradient-to-br from-orange-600/25 via-amber-600/20 to-yellow-600/25 border border-orange-400/40"
         >
-              <Card.Header>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500/30 to-amber-500/30 flex items-center justify-center backdrop-blur-md border border-white/30">
-                    <span className="text-2xl">📡</span>
-                  </div>
-                  <div>
-                    <Card.Title className="text-white text-xl font-bold">Device Commands</Card.Title>
-                    <Card.Description className="text-orange-100/80">
-                      Send commands to your IoT devices using their IMEI identifier
-                    </Card.Description>
-                  </div>
-                </div>
-              </Card.Header>
-              
-              <Card.Content>
+          <Card.Header>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500/30 to-amber-500/30 flex items-center justify-center backdrop-blur-md border border-white/30">
+                <span className="text-2xl">📡</span>
+              </div>
+              <div>
+                <Card.Title className="text-white text-xl font-bold">Device Commands</Card.Title>
+                <Card.Description className="text-orange-100/80">
+                  Send commands to your IoT devices using their IMEI identifier
+                </Card.Description>
+              </div>
+            </div>
+          </Card.Header>
+          
+          <Card.Content>
                 <div className="space-y-6">
                   {/* IMEI Input Field */}
                   <div className="space-y-2">
@@ -936,60 +936,58 @@ export default function Settings() {
                       </div>
                     </div>
                   )}
-                </div>
-              </Card.Content>
 
-              <Card.Footer>
-                <div className="flex items-center gap-3">
-                  <button 
-                    onClick={handleSubmit}
-                    disabled={commandLoading || hasNoDevices || !!imeiError || Object.values(paramErrors).some(error => error !== '')}
-                    className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold rounded-xl hover:from-orange-600 hover:to-amber-600 hover:scale-105 transition-all duration-300 shadow-lg shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {commandLoading ? 'Sending...' : 'Send Command'}
-                  </button>
-                </div>
-              </Card.Footer>
-
-              {/* Notification Component */}
-              {notification && (
-                <div className="mt-4">
-                  <Notification
-                    type={notification.type}
-                    message={notification.message}
-                    onDismiss={() => setNotification(null)}
-                  />
-                </div>
-              )}
-
-              {/* Command History Section */}
-              {deviceCommand.imei && (
-                <div className="mt-6 pt-6 border-t border-white/20">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-white font-bold text-lg flex items-center gap-2">
-                      <span>📋</span>
-                      Command History
-                    </h3>
-                    <button
-                      onClick={refreshCommandHistory}
-                      disabled={historyLoading}
-                      className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition-all duration-300 border border-white/20 disabled:opacity-50"
+                  {/* Send Command Button */}
+                  <div className="mt-6">
+                    <button 
+                      onClick={handleSubmit}
+                      disabled={commandLoading || hasNoDevices || !!imeiError || Object.values(paramErrors).some(error => error !== '')}
+                      className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold rounded-xl hover:from-orange-600 hover:to-amber-600 hover:scale-105 transition-all duration-300 shadow-lg shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                     >
-                      {historyLoading ? '🔄 Loading...' : '🔄 Refresh'}
+                      {commandLoading ? 'Sending...' : 'Send Command'}
                     </button>
                   </div>
+                </div>
 
-                  {historyLoading && !commandHistory.length ? (
-                    <div className="text-center py-8 text-orange-100/70">
-                      <div className="animate-spin inline-block w-8 h-8 border-4 border-white/20 border-t-white rounded-full mb-2"></div>
-                      <p>Loading command history...</p>
+                {/* Notification Component */}
+                {notification && (
+                  <div className="mt-4">
+                    <Notification
+                      type={notification.type}
+                      message={notification.message}
+                      onDismiss={() => setNotification(null)}
+                    />
+                  </div>
+                )}
+
+                {/* Command History Section */}
+                {deviceCommand.imei && (
+                  <div className="mt-6 pt-6 border-t border-white/20">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                        <span>📋</span>
+                        Command History
+                      </h3>
+                      <button
+                        onClick={refreshCommandHistory}
+                        disabled={historyLoading}
+                        className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition-all duration-300 border border-white/20 disabled:opacity-50"
+                      >
+                        {historyLoading ? '🔄 Loading...' : '🔄 Refresh'}
+                      </button>
                     </div>
-                  ) : historyError ? (
-                    <div className="bg-red-500/20 border border-red-400/40 rounded-xl p-4 text-red-100">
-                      <p className="font-medium">⚠️ {historyError}</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
+
+                    {historyLoading && !commandHistory.length ? (
+                      <div className="text-center py-8 text-orange-100/70">
+                        <div className="animate-spin inline-block w-8 h-8 border-4 border-white/20 border-t-white rounded-full mb-2"></div>
+                        <p>Loading command history...</p>
+                      </div>
+                    ) : historyError ? (
+                      <div className="bg-red-500/20 border border-red-400/40 rounded-xl p-4 text-red-100">
+                        <p className="font-medium">⚠️ {historyError}</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
                       {/* Sent Commands */}
                       <div className="bg-white/10 backdrop-blur-xl rounded-xl p-4 border border-white/20">
                         <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
@@ -1022,7 +1020,7 @@ export default function Settings() {
                                         <div className="ml-2 mt-1 space-y-0.5">
                                           {Object.entries(cmd.payload).map(([key, value]) => (
                                             <div key={key} className="text-xs">
-                                              <span className="text-orange-200">{key}:</span> {value}
+                                              <span className="text-orange-200">{key}:</span> {typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value)}
                                             </div>
                                           ))}
                                         </div>
@@ -1081,12 +1079,11 @@ export default function Settings() {
                       </div>
                     </div>
                   )}
-                </div>
-              )}
+                  </div>
+                )}
+              </Card.Content>
             </Card>
         )}
-
-      {/* Section Divider */}
       <SectionDivider 
         variant="gradient" 
         colorScheme="indigo" 
