@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { logoutUser } from '../utils/auth'
 import { useUserContext } from '../contexts/UserContext'
@@ -13,6 +13,8 @@ import { cn } from "../design-system/utils/cn"
 import { sendDeviceCommand } from '../utils/deviceCommandAPI'
 import { validateParams } from '../utils/deviceCommandValidation'
 import { Notification } from '../components/Notification'
+import { fetchDeviceCommands, parseDeviceCommands } from '../utils/deviceCommandsAPI'
+import { fetchDeviceConfig, parseDeviceConfig, getConfigAcknowledgments } from '../utils/deviceConfigAPI'
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -29,6 +31,82 @@ export default function Settings() {
   const [notification, setNotification] = useState(null)
   const [imeiError, setImeiError] = useState('')
   const [paramErrors, setParamErrors] = useState({})
+
+  // Command History state management
+  const [commandHistory, setCommandHistory] = useState([])
+  const [configAcknowledgments, setConfigAcknowledgments] = useState([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyError, setHistoryError] = useState(null)
+
+  // IMEI mode detection logic
+  // Filter out invalid IMEIs from the array
+  const validImeis = (imeis || []).filter(imei => imei && imei.trim() !== '');
+  const imeiCount = validImeis.length;
+  // Calculate mode flags
+  const hasNoDevices = imeiCount === 0;
+  const hasSingleDevice = imeiCount === 1;
+  const hasMultipleDevices = imeiCount > 1;
+
+  // Auto-populate IMEI for single device users
+  useEffect(() => {
+    if (activeTab === 'device-command' && hasSingleDevice) {
+      setDeviceCommand(prev => ({
+        ...prev,
+        imei: validImeis[0]
+      }));
+    }
+  }, [activeTab, hasSingleDevice, validImeis]);
+
+  // Fetch command history when IMEI is selected
+  useEffect(() => {
+    const fetchCommandHistory = async () => {
+      const currentImei = deviceCommand.imei?.trim();
+      console.log('fetchCommandHistory called with IMEI:', currentImei);
+      
+      if (!currentImei || currentImei.length === 0) {
+        console.log('No IMEI provided, clearing history');
+        setCommandHistory([]);
+        setConfigAcknowledgments([]);
+        return;
+      }
+
+      setHistoryLoading(true);
+      setHistoryError(null);
+
+      try {
+        console.log('Fetching command history and config for IMEI:', currentImei);
+        
+        // Fetch both command history and config acknowledgments in parallel
+        const [commands, configs] = await Promise.all([
+          fetchDeviceCommands(currentImei, 10),
+          fetchDeviceConfig(currentImei, 10)
+        ]);
+
+        console.log('Fetched commands:', commands);
+        console.log('Fetched configs:', configs);
+
+        const parsedCommands = parseDeviceCommands(commands);
+        const parsedAcks = getConfigAcknowledgments(configs);
+        
+        console.log('Parsed commands:', parsedCommands);
+        console.log('Parsed acknowledgments:', parsedAcks);
+
+        setCommandHistory(parsedCommands);
+        setConfigAcknowledgments(parsedAcks);
+      } catch (error) {
+        console.error('Error fetching command history:', error);
+        setHistoryError('Failed to load command history. Please try again.');
+        setCommandHistory([]);
+        setConfigAcknowledgments([]);
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+
+    if (activeTab === 'device-command') {
+      fetchCommandHistory();
+    }
+  }, [deviceCommand.imei, activeTab]);
 
   // Helper function to format user type
   const formatUserType = (userType) => {
@@ -143,11 +221,15 @@ export default function Settings() {
   }
 
   const validateImei = (imei) => {
-    const trimmedImei = imei.trim()
+    const trimmedImei = imei?.trim() || '';
     if (!trimmedImei || trimmedImei.length === 0) {
-      return 'IMEI is required. Please enter a valid device IMEI'
+      // Different message for dropdown vs text input
+      if (hasMultipleDevices) {
+        return 'Please select a device from the dropdown';
+      }
+      return 'IMEI is required. Please enter a valid device IMEI';
     }
-    return ''
+    return '';
   }
 
   const handleImeiChange = (e) => {
@@ -163,6 +245,23 @@ export default function Settings() {
     const error = validateImei(deviceCommand.imei)
     setImeiError(error)
   }
+
+  const refreshCommandHistory = async () => {
+    const currentImei = deviceCommand.imei?.trim();
+    if (!currentImei || currentImei.length === 0) return;
+
+    try {
+      const [commands, configs] = await Promise.all([
+        fetchDeviceCommands(currentImei, 10),
+        fetchDeviceConfig(currentImei, 10)
+      ]);
+
+      setCommandHistory(parseDeviceCommands(commands));
+      setConfigAcknowledgments(getConfigAcknowledgments(configs));
+    } catch (error) {
+      console.error('Error refreshing command history:', error);
+    }
+  };
 
   const handleSubmit = async () => {
     // Sub-task 7.1: Validate IMEI before submission
@@ -240,9 +339,9 @@ export default function Settings() {
         message: response.message || 'Command sent successfully. The command has been sent to the device'
       })
 
-      // Sub-task 6.2: Clear deviceCommand state (reset imei, command, params)
+      // Sub-task 8.2 & 8.3: Clear deviceCommand state (preserve IMEI for single device, clear for multiple)
       setDeviceCommand({
-        imei: '',
+        imei: hasSingleDevice ? validImeis[0] : '', // Keep IMEI for single device, clear for multiple
         command: '',
         params: {}
       })
@@ -257,6 +356,11 @@ export default function Settings() {
       setTimeout(() => {
         setNotification(null)
       }, 5000)
+
+      // Refresh command history after successful command submission
+      setTimeout(() => {
+        refreshCommandHistory();
+      }, 2000); // Wait 2 seconds for the command to be processed
 
     } catch (error) {
       // Sub-task 6.3: Handle error response
@@ -530,24 +634,91 @@ export default function Settings() {
                   {/* IMEI Input Field */}
                   <div className="space-y-2">
                     <label className="text-white font-semibold text-sm">Device IMEI</label>
-                    <input
-                      type="text"
-                      value={deviceCommand.imei}
-                      onChange={handleImeiChange}
-                      onBlur={handleImeiBlur}
-                      className={cn(
-                        "w-full px-4 py-3 rounded-xl bg-white/15 backdrop-blur-xl border text-white placeholder-white/70 focus:bg-white/20 focus:outline-none transition-all duration-300",
-                        imeiError 
-                          ? "border-red-400/60 focus:border-red-400/80" 
-                          : "border-white/30 focus:border-orange-300/60"
-                      )}
-                      placeholder="Enter 15-digit IMEI"
-                      aria-invalid={!!imeiError}
-                      aria-describedby={imeiError ? "imei-error" : undefined}
-                    />
+                    {hasSingleDevice ? (
+                      <input
+                        type="text"
+                        value={validImeis[0]}
+                        readOnly
+                        disabled
+                        className={cn(
+                          "w-full px-4 py-3 rounded-xl bg-white/10 backdrop-blur-xl border text-white",
+                          "border-white/20 cursor-not-allowed opacity-70",
+                          "focus:outline-none"
+                        )}
+                        aria-label="Device IMEI (auto-filled)"
+                        aria-describedby="imei-help"
+                      />
+                    ) : hasMultipleDevices ? (
+                      <select
+                        value={deviceCommand.imei}
+                        onChange={handleImeiChange}
+                        onBlur={handleImeiBlur}
+                        className={cn(
+                          "w-full px-4 py-3 rounded-xl bg-white/15 backdrop-blur-xl border text-white",
+                          "focus:bg-white/20 focus:outline-none transition-all duration-300",
+                          imeiError 
+                            ? "border-red-400/60 focus:border-red-400/80" 
+                            : "border-white/30 focus:border-orange-300/60"
+                        )}
+                        aria-invalid={!!imeiError}
+                        aria-describedby={imeiError ? "imei-error" : "imei-help"}
+                      >
+                        <option value="" className="bg-gray-800 text-white">
+                          Select a device...
+                        </option>
+                        {validImeis.map((imei) => (
+                          <option key={imei} value={imei} className="bg-gray-800 text-white">
+                            {imei}
+                          </option>
+                        ))}
+                      </select>
+                    ) : hasNoDevices ? (
+                      <>
+                        <input
+                          type="text"
+                          value=""
+                          readOnly
+                          disabled
+                          placeholder="No devices assigned"
+                          className={cn(
+                            "w-full px-4 py-3 rounded-xl bg-white/10 backdrop-blur-xl border text-white",
+                            "border-white/20 cursor-not-allowed opacity-70 placeholder-white/50",
+                            "focus:outline-none"
+                          )}
+                          aria-label="Device IMEI (no devices assigned)"
+                        />
+                        <p className="text-orange-200 text-sm font-medium mt-2">
+                          No devices are assigned to your account. Please contact your administrator to assign devices.
+                        </p>
+                      </>
+                    ) : (
+                      <input
+                        type="text"
+                        value={deviceCommand.imei}
+                        onChange={handleImeiChange}
+                        onBlur={handleImeiBlur}
+                        className={cn(
+                          "w-full px-4 py-3 rounded-xl bg-white/15 backdrop-blur-xl border text-white placeholder-white/70 focus:bg-white/20 focus:outline-none transition-all duration-300",
+                          imeiError 
+                            ? "border-red-400/60 focus:border-red-400/80" 
+                            : "border-white/30 focus:border-orange-300/60"
+                        )}
+                        placeholder="Enter 15-digit IMEI"
+                        aria-invalid={!!imeiError}
+                        aria-describedby={imeiError ? "imei-error" : undefined}
+                      />
+                    )}
+                    {/* Error message - shown when validation fails */}
                     {imeiError && (
                       <p id="imei-error" className="text-red-300 text-sm font-medium" role="alert">
                         {imeiError}
+                      </p>
+                    )}
+                    {/* Help text - only shown when no error is present and not in no-device mode */}
+                    {!hasNoDevices && !imeiError && (
+                      <p id="imei-help" className="text-orange-100/70 text-xs">
+                        {hasSingleDevice && "Your device IMEI (automatically filled)"}
+                        {hasMultipleDevices && "Select the device you want to send commands to"}
                       </p>
                     )}
                   </div>
@@ -772,7 +943,7 @@ export default function Settings() {
                 <div className="flex items-center gap-3">
                   <button 
                     onClick={handleSubmit}
-                    disabled={commandLoading || !!imeiError || Object.values(paramErrors).some(error => error !== '')}
+                    disabled={commandLoading || hasNoDevices || !!imeiError || Object.values(paramErrors).some(error => error !== '')}
                     className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold rounded-xl hover:from-orange-600 hover:to-amber-600 hover:scale-105 transition-all duration-300 shadow-lg shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {commandLoading ? 'Sending...' : 'Send Command'}
@@ -788,6 +959,128 @@ export default function Settings() {
                     message={notification.message}
                     onDismiss={() => setNotification(null)}
                   />
+                </div>
+              )}
+
+              {/* Command History Section */}
+              {deviceCommand.imei && (
+                <div className="mt-6 pt-6 border-t border-white/20">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                      <span>📋</span>
+                      Command History
+                    </h3>
+                    <button
+                      onClick={refreshCommandHistory}
+                      disabled={historyLoading}
+                      className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition-all duration-300 border border-white/20 disabled:opacity-50"
+                    >
+                      {historyLoading ? '🔄 Loading...' : '🔄 Refresh'}
+                    </button>
+                  </div>
+
+                  {historyLoading && !commandHistory.length ? (
+                    <div className="text-center py-8 text-orange-100/70">
+                      <div className="animate-spin inline-block w-8 h-8 border-4 border-white/20 border-t-white rounded-full mb-2"></div>
+                      <p>Loading command history...</p>
+                    </div>
+                  ) : historyError ? (
+                    <div className="bg-red-500/20 border border-red-400/40 rounded-xl p-4 text-red-100">
+                      <p className="font-medium">⚠️ {historyError}</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Sent Commands */}
+                      <div className="bg-white/10 backdrop-blur-xl rounded-xl p-4 border border-white/20">
+                        <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+                          <span>📤</span>
+                          Sent Commands (Last 10)
+                        </h4>
+                        {commandHistory.length > 0 ? (
+                          <div className="space-y-2">
+                            {commandHistory.map((cmd) => (
+                              <div
+                                key={cmd.id}
+                                className="bg-white/5 rounded-lg p-3 border border-white/10 hover:bg-white/10 transition-all duration-200"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="text-white font-semibold">{cmd.command}</span>
+                                      <span className={cn(
+                                        "px-2 py-0.5 rounded-full text-xs font-medium",
+                                        cmd.status === 'PUBLISHED' ? 'bg-green-500/20 text-green-200 border border-green-400/30' :
+                                        cmd.status === 'PENDING' ? 'bg-yellow-500/20 text-yellow-200 border border-yellow-400/30' :
+                                        'bg-gray-500/20 text-gray-200 border border-gray-400/30'
+                                      )}>
+                                        {cmd.status}
+                                      </span>
+                                    </div>
+                                    {cmd.payload && Object.keys(cmd.payload).length > 0 && (
+                                      <div className="text-orange-100/70 text-sm mt-1">
+                                        <span className="font-medium">Parameters:</span>
+                                        <div className="ml-2 mt-1 space-y-0.5">
+                                          {Object.entries(cmd.payload).map(([key, value]) => (
+                                            <div key={key} className="text-xs">
+                                              <span className="text-orange-200">{key}:</span> {value}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="text-right text-xs text-orange-100/60 whitespace-nowrap">
+                                    {new Date(cmd.createdAt).toLocaleString()}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-orange-100/60 text-sm text-center py-4">
+                            No commands sent yet
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Device Acknowledgments */}
+                      <div className="bg-white/10 backdrop-blur-xl rounded-xl p-4 border border-white/20">
+                        <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+                          <span>✅</span>
+                          Device Acknowledgments (Last 10)
+                        </h4>
+                        {configAcknowledgments.length > 0 ? (
+                          <div className="space-y-2">
+                            {configAcknowledgments.map((ack) => (
+                              <div
+                                key={ack.id}
+                                className="bg-white/5 rounded-lg p-3 border border-white/10 hover:bg-white/10 transition-all duration-200"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="text-green-300 text-lg">✓</span>
+                                      <span className="text-white font-medium">{ack.rawBody}</span>
+                                    </div>
+                                    <div className="text-orange-100/60 text-xs">
+                                      Topic: {ack.topic}
+                                    </div>
+                                  </div>
+                                  <div className="text-right text-xs text-orange-100/60 whitespace-nowrap">
+                                    {new Date(ack.deviceTimestamp).toLocaleString()}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-orange-100/60 text-sm text-center py-4">
+                            No acknowledgments received yet
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </Card>
