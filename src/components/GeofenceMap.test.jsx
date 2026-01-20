@@ -2,6 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import GeofenceMap from './GeofenceMap';
 
+// Mock useCurrentLocation hook
+vi.mock('../hooks/useCurrentLocation', () => ({
+  useCurrentLocation: vi.fn(() => ({
+    location: null,
+    loading: false,
+    error: null,
+    getCurrentLocation: vi.fn()
+  }))
+}));
+
 // Mock react-leaflet components
 vi.mock('react-leaflet', () => ({
   MapContainer: ({ children, ...props }) => (
@@ -25,7 +35,10 @@ vi.mock('react-leaflet', () => ({
       window.__mapEventHandlers = handlers;
     }
     return null;
-  }
+  },
+  useMap: () => ({
+    flyTo: vi.fn()
+  })
 }));
 
 describe('GeofenceMap', () => {
@@ -229,5 +242,258 @@ describe('GeofenceMap', () => {
 
     const mapContainer = screen.getByTestId('map-container');
     expect(mapContainer).toBeInTheDocument();
+  });
+
+  describe('Map Centering Functionality', () => {
+    it('should render My Location button', () => {
+      render(
+        <GeofenceMap
+          coordinates={[]}
+          onCoordinatesChange={mockOnCoordinatesChange}
+        />
+      );
+
+      const locationButton = screen.getByLabelText('Go to my current location');
+      expect(locationButton).toBeInTheDocument();
+      expect(locationButton).toHaveTextContent('My Location');
+    });
+
+    it('should show loading state when fetching location', async () => {
+      const { useCurrentLocation } = await import('../hooks/useCurrentLocation');
+      vi.mocked(useCurrentLocation).mockReturnValue({
+        location: null,
+        loading: true,
+        error: null,
+        getCurrentLocation: vi.fn()
+      });
+
+      render(
+        <GeofenceMap
+          coordinates={[]}
+          onCoordinatesChange={mockOnCoordinatesChange}
+        />
+      );
+
+      const locationButton = screen.getByLabelText('Go to my current location');
+      expect(locationButton).toBeDisabled();
+      expect(screen.getByText('Loading...')).toBeInTheDocument();
+    });
+
+    it('should call getCurrentLocation when button is clicked', async () => {
+      const mockGetCurrentLocation = vi.fn();
+      const { useCurrentLocation } = await import('../hooks/useCurrentLocation');
+      vi.mocked(useCurrentLocation).mockReturnValue({
+        location: null,
+        loading: false,
+        error: null,
+        getCurrentLocation: mockGetCurrentLocation
+      });
+
+      render(
+        <GeofenceMap
+          coordinates={[]}
+          onCoordinatesChange={mockOnCoordinatesChange}
+        />
+      );
+
+      const locationButton = screen.getByLabelText('Go to my current location');
+      fireEvent.click(locationButton);
+
+      expect(mockGetCurrentLocation).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Keyboard Navigation and Accessibility', () => {
+    it('should allow keyboard navigation to My Location button', () => {
+      render(
+        <GeofenceMap
+          coordinates={[]}
+          onCoordinatesChange={mockOnCoordinatesChange}
+        />
+      );
+
+      const locationButton = screen.getByLabelText('Go to my current location');
+      
+      // Button should be focusable
+      locationButton.focus();
+      expect(document.activeElement).toBe(locationButton);
+    });
+
+    it('should trigger location fetch on Enter key press', async () => {
+      const mockGetCurrentLocation = vi.fn();
+      const { useCurrentLocation } = await import('../hooks/useCurrentLocation');
+      vi.mocked(useCurrentLocation).mockReturnValue({
+        location: null,
+        loading: false,
+        error: null,
+        getCurrentLocation: mockGetCurrentLocation
+      });
+
+      render(
+        <GeofenceMap
+          coordinates={[]}
+          onCoordinatesChange={mockOnCoordinatesChange}
+        />
+      );
+
+      const locationButton = screen.getByLabelText('Go to my current location');
+      locationButton.focus();
+      
+      // Simulate Enter key press
+      fireEvent.keyDown(locationButton, { key: 'Enter', code: 'Enter' });
+      fireEvent.click(locationButton); // Enter triggers click event on buttons
+
+      expect(mockGetCurrentLocation).toHaveBeenCalled();
+    });
+
+    it('should trigger location fetch on Space key press', async () => {
+      const mockGetCurrentLocation = vi.fn();
+      const { useCurrentLocation } = await import('../hooks/useCurrentLocation');
+      vi.mocked(useCurrentLocation).mockReturnValue({
+        location: null,
+        loading: false,
+        error: null,
+        getCurrentLocation: mockGetCurrentLocation
+      });
+
+      render(
+        <GeofenceMap
+          coordinates={[]}
+          onCoordinatesChange={mockOnCoordinatesChange}
+        />
+      );
+
+      const locationButton = screen.getByLabelText('Go to my current location');
+      locationButton.focus();
+      
+      // Simulate Space key press
+      fireEvent.keyDown(locationButton, { key: ' ', code: 'Space' });
+      fireEvent.click(locationButton); // Space triggers click event on buttons
+
+      expect(mockGetCurrentLocation).toHaveBeenCalled();
+    });
+
+    it('should allow keyboard navigation to Clear All button', () => {
+      render(
+        <GeofenceMap
+          coordinates={mockCoordinates}
+          onCoordinatesChange={mockOnCoordinatesChange}
+        />
+      );
+
+      const clearButton = screen.getByText('Clear All');
+      
+      // Button should be focusable
+      clearButton.focus();
+      expect(document.activeElement).toBe(clearButton);
+    });
+
+    it('should have proper aria-label on My Location button', () => {
+      render(
+        <GeofenceMap
+          coordinates={[]}
+          onCoordinatesChange={mockOnCoordinatesChange}
+        />
+      );
+
+      const locationButton = screen.getByLabelText('Go to my current location');
+      expect(locationButton).toHaveAttribute('aria-label', 'Go to my current location');
+    });
+
+    it('should have aria-busy attribute during loading', async () => {
+      const { useCurrentLocation } = await import('../hooks/useCurrentLocation');
+      vi.mocked(useCurrentLocation).mockReturnValue({
+        location: null,
+        loading: true,
+        error: null,
+        getCurrentLocation: vi.fn()
+      });
+
+      render(
+        <GeofenceMap
+          coordinates={[]}
+          onCoordinatesChange={mockOnCoordinatesChange}
+        />
+      );
+
+      const locationButton = screen.getByLabelText('Go to my current location');
+      expect(locationButton).toHaveAttribute('aria-busy', 'true');
+    });
+
+    it('should announce loading state to screen readers', async () => {
+      const { useCurrentLocation } = await import('../hooks/useCurrentLocation');
+      vi.mocked(useCurrentLocation).mockReturnValue({
+        location: null,
+        loading: true,
+        error: null,
+        getCurrentLocation: vi.fn()
+      });
+
+      render(
+        <GeofenceMap
+          coordinates={[]}
+          onCoordinatesChange={mockOnCoordinatesChange}
+        />
+      );
+
+      // Check for aria-live region with loading message
+      const liveRegion = screen.getByRole('status');
+      expect(liveRegion).toHaveTextContent('Fetching your current location...');
+      expect(liveRegion).toHaveAttribute('aria-live', 'polite');
+      expect(liveRegion).toHaveAttribute('aria-atomic', 'true');
+    });
+
+    it('should have role="alert" on error messages', async () => {
+      const { useCurrentLocation } = await import('../hooks/useCurrentLocation');
+      vi.mocked(useCurrentLocation).mockReturnValue({
+        location: null,
+        loading: false,
+        error: 'Location access denied',
+        getCurrentLocation: vi.fn()
+      });
+
+      render(
+        <GeofenceMap
+          coordinates={[]}
+          onCoordinatesChange={mockOnCoordinatesChange}
+        />
+      );
+
+      const errorAlert = screen.getByRole('alert');
+      expect(errorAlert).toBeInTheDocument();
+      expect(errorAlert).toHaveTextContent('Location access denied');
+      expect(errorAlert).toHaveAttribute('aria-live', 'assertive');
+    });
+
+    it('should allow dismissing error message with keyboard', async () => {
+      const { useCurrentLocation } = await import('../hooks/useCurrentLocation');
+      vi.mocked(useCurrentLocation).mockReturnValue({
+        location: null,
+        loading: false,
+        error: 'Location access denied',
+        getCurrentLocation: vi.fn()
+      });
+
+      render(
+        <GeofenceMap
+          coordinates={[]}
+          onCoordinatesChange={mockOnCoordinatesChange}
+        />
+      );
+
+      const dismissButton = screen.getByLabelText('Dismiss error message');
+      expect(dismissButton).toBeInTheDocument();
+      
+      // Focus and click dismiss button
+      dismissButton.focus();
+      expect(document.activeElement).toBe(dismissButton);
+      
+      fireEvent.click(dismissButton);
+      
+      // Error should be dismissed
+      await waitFor(() => {
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      });
+    });
   });
 });

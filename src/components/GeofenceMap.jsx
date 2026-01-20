@@ -1,7 +1,21 @@
-import React, { useCallback, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Polygon, useMapEvents } from 'react-leaflet';
+import React, { useCallback, useMemo, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Polygon, useMapEvents, useMap, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { useCurrentLocation } from '../hooks/useCurrentLocation';
+
+// Custom Leaflet icon for current location marker
+const currentLocationIcon = L.divIcon({
+  className: 'current-location-marker',
+  html: `
+    <div class="current-location-marker-inner">
+      <div class="current-location-pulse"></div>
+      <div class="current-location-dot"></div>
+    </div>
+  `,
+  iconSize: [40, 40],
+  iconAnchor: [20, 20],
+});
 
 /**
  * GeofenceMap Component
@@ -22,6 +36,19 @@ const GeofenceMap = ({
   zoom = 13
 }) => {
   
+  // Use current location hook
+  const { location, loading, error, getCurrentLocation } = useCurrentLocation();
+  
+  // State for dismissing error messages
+  const [errorDismissed, setErrorDismissed] = React.useState(false);
+  
+  // Reset error dismissed state when error changes
+  useEffect(() => {
+    if (error) {
+      setErrorDismissed(false);
+    }
+  }, [error]);
+  
   // Convert coordinates to Leaflet format [lat, lng]
   const positions = useMemo(() => {
     return coordinates.map(coord => [coord.latitude, coord.longitude]);
@@ -40,6 +67,22 @@ const GeofenceMap = ({
         }
       }
     });
+    return null;
+  };
+
+  // Map centering component - handles centering when location changes
+  const MapCenterController = ({ location }) => {
+    const map = useMap();
+    
+    useEffect(() => {
+      if (location) {
+        // Use flyTo for smooth animation to the new location
+        map.flyTo([location.lat, location.lng], 16, {
+          duration: 1.5 // Animation duration in seconds
+        });
+      }
+    }, [location, map]);
+    
     return null;
   };
 
@@ -75,6 +118,16 @@ const GeofenceMap = ({
     }
   }, [coordinates, editable, onCoordinatesChange]);
 
+  // Handle current location button click
+  const handleCurrentLocation = useCallback(() => {
+    getCurrentLocation();
+  }, [getCurrentLocation]);
+
+  // Handle error dismissal
+  const handleErrorDismiss = useCallback(() => {
+    setErrorDismissed(true);
+  }, []);
+
   return (
     <div className="relative w-full h-full">
       <MapContainer
@@ -89,6 +142,7 @@ const GeofenceMap = ({
         />
         
         <MapClickHandler />
+        <MapCenterController location={location} />
         
         {/* Render markers for each coordinate */}
         {positions.map((position, index) => (
@@ -103,6 +157,19 @@ const GeofenceMap = ({
             title={`Point ${index + 1}: ${coordinates[index].latitude.toFixed(6)}, ${coordinates[index].longitude.toFixed(6)}`}
           />
         ))}
+        
+        {/* Render current location marker */}
+        {location && (
+          <Marker
+            position={[location.lat, location.lng]}
+            icon={currentLocationIcon}
+            draggable={false}
+          >
+            <Tooltip permanent={false} direction="top">
+              Your current location
+            </Tooltip>
+          </Marker>
+        )}
         
         {/* Render polygon if we have at least 3 points */}
         {positions.length >= 3 && (
@@ -121,6 +188,41 @@ const GeofenceMap = ({
       {/* Control buttons */}
       {editable && (
         <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
+          {/* Screen reader announcement for loading state */}
+          <div 
+            className="sr-only" 
+            role="status" 
+            aria-live="polite" 
+            aria-atomic="true"
+          >
+            {loading ? 'Fetching your current location...' : ''}
+          </div>
+          
+          <button
+            onClick={handleCurrentLocation}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            disabled={loading}
+            aria-label="Go to my current location"
+            aria-busy={loading}
+          >
+            {loading ? (
+              <>
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Loading...</span>
+              </>
+            ) : (
+              <>
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span>My Location</span>
+              </>
+            )}
+          </button>
           <button
             onClick={handleClearAll}
             className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg transition-colors"
@@ -134,6 +236,33 @@ const GeofenceMap = ({
               {coordinates.length < 3 ? 'Add at least 3 points' : 'Click point to delete'}
             </div>
           </div>
+          
+          {/* Error message display */}
+          {error && !errorDismissed && (
+            <div 
+              className="bg-red-500/90 backdrop-blur-sm border-2 border-red-400 text-white px-4 py-3 rounded-lg shadow-lg flex items-start gap-3 max-w-xs"
+              role="alert"
+              aria-live="assertive"
+            >
+              <div className="flex-shrink-0 mt-0.5">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">{error}</p>
+              </div>
+              <button
+                onClick={handleErrorDismiss}
+                className="flex-shrink-0 text-white hover:text-red-100 transition-colors"
+                aria-label="Dismiss error message"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

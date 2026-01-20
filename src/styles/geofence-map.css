@@ -1,0 +1,53 @@
+/* Current Location Marker Styles */
+
+.current-location-marker {
+  background: transparent;
+  border: none;
+}
+
+.current-location-marker-inner {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Pulsing animation ring */
+.current-location-pulse {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(59, 130, 246, 0.3);
+  animation: pulse-animation 2s ease-out infinite;
+}
+
+/* Center dot */
+.current-location-dot {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #3b82f6;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1;
+}
+
+/* Pulse animation keyframes */
+@keyframes pulse-animation {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}

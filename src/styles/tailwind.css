@@ -7,6 +7,9 @@
 /* Import KPI animations */
 @import '../design-system/styles/kpi-animations.css';
 
+/* Import geofence map styles */
+@import './geofence-map.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
