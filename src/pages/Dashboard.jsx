@@ -97,6 +97,14 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [geofences, setGeofences] = useState([]);
   
+  // Previous stats for trend calculation
+  const [previousStats, setPreviousStats] = useState({
+    totalAnalytics: 0,
+    devicesCount: 0,
+    recentCount: 0,
+    timestamp: Date.now()
+  });
+  
   // Enhanced analytics API instance
   const [analyticsAPI] = useState(() => new EnhancedAnalyticsAPI({
     maxRetries: 3,
@@ -131,23 +139,63 @@ export default function Dashboard() {
   }, [filteredDevices, shouldFilterDevices]);
 
   // Filter analytics data by allowed devices (Requirement 4.2)
+  // AND filter by packet type: only packet_N, packet_A, and packet_E
   const filteredAnalytics = useMemo(() => {
-    if (!allowedIMEIs) {
-      return allAnalytics; // No filtering for ADMIN users
+    let filtered = allAnalytics;
+    
+    // Log packet type distribution for debugging
+    if (allAnalytics.length > 0) {
+      const packetTypeBreakdown = allAnalytics.reduce((acc, record) => {
+        const type = record.type || 'unknown';
+        acc[type] = (acc[type] || 0) + 1;
+        return acc;
+      }, {});
+      console.log('📊 Packet Type Breakdown (All Analytics):', packetTypeBreakdown);
+      console.log('📊 Total Records:', allAnalytics.length);
     }
-    return allAnalytics.filter(a => 
-      a.imei && allowedIMEIs.includes(a.imei.toLowerCase())
-    );
+    
+    // Filter by device permissions (for NON-ADMIN users)
+    if (allowedIMEIs) {
+      filtered = filtered.filter(a => 
+        a.imei && allowedIMEIs.includes(a.imei.toLowerCase())
+      );
+      console.log('📱 After device filtering:', filtered.length, 'records');
+    }
+    
+    // Filter by packet type: only Normal (packet_N), Alert (packet_A), and Error (packet_E)
+    const beforeTypeFilter = filtered.length;
+    filtered = filtered.filter(a => {
+      const packetType = a.type || '';
+      return packetType === 'packet_N' || packetType === 'packet_A' || packetType === 'packet_E';
+    });
+    
+    console.log('🔍 Packet Type Filter Applied:');
+    console.log('   Before:', beforeTypeFilter, 'records');
+    console.log('   After:', filtered.length, 'records (packet_N + packet_A + packet_E only)');
+    console.log('   Filtered out:', beforeTypeFilter - filtered.length, 'records (packet_H, etc.)');
+    
+    return filtered;
   }, [allAnalytics, allowedIMEIs]);
 
   // Filter recent analytics by allowed devices (Requirement 4.2)
+  // AND filter by packet type: only packet_N, packet_A, and packet_E
   const filteredRecentAnalytics = useMemo(() => {
-    if (!allowedIMEIs) {
-      return recentAnalytics; // No filtering for ADMIN users
+    let filtered = recentAnalytics;
+    
+    // Filter by device permissions (for NON-ADMIN users)
+    if (allowedIMEIs) {
+      filtered = filtered.filter(a => 
+        a.imei && allowedIMEIs.includes(a.imei.toLowerCase())
+      );
     }
-    return recentAnalytics.filter(a => 
-      a.imei && allowedIMEIs.includes(a.imei.toLowerCase())
-    );
+    
+    // Filter by packet type: only Normal (packet_N), Alert (packet_A), and Error (packet_E)
+    filtered = filtered.filter(a => {
+      const packetType = a.type || '';
+      return packetType === 'packet_N' || packetType === 'packet_A' || packetType === 'packet_E';
+    });
+    
+    return filtered;
   }, [recentAnalytics, allowedIMEIs]);
 
   // Filter and limit recent analytics to show only 5 records with speed > 0
@@ -252,11 +300,43 @@ export default function Dashboard() {
   })();
 
   // Calculate stats with filtered data (Requirement 4.2)
-  const stats = {
-    devicesCount: filteredDevices.length,
-    recentCount: displayRecentAnalytics.length,
-    totalAnalytics: shouldFilterDevices() ? filteredAnalytics.length : Number(totalAnalytics) || 0
-  };
+  // Total analytics now counts only packet_N and packet_A
+  const stats = useMemo(() => {
+    // Always use filteredAnalytics.length since it now includes packet type filtering
+    const currentTotalAnalytics = filteredAnalytics.length;
+    const currentDevicesCount = filteredDevices.length;
+    const currentRecentCount = displayRecentAnalytics.length;
+    
+    // Calculate trend percentages based on previous stats
+    const calculateTrend = (current, previous) => {
+      if (previous === 0) return { trend: 'stable', value: '0%' };
+      const change = ((current - previous) / previous) * 100;
+      
+      if (Math.abs(change) < 1) {
+        return { trend: 'stable', value: '0%' };
+      } else if (change > 0) {
+        return { trend: 'up', value: `+${change.toFixed(1)}%` };
+      } else {
+        return { trend: 'down', value: `${change.toFixed(1)}%` };
+      }
+    };
+    
+    const totalAnalyticsTrend = calculateTrend(currentTotalAnalytics, previousStats.totalAnalytics);
+    const devicesTrend = calculateTrend(currentDevicesCount, previousStats.devicesCount);
+    const recentTrend = calculateTrend(currentRecentCount, previousStats.recentCount);
+    
+    return {
+      devicesCount: currentDevicesCount,
+      recentCount: currentRecentCount,
+      totalAnalytics: currentTotalAnalytics,
+      totalAnalyticsTrend: totalAnalyticsTrend.trend,
+      totalAnalyticsTrendValue: totalAnalyticsTrend.value,
+      devicesTrend: devicesTrend.trend,
+      devicesTrendValue: devicesTrend.value,
+      recentTrend: recentTrend.trend,
+      recentTrendValue: recentTrend.value
+    };
+  }, [filteredAnalytics, filteredDevices, displayRecentAnalytics, previousStats]);
 
   // Load dashboard data
   const loadDashboardData = async () => {
@@ -300,16 +380,17 @@ export default function Dashboard() {
           return { devices: [], full: [] };
         }),
         
-        // Use enhanced analytics with progress tracking and chunking
-        getAllAnalyticsSafe({
-          pageSize: 1000,
-          maxPages: 20, // Limit to prevent excessive loading
-          onProgress: analyticsProgress,
-          includeRawData: false
-        }).catch(err => {
-          console.warn("Enhanced analytics failed, trying basic fallback:", err.message);
-          // Fallback to basic analytics with smaller limit
-          return getAllAnalytics().catch(fallbackErr => {
+        // CRITICAL: Use getAllAnalytics() directly to ensure ALL data is loaded
+        // getAllAnalyticsSafe has pagination limits that might not load all 3314+ records
+        getAllAnalytics().catch(err => {
+          console.warn("getAllAnalytics failed, trying enhanced analytics:", err.message);
+          // Fallback to enhanced analytics with very high limits
+          return getAllAnalyticsSafe({
+            pageSize: 1000,
+            maxPages: 100,
+            onProgress: analyticsProgress,
+            includeRawData: false
+          }).catch(fallbackErr => {
             console.error("All analytics loading methods failed:", fallbackErr.message);
             return [];
           });
@@ -322,6 +403,29 @@ export default function Dashboard() {
         devicesCount: Array.isArray(devicesData?.devices) ? devicesData.devices.length : 0,
         analyticsCount: allData?.length
       });
+      
+      console.log("📊 Raw Analytics Data Loaded:", {
+        totalRecords: allData?.length || 0,
+        isArray: Array.isArray(allData),
+        sampleRecord: allData?.[0]
+      });
+      
+      // Log packet type distribution from raw data
+      if (Array.isArray(allData) && allData.length > 0) {
+        const rawPacketTypeBreakdown = allData.reduce((acc, record) => {
+          const type = record.type || 'unknown';
+          acc[type] = (acc[type] || 0) + 1;
+          return acc;
+        }, {});
+        console.log('📊 Raw Data Packet Type Breakdown:', rawPacketTypeBreakdown);
+        console.log('📊 Expected packet_N count: 3314, Actual loaded:', rawPacketTypeBreakdown.packet_N || 0);
+        
+        if ((rawPacketTypeBreakdown.packet_N || 0) < 3314) {
+          console.warn('⚠️ WARNING: Not all packet_N records were loaded!');
+          console.warn(`   Expected: 3314, Got: ${rawPacketTypeBreakdown.packet_N || 0}`);
+          console.warn(`   Missing: ${3314 - (rawPacketTypeBreakdown.packet_N || 0)} records`);
+        }
+      }
 
       setTotalAnalytics(countData || 0);
       setRecentAnalytics(Array.isArray(recentData) ? recentData : []);
@@ -336,6 +440,41 @@ export default function Dashboard() {
       setDevices(devicesList.slice(0, 10));
       
       setAllAnalytics(Array.isArray(allData) ? allData : []);
+      
+      // Update previous stats for trend calculation (only on successful load)
+      setPreviousStats(prev => {
+        // Only update if we have valid data and it's been at least 5 seconds since last update
+        const timeSinceLastUpdate = Date.now() - prev.timestamp;
+        if (timeSinceLastUpdate < 5000) {
+          return prev; // Don't update too frequently
+        }
+        
+        // Calculate current values for comparison
+        // Filter by packet type: only packet_N, packet_A, and packet_E
+        const filteredByType = Array.isArray(allData) 
+          ? allData.filter(a => {
+              const packetType = a.type || '';
+              return packetType === 'packet_N' || packetType === 'packet_A' || packetType === 'packet_E';
+            })
+          : [];
+        
+        // Then filter by device permissions if needed
+        const currentTotal = shouldFilterDevices() 
+          ? filteredByType.filter(a => {
+              const allowedIMEIs = devicesList
+                .filter(d => d.imei)
+                .map(d => d.imei.toLowerCase());
+              return a.imei && allowedIMEIs.includes(a.imei.toLowerCase());
+            }).length
+          : filteredByType.length;
+        
+        return {
+          totalAnalytics: currentTotal,
+          devicesCount: devicesList.length,
+          recentCount: Array.isArray(recentData) ? recentData.length : 0,
+          timestamp: Date.now()
+        };
+      });
       
       // Load sample geofences for analytics
       // In a real app, this would come from an API
@@ -604,12 +743,13 @@ export default function Dashboard() {
           devicesCount: stats.devicesCount,
           recentCount: stats.recentCount,
           totalAnalytics: stats.totalAnalytics,
-          // Add trend data for enhanced statistics
-          devicesTrend: "stable",
-          recentTrend: "up",
-          recentTrendValue: "+5%",
-          totalTrend: "up",
-          totalTrendValue: "+12%"
+          // Use calculated trend data
+          devicesTrend: stats.devicesTrend,
+          devicesTrendValue: stats.devicesTrendValue,
+          recentTrend: stats.recentTrend,
+          recentTrendValue: stats.recentTrendValue,
+          totalTrend: stats.totalAnalyticsTrend,
+          totalTrendValue: stats.totalAnalyticsTrendValue
         }}
         onRefresh={refreshDashboard}
         loading={loading}
@@ -627,11 +767,11 @@ export default function Dashboard() {
             <KpiCard
               title="Total Analytics"
               value={stats.totalAnalytics}
-              subtitle="All datapoints collected"
+              subtitle="Normal, Alert & Error packets"
               type="performance"
               colorScheme="blue"
-              trend="up"
-              trendValue="+12%"
+              trend={stats.totalAnalyticsTrend}
+              trendValue={stats.totalAnalyticsTrendValue}
               size="lg"
               animated={true}
               className="relative overflow-hidden group border-2 border-blue-500/50"
@@ -651,8 +791,8 @@ export default function Dashboard() {
               subtitle="Connected IoT devices"
               type="status"
               colorScheme="green"
-              trend="stable"
-              trendValue="100%"
+              trend={stats.devicesTrend}
+              trendValue={stats.devicesTrendValue}
               size="lg"
               animated={true}
               className="relative overflow-hidden group border-2 border-green-500/50"
@@ -672,8 +812,8 @@ export default function Dashboard() {
               subtitle="Latest data points"
               type="growth"
               colorScheme="amber"
-              trend="up"
-              trendValue="+5%"
+              trend={stats.recentTrend}
+              trendValue={stats.recentTrendValue}
               size="lg"
               animated={true}
               className="relative overflow-hidden group border-2 border-amber-500/50"
@@ -992,7 +1132,8 @@ export default function Dashboard() {
         animated={true}
       />
 
-      {/* Recent Analytics Table with Enhanced Styling */}
+      {/* Recent Analytics Table with Enhanced Styling - HIDDEN */}
+      {/* 
       <ContentSection variant="subtle" colorScheme="purple" padding="md" spacing="sm" bordered={true}>
         <EnhancedTableContainer 
           variant="enhanced" 
@@ -1000,7 +1141,7 @@ export default function Dashboard() {
           padding="md"
           className="relative overflow-hidden border-2 border-purple-500/50 rounded-xl bg-gradient-to-br from-purple-900/20 via-slate-900/20 to-purple-900/20 backdrop-blur-sm"
         >
-          {/* Enhanced Header with Gradient Design */}
+          {/* Enhanced Header with Gradient Design *-/}
           <div className="mb-4">
             <div className="flex items-center justify-between w-full mb-4">
               <div className="flex-1">
@@ -1012,7 +1153,7 @@ export default function Dashboard() {
                 </p>
               </div>
               
-              {/* Refresh Button and Statistics Badge */}
+              {/* Refresh Button and Statistics Badge *-/}
               <div className="ml-6 flex items-center gap-3">
                 <button
                   onClick={refreshDashboard}
@@ -1037,11 +1178,11 @@ export default function Dashboard() {
               </div>
             </div>
             
-            {/* Enhanced Visual Divider */}
+            {/* Enhanced Visual Divider *-/}
             <div className="h-px bg-gradient-to-r from-transparent via-purple-400/40 to-transparent" />
           </div>
 
-          {/* Enhanced Table with Color-Coded Cells and Improved Typography */}
+          {/* Enhanced Table with Color-Coded Cells and Improved Typography *-/}
           <EnhancedTable
             variant="enhanced"
             size="md"
@@ -1261,7 +1402,7 @@ export default function Dashboard() {
             }}
           />
           
-          {/* Enhanced Table Footer with Statistics */}
+          {/* Enhanced Table Footer with Statistics *-/}
           <div className="mt-4 pt-4 border-t border-white/10">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -1284,6 +1425,7 @@ export default function Dashboard() {
           </div>
         </EnhancedTableContainer>
       </ContentSection>
+      */}
 
       {/* Trip Analytics Section */}
       <SectionDivider 
