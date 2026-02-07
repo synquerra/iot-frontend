@@ -10,6 +10,7 @@ import { parseTemperature } from "../utils/telemetryTransformers";
 import TripSummary from "../components/TripSummary";
 import { sendDeviceCommand } from "../utils/deviceCommandAPI";
 import { Notification } from "../components/Notification";
+import { mapAlertErrorCode } from "../utils/alertErrorMapper";
 /* ------------------------------------
    TIMESTAMP HELPERS (RAW TIMESTAMP LOGIC)
 ------------------------------------- */
@@ -631,15 +632,31 @@ export default function DeviceDetails() {
     (p) => p.packetType === "N" || p.packetType === "PACKET_N"
   );
   const normal = normalPackets[0] || {};
+  
+  // Filter alerts: packetType 'A' OR alert code starts with 'A'
   const alertPackets = packets
-    .filter((p) => p.packetType === "A")
+    .filter((p) => {
+      if (p.packetType === "A" && (!p.alert || !String(p.alert).toUpperCase().startsWith("E"))) {
+        return true;
+      }
+      if (p.alert && String(p.alert).toUpperCase().startsWith("A")) {
+        return true;
+      }
+      return false;
+    })
     .slice(0, 5);
+  
+  // Filter errors: packetType 'E' OR alert code starts with 'E'
   const errorPackets = packets
-    .filter(
-      (p) =>
-        p.packetType === "E" ||
-        (p.packetType === "A" && p.alert && p.alert.startsWith("E"))
-    )
+    .filter((p) => {
+      if (p.packetType === "E") {
+        return true;
+      }
+      if (p.alert && String(p.alert).toUpperCase().startsWith("E")) {
+        return true;
+      }
+      return false;
+    })
     .slice(0, 5);
   const highSpeedCount = packets.filter((p) => p.speed > 70).length;
   const highTempCount = packets.filter((p) => {
@@ -764,46 +781,157 @@ export default function DeviceDetails() {
         </Card.Content>
       </Card>
 
-      {/* Latest Packet Information - Always Visible */}
+      {/* Status Section - GPS, Speed, Battery, Signal at Top */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card variant="glass" colorScheme="green" padding="lg" hover={true} className="group">
+          <Card.Content>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="text-green-200/80 text-sm font-medium mb-1">GPS & Speed</div>
+                <div className="text-white text-2xl font-bold mb-2">
+                  {normal.speed != null && !isNaN(Number(normal.speed)) ? `${normal.speed} km/h` : '-'}
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className={cn('w-2 h-2 rounded-full animate-pulse', getGpsStatus(normal).color.replace('bg-', 'bg-'))}></div>
+                    <span className="text-green-200/70 text-xs">{getGpsStatus(normal).text}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={cn('w-2 h-2 rounded-full animate-pulse', getSpeedStatus(normal).color.replace('bg-', 'bg-'))}></div>
+                    <span className="text-green-200/70 text-xs">{getSpeedStatus(normal).text}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+            </div>
+          </Card.Content>
+        </Card>
+
+        <Card variant="glass" colorScheme="purple" padding="lg" hover={true} className="group">
+          <Card.Content>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="text-purple-200/80 text-sm font-medium mb-1">Battery</div>
+                <div className="text-white text-2xl font-bold mb-2">
+                  {(() => {
+                    const b = normal.battery;
+                    const n = b == null ? NaN : Number(String(b).replace(/[^\d.-]/g, ""));
+                    return !isNaN(n) ? `${n}%` : '-';
+                  })()}
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className={cn('w-2 h-2 rounded-full animate-pulse', getBatteryStatus(normal).color.replace('bg-', 'bg-'))}></div>
+                    <span className="text-purple-200/70 text-xs">{getBatteryStatus(normal).text}</span>
+                  </div>
+                  <div className="text-purple-200/60 text-xs">
+                    Drain: {computeBatteryDrainTime(packets)}
+                  </div>
+                  <div className="text-purple-200/60 text-xs">
+                    Runtime: {computeBatteryRuntimeHours(packets)} hrs
+                  </div>
+                  <div className="text-purple-200/60 text-xs">
+                    Updated: {timeAgo(normal.deviceTimestamp)}
+                  </div>
+                </div>
+              </div>
+              <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <rect x="2" y="7" width="18" height="11" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M22 10v4" strokeLinecap="round" strokeLinejoin="round"/>
+                  <rect x="5" y="10" width="12" height="5" fill="currentColor" opacity="0.6"/>
+                </svg>
+              </div>
+            </div>
+          </Card.Content>
+        </Card>
+
+        <Card variant="glass" colorScheme="amber" padding="lg" hover={true} className="group">
+          <Card.Content>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="text-amber-200/80 text-sm font-medium mb-1">Signal</div>
+                <div className="text-white text-2xl font-bold mb-2">
+                  {normal.signal != null && !isNaN(Number(normal.signal)) ? normal.signal : '-'}
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+                  <span className="text-amber-200/70 text-xs">Strength</span>
+                </div>
+              </div>
+              <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                </svg>
+              </div>
+            </div>
+          </Card.Content>
+        </Card>
+      </div>
+
+      {/* Latest Packet Information */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Latest Packet (Any Type) */}
         <Card variant="glass" colorScheme={
           latest.packetType === 'N' ? 'green' : 
-          latest.packetType === 'A' ? 'amber' : 'red'
+          (() => {
+            const alertCode = String(latest.alert || '').toUpperCase();
+            if (alertCode.startsWith('A')) return 'amber';
+            if (alertCode.startsWith('E')) return 'red';
+            return latest.packetType === 'A' ? 'amber' : 'red';
+          })()
         } padding="lg">
           <Card.Content>
             <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
               <div className={cn(
                 'w-3 h-3 rounded-full animate-pulse',
                 latest.packetType === 'N' ? 'bg-green-400' : 
-                latest.packetType === 'A' ? 'bg-amber-400' : 'bg-red-400'
+                (() => {
+                  const alertCode = String(latest.alert || '').toUpperCase();
+                  if (alertCode.startsWith('A')) return 'bg-amber-400';
+                  if (alertCode.startsWith('E')) return 'bg-red-400';
+                  return latest.packetType === 'A' ? 'bg-amber-400' : 'bg-red-400';
+                })()
               )}></div>
-              Latest Packet ({latest.packetType})
-              {latest.alert && (
-                <span className="text-xs bg-white/20 px-2 py-1 rounded">
-                  {latest.alert}
-                </span>
-              )}
+              {(() => {
+                if (latest.packetType === 'N') {
+                  return 'Latest Normal Packet';
+                } else if (latest.alert) {
+                  // Auto-detect packet type from alert code if needed
+                  let detectedPacketType = latest.packetType;
+                  const alertCode = String(latest.alert).toUpperCase();
+                  
+                  // If alert code starts with E, it's an error
+                  if (alertCode.startsWith('E')) {
+                    detectedPacketType = 'E';
+                  }
+                  // If alert code starts with A, it's an alert
+                  else if (alertCode.startsWith('A')) {
+                    detectedPacketType = 'A';
+                  }
+                  
+                  const mapped = mapAlertErrorCode(latest.alert, detectedPacketType);
+                  return mapped.description;
+                } else {
+                  return `Latest ${latest.packetType === 'A' ? 'Alert' : 'Error'} Packet`;
+                }
+              })()}
             </h3>
             <div className="space-y-3 text-sm">
               <div className="flex justify-between items-center py-2 border-b border-white/10">
-                <span className="text-white/70">IMEI</span>
+                <span className="text-white/70">Device IMEI</span>
                 <span className="font-mono text-white bg-white/10 px-2 py-1 rounded text-xs">{latest.imei}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-white/10">
-                <span className="text-white/70">Packet Type</span>
-                <span className="text-white font-semibold">{latest.packetType}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-white/10">
-                <span className="text-white/70">Device Time</span>
-                <span className="text-white text-xs">{extractRawTime(latest.deviceRawTimestamp)}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-white/10">
-                <span className="text-white/70">Server Time</span>
+                <span className="text-white/70">Timestamp</span>
                 <span className="text-white text-xs">{formatIST(latest.serverTimestampISO || latest.deviceRawTimestamp)}</span>
               </div>
               <div className="flex justify-between items-center py-2">
-                <span className="text-white/70">Time Ago</span>
+                <span className="text-white/70">Received</span>
                 <span className="text-white font-medium">{timeAgo(latest.serverTimestampISO || latest.deviceRawTimestamp)}</span>
               </div>
             </div>
@@ -815,7 +943,7 @@ export default function DeviceDetails() {
           <Card.Content>
             <h3 className="text-green-300 text-lg font-semibold mb-4 flex items-center gap-2">
               <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-              Latest Normal Packet (N)
+              Device Status
               <div className="flex gap-2 ml-auto">
                 <span className={cn('text-xs px-2 py-1 rounded', getGpsStatus(normal).color)}>
                   {getGpsStatus(normal).text}
@@ -831,43 +959,60 @@ export default function DeviceDetails() {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-green-200/80">GEO ID</span>
+                  <span className="text-green-200/80" title="Geofence ID when device enters any geofence">GEO ID</span>
                   <span className="text-white">{normal.geoid ?? "-"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-green-200/80">Latitude</span>
-                  <span className="text-white font-mono text-xs">{normal.latitude ?? "-"}</span>
+                  <span className="text-green-200/80" title="View device location on Google Maps">View on Map</span>
+                  {(() => {
+                    const lat = Number(normal.latitude);
+                    const lon = Number(normal.longitude);
+                    const hasValidCoords = lat && lon && !isNaN(lat) && !isNaN(lon);
+                    
+                    return hasValidCoords ? (
+                      <a
+                        href={`https://www.google.com/maps?q=${lat},${lon}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-green-400 hover:text-green-300 text-xs underline flex items-center gap-1"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Open Maps
+                      </a>
+                    ) : (
+                      <span className="text-white/50 text-xs">No location</span>
+                    );
+                  })()}
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-green-200/80">Speed</span>
+                  <span className="text-green-200/80" title="Current speed in kilometers per hour">Speed</span>
                   <span className="text-white">{normal.speed ?? "-"} km/h</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-green-200/80">Signal</span>
-                  <span className="text-white">{normal.signal ?? "-"}</span>
+                  <span className="text-green-200/80" title="Current signal strength percentage">Signal</span>
+                  <span className="text-white">{normal.signal ?? "-"}%</span>
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-green-200/80">GEO Number</span>
+                  <span className="text-green-200/80" title="Time interval for normal packet transmission">Interval</span>
                   <span className="text-white">-</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-green-200/80">Longitude</span>
-                  <span className="text-white font-mono text-xs">{normal.longitude ?? "-"}</span>
+                  <span className="text-green-200/80" title="Current device temperature in Celsius">Temperature</span>
+                  <span className="text-white">{parseTemperature(normal.rawTemperature)}°C</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-green-200/80">Device Time</span>
+                  <span className="text-green-200/80" title="Current date and time from device">Timestamp</span>
                   <span className="text-white text-xs">{formatIST(normal.deviceTimestamp)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-green-200/80">Battery</span>
+                  <span className="text-green-200/80" title="Current battery percentage">Battery</span>
                   <span className="text-white">{normal.battery ?? "-"}%</span>
                 </div>
-              </div>
-              <div className="col-span-2 flex justify-between pt-2 border-t border-white/10">
-                <span className="text-green-200/80">Temperature</span>
-                <span className="text-white">{parseTemperature(normal.rawTemperature)}°C</span>
               </div>
             </div>
           </Card.Content>
@@ -877,89 +1022,6 @@ export default function DeviceDetails() {
       {/* Tab Content */}
       {activeTab === "overview" && (
         <div className="space-y-6">
-          {/* Device Status Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card variant="glass" colorScheme="green" padding="lg" hover={true} className="group">
-              <Card.Content>
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="text-green-200/80 text-sm font-medium mb-1">GPS Status</div>
-                    <div className="text-white text-2xl font-bold mb-2">{getGpsStatus(normal).text}</div>
-                    <div className="flex items-center gap-2">
-                      <div className={cn('w-2 h-2 rounded-full animate-pulse', getGpsStatus(normal).color.replace('bg-', 'bg-'))}></div>
-                      <span className="text-green-200/70 text-xs">Real-time</span>
-                    </div>
-                  </div>
-                  <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </div>
-                </div>
-              </Card.Content>
-            </Card>
-
-            <Card variant="glass" colorScheme="blue" padding="lg" hover={true} className="group">
-              <Card.Content>
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="text-blue-200/80 text-sm font-medium mb-1">Speed</div>
-                    <div className="text-white text-2xl font-bold mb-2">{normal.speed || 0} km/h</div>
-                    <div className="flex items-center gap-2">
-                      <div className={cn('w-2 h-2 rounded-full animate-pulse', getSpeedStatus(normal).color.replace('bg-', 'bg-'))}></div>
-                      <span className="text-blue-200/70 text-xs">{getSpeedStatus(normal).text}</span>
-                    </div>
-                  </div>
-                  <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
-                </div>
-              </Card.Content>
-            </Card>
-
-            <Card variant="glass" colorScheme="purple" padding="lg" hover={true} className="group">
-              <Card.Content>
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="text-purple-200/80 text-sm font-medium mb-1">Battery</div>
-                    <div className="text-white text-2xl font-bold mb-2">{normal.battery || 0}%</div>
-                    <div className="flex items-center gap-2">
-                      <div className={cn('w-2 h-2 rounded-full animate-pulse', getBatteryStatus(normal).color.replace('bg-', 'bg-'))}></div>
-                      <span className="text-purple-200/70 text-xs">{getBatteryStatus(normal).text}</span>
-                    </div>
-                  </div>
-                  <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                  </div>
-                </div>
-              </Card.Content>
-            </Card>
-
-            <Card variant="glass" colorScheme="amber" padding="lg" hover={true} className="group">
-              <Card.Content>
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="text-amber-200/80 text-sm font-medium mb-1">Signal</div>
-                    <div className="text-white text-2xl font-bold mb-2">{normal.signal || 0}</div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
-                      <span className="text-amber-200/70 text-xs">Strength</span>
-                    </div>
-                  </div>
-                  <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-                    </svg>
-                  </div>
-                </div>
-              </Card.Content>
-            </Card>
-          </div>
 
           {/* Device Information */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1006,14 +1068,6 @@ export default function DeviceDetails() {
                 </h3>
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-white/70">Latitude</span>
-                    <span className="font-mono text-white text-xs">{normal.latitude || "-"}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-white/70">Longitude</span>
-                    <span className="font-mono text-white text-xs">{normal.longitude || "-"}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
                     <span className="text-white/70">Distance Today</span>
                     <span className="text-white">{computeTodayDistance(packets)} km</span>
                   </div>
@@ -1052,35 +1106,6 @@ export default function DeviceDetails() {
             </Card>
           </div>
 
-          {/* Battery Insights */}
-          <Card variant="glass" colorScheme="purple" padding="lg">
-            <Card.Content>
-              <h3 className="text-purple-300 text-lg font-semibold mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012 2v2M7 7h10" />
-                </svg>
-                Battery Insights
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-                <div className="bg-white/5 rounded-lg p-4">
-                  <div className="text-purple-200/80 text-xs font-medium mb-2">Health Status</div>
-                  <div className="text-white text-lg font-bold">{getBatteryStatus(normal).text}</div>
-                </div>
-                <div className="bg-white/5 rounded-lg p-4">
-                  <div className="text-purple-200/80 text-xs font-medium mb-2">Runtime Left</div>
-                  <div className="text-white text-lg font-bold">{computeBatteryRuntimeHours(packets)} hrs</div>
-                </div>
-                <div className="bg-white/5 rounded-lg p-4">
-                  <div className="text-purple-200/80 text-xs font-medium mb-2">Drain Time (100→current%)</div>
-                  <div className="text-white text-lg font-bold">{computeBatteryDrainTime(packets)}</div>
-                </div>
-                <div className="bg-white/5 rounded-lg p-4">
-                  <div className="text-purple-200/80 text-xs font-medium mb-2">Last Update</div>
-                  <div className="text-white text-lg font-bold">{timeAgo(normal.deviceTimestamp)}</div>
-                </div>
-              </div>
-            </Card.Content>
-          </Card>
         </div>
       )}
 
@@ -1273,24 +1298,37 @@ export default function DeviceDetails() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {alertPackets.map((alert, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-amber-500/20">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-amber-500/20 rounded-full flex items-center justify-center">
-                          <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                          </svg>
+                  {alertPackets.map((alert, i) => {
+                    // Auto-detect packet type from alert code
+                    let detectedPacketType = 'A';
+                    const alertCode = String(alert.alert || '').toUpperCase();
+                    
+                    if (alertCode.startsWith('E')) {
+                      detectedPacketType = 'E';
+                    } else if (alertCode.startsWith('A')) {
+                      detectedPacketType = 'A';
+                    }
+                    
+                    const mapped = mapAlertErrorCode(alert.alert, detectedPacketType);
+                    return (
+                      <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-amber-500/20">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-amber-500/20 rounded-full flex items-center justify-center">
+                            <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <div className="text-amber-300 font-semibold text-sm">{mapped.description}</div>
+                            <div className="text-white/70 text-xs">{timeAgo(alert.deviceRawTimestamp)}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-amber-300 font-semibold">A({alert.alert})</div>
-                          <div className="text-white/70 text-xs">{timeAgo(alert.deviceRawTimestamp)}</div>
+                        <div className="text-amber-200 text-sm">
+                          {formatIST(alert.deviceRawTimestamp)}
                         </div>
                       </div>
-                      <div className="text-amber-200 text-sm">
-                        {formatIST(alert.deviceRawTimestamp)}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </Card.Content>
@@ -1320,24 +1358,37 @@ export default function DeviceDetails() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {errorPackets.map((error, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-red-500/20">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
-                          <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
+                  {errorPackets.map((error, i) => {
+                    // Auto-detect packet type from alert code
+                    let detectedPacketType = 'E';
+                    const alertCode = String(error.alert || '').toUpperCase();
+                    
+                    if (alertCode.startsWith('E')) {
+                      detectedPacketType = 'E';
+                    } else if (alertCode.startsWith('A')) {
+                      detectedPacketType = 'A';
+                    }
+                    
+                    const mapped = mapAlertErrorCode(error.alert, detectedPacketType);
+                    return (
+                      <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-red-500/20">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
+                            <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <div className="text-red-300 font-semibold text-sm">{mapped.description}</div>
+                            <div className="text-white/70 text-xs">{timeAgo(error.deviceRawTimestamp)}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-red-300 font-semibold">{error.alert}</div>
-                          <div className="text-white/70 text-xs">{timeAgo(error.deviceRawTimestamp)}</div>
+                        <div className="text-red-200 text-sm">
+                          {formatIST(error.deviceRawTimestamp)}
                         </div>
                       </div>
-                      <div className="text-red-200 text-sm">
-                        {formatIST(error.deviceRawTimestamp)}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </Card.Content>

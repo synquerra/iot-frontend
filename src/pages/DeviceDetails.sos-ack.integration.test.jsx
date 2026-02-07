@@ -63,7 +63,8 @@ describe('DeviceDetails - SOS ACK Button Integration Tests', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
+    // Don't use fake timers for these integration tests as they interfere with async operations
+    // vi.useFakeTimers();
     
     // Setup default mock responses
     analytics.getAnalyticsByImei.mockResolvedValue(mockPackets);
@@ -72,8 +73,8 @@ describe('DeviceDetails - SOS ACK Button Integration Tests', () => {
   });
 
   afterEach(() => {
-    vi.runOnlyPendingTimers();
-    vi.useRealTimers();
+    // vi.runOnlyPendingTimers();
+    // vi.useRealTimers();
   });
 
   /**
@@ -445,6 +446,9 @@ describe('DeviceDetails - SOS ACK Button Integration Tests', () => {
       const { user } = await renderDeviceDetails();
       const ackButton = await navigateToAlertsTab(user);
       
+      // Use fake timers after rendering to control setTimeout
+      vi.useFakeTimers();
+      
       // Click the button
       await user.click(ackButton);
       
@@ -457,18 +461,20 @@ describe('DeviceDetails - SOS ACK Button Integration Tests', () => {
       expect(screen.getByRole('alert')).toBeInTheDocument();
       
       // Advance time by 4 seconds (less than 5)
-      vi.advanceTimersByTime(4000);
+      await vi.advanceTimersByTimeAsync(4000);
       
       // Notification should still be visible
       expect(screen.getByRole('alert')).toBeInTheDocument();
       
       // Advance time by 1 more second (total 5 seconds)
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1000);
       
       // Notification should be dismissed
       await waitFor(() => {
         expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       });
+      
+      vi.useRealTimers();
     }, 15000);
 
     it('auto-dismisses error notification after 5 seconds', async () => {
@@ -478,6 +484,9 @@ describe('DeviceDetails - SOS ACK Button Integration Tests', () => {
       
       const { user } = await renderDeviceDetails();
       const ackButton = await navigateToAlertsTab(user);
+      
+      // Use fake timers after rendering
+      vi.useFakeTimers();
       
       // Click the button
       await user.click(ackButton);
@@ -491,12 +500,14 @@ describe('DeviceDetails - SOS ACK Button Integration Tests', () => {
       expect(screen.getByRole('alert')).toBeInTheDocument();
       
       // Advance time by 5 seconds
-      vi.advanceTimersByTime(5000);
+      await vi.advanceTimersByTimeAsync(5000);
       
       // Notification should be dismissed
       await waitFor(() => {
         expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       });
+      
+      vi.useRealTimers();
     }, 15000);
 
     it('allows manual dismissal of error notification', async () => {
@@ -531,6 +542,9 @@ describe('DeviceDetails - SOS ACK Button Integration Tests', () => {
       const { user } = await renderDeviceDetails();
       const ackButton = await navigateToAlertsTab(user);
       
+      // Use fake timers after rendering
+      vi.useFakeTimers();
+      
       // First click
       await user.click(ackButton);
       
@@ -540,7 +554,7 @@ describe('DeviceDetails - SOS ACK Button Integration Tests', () => {
       });
       
       // Click again before auto-dismiss
-      vi.advanceTimersByTime(2000); // Only 2 seconds
+      await vi.advanceTimersByTimeAsync(2000); // Only 2 seconds
       const ackButtonAgain = screen.getByRole('button', { name: /^ACK$/i });
       await user.click(ackButtonAgain);
       
@@ -556,6 +570,8 @@ describe('DeviceDetails - SOS ACK Button Integration Tests', () => {
       await waitFor(() => {
         expect(screen.getByText('SOS acknowledgment sent successfully')).toBeInTheDocument();
       });
+      
+      vi.useRealTimers();
     }, 15000);
 
     it('does not dismiss notification before 5 seconds', async () => {
@@ -563,6 +579,9 @@ describe('DeviceDetails - SOS ACK Button Integration Tests', () => {
       
       const { user } = await renderDeviceDetails();
       const ackButton = await navigateToAlertsTab(user);
+      
+      // Use fake timers after rendering
+      vi.useFakeTimers();
       
       // Click the button
       await user.click(ackButton);
@@ -573,11 +592,13 @@ describe('DeviceDetails - SOS ACK Button Integration Tests', () => {
       });
       
       // Advance time by 4.9 seconds
-      vi.advanceTimersByTime(4900);
+      await vi.advanceTimersByTimeAsync(4900);
       
       // Notification should still be visible
       expect(screen.getByRole('alert')).toBeInTheDocument();
       expect(screen.getByText('SOS acknowledgment sent successfully')).toBeInTheDocument();
+      
+      vi.useRealTimers();
     }, 15000);
   });
 });

@@ -17,7 +17,6 @@ export default function Devices() {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'table'
   const navigate = useNavigate();
   
   // Use device filter hook for user-based filtering
@@ -81,6 +80,40 @@ export default function Devices() {
                 }
               }
 
+              // Analyze packets for device conditions
+              const latestPacket = packets[0] || null;
+              const now = Date.now();
+              const lastPacketTime = latestPacket ? new Date(latestPacket.deviceTimestamp || latestPacket.timestamp).getTime() : 0;
+              const timeSinceLastPacket = now - lastPacketTime;
+              
+              // Check for various conditions
+              const isHanged = timeSinceLastPacket > 3600000; // No packet for 1 hour = hanged
+              const hasSOS = packets.some(p => {
+                const alert = String(p.alert || '').toUpperCase();
+                return alert === 'A1002' || alert === 'SOS';
+              });
+              const hasOverspeed = packets.some(p => Number(p.speed) > 70);
+              const hasHighTemp = temperature !== null && temperature > 50;
+              const hasLowBattery = batteryLevel !== null && batteryLevel < 20;
+              
+              // Check for error codes in alert/error packets
+              const hasTampered = packets.some(p => {
+                const alert = String(p.alert || '').toUpperCase();
+                return alert === 'A1003' || alert === 'TAMPERED';
+              });
+              const hasSimIssue = packets.some(p => {
+                const alert = String(p.alert || '').toUpperCase();
+                return alert === 'E1011' || alert === 'NO_SIM' || alert === 'NO SIM';
+              });
+              const hasDataIssue = packets.some(p => {
+                const alert = String(p.alert || '').toUpperCase();
+                return alert === 'E1003' || alert === 'NO_DATA_CAPABILITY' || alert === 'NO DATA CAPABILITY';
+              });
+              const hasGpsIssue = packets.some(p => {
+                const alert = String(p.alert || '').toUpperCase();
+                return alert === 'E1001' || alert === 'GNSS_ERROR' || alert === 'GNSS CONNECTIVITY' || alert === 'A1004' || alert === 'GPS_DISABLED' || alert === 'GPS DISABLE';
+              });
+
               return {
                 topic: device.topic || "-",
                 imei: device.imei || "-",
@@ -91,6 +124,16 @@ export default function Devices() {
                 lastSeen: device.createdAt || "-",
                 batteryLevel,
                 signalStrength,
+                // Device condition flags
+                isHanged,
+                hasSOS,
+                hasOverspeed,
+                hasHighTemp,
+                hasLowBattery,
+                hasTampered,
+                hasSimIssue,
+                hasDataIssue,
+                hasGpsIssue,
               };
             } catch (err) {
               console.warn(`Failed to fetch telemetry for device ${device.imei}:`, err.message);
@@ -105,6 +148,15 @@ export default function Devices() {
                 lastSeen: device.createdAt || "-",
                 batteryLevel: null,
                 signalStrength: null,
+                isHanged: false,
+                hasSOS: false,
+                hasOverspeed: false,
+                hasHighTemp: false,
+                hasLowBattery: false,
+                hasTampered: false,
+                hasSimIssue: false,
+                hasDataIssue: false,
+                hasGpsIssue: false,
               };
             }
           })
@@ -134,12 +186,26 @@ export default function Devices() {
   });
 
   const stats = {
+    // Row 1
     total: devices.length,
     active: devices.filter(d => d.status === "active").length,
     inactive: devices.filter(d => d.status === "inactive").length,
-    online: devices.filter(d => d.status === "active").length, // Simplified for demo
-    highTemp: devices.filter(d => d.temperature !== null && d.temperature > 50).length,
-    normalTemp: devices.filter(d => d.temperature !== null && d.temperature <= 50).length,
+    hanged: devices.filter(d => d.isHanged).length,
+    tampered: devices.filter(d => d.hasTampered).length,
+    
+    // Row 2
+    highTemp: devices.filter(d => d.hasHighTemp).length,
+    sos: devices.filter(d => d.hasSOS).length,
+    overspeed: devices.filter(d => d.hasOverspeed).length,
+    anomaly: devices.filter(d => d.isHanged || d.hasTampered).length, // Anomaly = hanged or tampered
+    restrictedEntry: 0, // Requires geofence breach detection - not implemented yet
+    
+    // Row 3
+    simNotWorking: devices.filter(d => d.hasSimIssue).length,
+    lowData: devices.filter(d => d.hasDataIssue).length,
+    gpsUplinkIssues: devices.filter(d => d.hasGpsIssue).length,
+    batteryHealth: devices.filter(d => d.hasLowBattery).length,
+    ble: 0, // BLE status not available in current data
   };
 
   if (loading && devices.length === 0) {
@@ -247,8 +313,8 @@ export default function Devices() {
         </div>
       </div>
 
-      {/* Enhanced Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Enhanced Statistics Cards - Row 1 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
         <Card variant="glass" colorScheme="blue" padding="lg" hover={true} className="group">
           <Card.Content>
             <div className="flex items-center justify-between">
@@ -273,11 +339,11 @@ export default function Devices() {
           <Card.Content>
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <div className="text-green-200/80 text-sm font-medium mb-1">Active Devices</div>
+                <div className="text-green-200/80 text-sm font-medium mb-1">Active</div>
                 <div className="text-white text-3xl font-bold mb-2">{stats.active}</div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-green-200/70 text-xs">Currently online</span>
+                  <span className="text-green-200/70 text-xs">Online</span>
                 </div>
               </div>
               <div className="w-14 h-14 bg-green-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
@@ -293,11 +359,11 @@ export default function Devices() {
           <Card.Content>
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <div className="text-amber-200/80 text-sm font-medium mb-1">Inactive Devices</div>
+                <div className="text-amber-200/80 text-sm font-medium mb-1">Inactive</div>
                 <div className="text-white text-3xl font-bold mb-2">{stats.inactive}</div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
-                  <span className="text-amber-200/70 text-xs">Need attention</span>
+                  <span className="text-amber-200/70 text-xs">Offline</span>
                 </div>
               </div>
               <div className="w-14 h-14 bg-amber-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
@@ -313,7 +379,50 @@ export default function Devices() {
           <Card.Content>
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <div className="text-red-200/80 text-sm font-medium mb-1">High Temperature</div>
+                <div className="text-red-200/80 text-sm font-medium mb-1">Hanged</div>
+                <div className="text-white text-3xl font-bold mb-2">{stats.hanged}</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                  <span className="text-red-200/70 text-xs">Not responding</span>
+                </div>
+              </div>
+              <div className="w-14 h-14 bg-red-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-7 h-7 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+          </Card.Content>
+        </Card>
+
+        <Card variant="glass" colorScheme="purple" padding="lg" hover={true} className="group">
+          <Card.Content>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="text-purple-200/80 text-sm font-medium mb-1">Tampered</div>
+                <div className="text-white text-3xl font-bold mb-2">{stats.tampered}</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
+                  <span className="text-purple-200/70 text-xs">Security alert</span>
+                </div>
+              </div>
+              <div className="w-14 h-14 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-7 h-7 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+            </div>
+          </Card.Content>
+        </Card>
+      </div>
+
+      {/* Row 2 - Alerts & Issues */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+        <Card variant="glass" colorScheme="red" padding="lg" hover={true} className="group">
+          <Card.Content>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="text-red-200/80 text-sm font-medium mb-1">High Temp</div>
                 <div className="text-white text-3xl font-bold mb-2">{stats.highTemp}</div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
@@ -323,6 +432,190 @@ export default function Devices() {
               <div className="w-14 h-14 bg-red-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                 <svg className="w-7 h-7 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+            </div>
+          </Card.Content>
+        </Card>
+
+        <Card variant="glass" colorScheme="amber" padding="lg" hover={true} className="group">
+          <Card.Content>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="text-amber-200/80 text-sm font-medium mb-1">SOS</div>
+                <div className="text-white text-3xl font-bold mb-2">{stats.sos}</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+                  <span className="text-amber-200/70 text-xs">Emergency</span>
+                </div>
+              </div>
+              <div className="w-14 h-14 bg-amber-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-7 h-7 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+            </div>
+          </Card.Content>
+        </Card>
+
+        <Card variant="glass" colorScheme="orange" padding="lg" hover={true} className="group">
+          <Card.Content>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="text-orange-200/80 text-sm font-medium mb-1">Overspeed</div>
+                <div className="text-white text-3xl font-bold mb-2">{stats.overspeed}</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
+                  <span className="text-orange-200/70 text-xs">&gt;70 km/h</span>
+                </div>
+              </div>
+              <div className="w-14 h-14 bg-orange-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-7 h-7 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+            </div>
+          </Card.Content>
+        </Card>
+
+        <Card variant="glass" colorScheme="pink" padding="lg" hover={true} className="group">
+          <Card.Content>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="text-pink-200/80 text-sm font-medium mb-1">Anomaly</div>
+                <div className="text-white text-3xl font-bold mb-2">{stats.anomaly}</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-pink-400 rounded-full animate-pulse"></div>
+                  <span className="text-pink-200/70 text-xs">Unusual behavior</span>
+                </div>
+              </div>
+              <div className="w-14 h-14 bg-pink-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-7 h-7 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+              </div>
+            </div>
+          </Card.Content>
+        </Card>
+
+        <Card variant="glass" colorScheme="indigo" padding="lg" hover={true} className="group">
+          <Card.Content>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="text-indigo-200/80 text-sm font-medium mb-1">Restricted Entry</div>
+                <div className="text-white text-3xl font-bold mb-2">{stats.restrictedEntry}</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></div>
+                  <span className="text-indigo-200/70 text-xs">Geofence breach</span>
+                </div>
+              </div>
+              <div className="w-14 h-14 bg-indigo-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-7 h-7 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+              </div>
+            </div>
+          </Card.Content>
+        </Card>
+      </div>
+
+      {/* Row 3 - Technical Issues */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+        <Card variant="glass" colorScheme="red" padding="lg" hover={true} className="group">
+          <Card.Content>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="text-red-200/80 text-sm font-medium mb-1">SIM Not Working</div>
+                <div className="text-white text-3xl font-bold mb-2">{stats.simNotWorking}</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                  <span className="text-red-200/70 text-xs">No SIM</span>
+                </div>
+              </div>
+              <div className="w-14 h-14 bg-red-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-7 h-7 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+              </div>
+            </div>
+          </Card.Content>
+        </Card>
+
+        <Card variant="glass" colorScheme="amber" padding="lg" hover={true} className="group">
+          <Card.Content>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="text-amber-200/80 text-sm font-medium mb-1">Low Data</div>
+                <div className="text-white text-3xl font-bold mb-2">{stats.lowData}</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+                  <span className="text-amber-200/70 text-xs">Data issue</span>
+                </div>
+              </div>
+              <div className="w-14 h-14 bg-amber-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-7 h-7 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+              </div>
+            </div>
+          </Card.Content>
+        </Card>
+
+        <Card variant="glass" colorScheme="orange" padding="lg" hover={true} className="group">
+          <Card.Content>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="text-orange-200/80 text-sm font-medium mb-1">GPS Uplink Issues</div>
+                <div className="text-white text-3xl font-bold mb-2">{stats.gpsUplinkIssues}</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
+                  <span className="text-orange-200/70 text-xs">GNSS error</span>
+                </div>
+              </div>
+              <div className="w-14 h-14 bg-orange-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-7 h-7 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                </svg>
+              </div>
+            </div>
+          </Card.Content>
+        </Card>
+
+        <Card variant="glass" colorScheme="purple" padding="lg" hover={true} className="group">
+          <Card.Content>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="text-purple-200/80 text-sm font-medium mb-1">Battery Health</div>
+                <div className="text-white text-3xl font-bold mb-2">{stats.batteryHealth}</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
+                  <span className="text-purple-200/70 text-xs">Low battery</span>
+                </div>
+              </div>
+              <div className="w-14 h-14 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-7 h-7 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <rect x="2" y="7" width="18" height="11" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M22 10v4" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+            </div>
+          </Card.Content>
+        </Card>
+
+        <Card variant="glass" colorScheme="cyan" padding="lg" hover={true} className="group">
+          <Card.Content>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="text-cyan-200/80 text-sm font-medium mb-1">BLE</div>
+                <div className="text-white text-3xl font-bold mb-2">{stats.ble}</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
+                  <span className="text-cyan-200/70 text-xs">Bluetooth</span>
+                </div>
+              </div>
+              <div className="w-14 h-14 bg-cyan-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-7 h-7 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
                 </svg>
               </div>
             </div>
@@ -374,39 +667,6 @@ export default function Devices() {
                 <option value="active" className="bg-slate-900 text-white">Active Only</option>
                 <option value="inactive" className="bg-slate-900 text-white">Inactive Only</option>
               </select>
-            </div>
-
-            {/* View Mode Toggle */}
-            <div className="flex items-center gap-2">
-              <span className="text-white/70 text-sm font-medium">View:</span>
-              <div className="flex bg-white/10 rounded-lg p-1 backdrop-blur-xl border border-white/20">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={cn(
-                    'px-3 py-2 rounded-md text-sm font-medium transition-all duration-200',
-                    viewMode === 'grid'
-                      ? 'bg-blue-500/80 text-white shadow-lg'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  )}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => setViewMode('table')}
-                  className={cn(
-                    'px-3 py-2 rounded-md text-sm font-medium transition-all duration-200',
-                    viewMode === 'table'
-                      ? 'bg-blue-500/80 text-white shadow-lg'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  )}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                  </svg>
-                </button>
-              </div>
             </div>
           </div>
 
@@ -460,317 +720,163 @@ export default function Devices() {
         </Card.Content>
       </Card>
 
-      {/* Device Display - Grid or Table View */}
-      {viewMode === 'grid' ? (
-        /* Grid View */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredDevices.map((device) => (
-            <Card 
-              key={device.imei} 
-              variant="glass" 
-              colorScheme={device.status === 'active' ? 'green' : 'amber'} 
-              padding="lg" 
-              hover={true}
-              className="group cursor-pointer transform transition-all duration-300 hover:scale-105"
-              onClick={() => navigate(`/devices/${device.imei}`)}
-            >
-              <Card.Content>
-                <div className="space-y-4">
-                  {/* Device Header */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className={cn(
-                          'w-3 h-3 rounded-full animate-pulse',
-                          device.status === 'active' ? 'bg-green-400' : 'bg-amber-400'
-                        )}></div>
-                        <span className="text-white/90 text-sm font-medium">
-                          {device.status === 'active' ? 'Active' : 'Inactive'}
-                        </span>
-                      </div>
-                      <h3 className="text-white font-bold text-lg mb-2 break-all leading-tight">
-                        {device.topic}
-                      </h3>
-                      <div className="text-white/70 text-xs font-mono bg-white/10 px-2 py-1.5 rounded break-all leading-relaxed">
-                        <span className="text-white/50 text-xs block mb-1">IMEI:</span>
-                        {device.imei}
-                      </div>
-                    </div>
-                    <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center group-hover:bg-white/20 transition-colors duration-300">
-                      <svg className="w-5 h-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                      </svg>
-                    </div>
-                  </div>
-
-                  {/* Device Stats */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-white/5 rounded-lg p-3">
-                      <div className="text-white/60 text-xs font-medium mb-1">Battery</div>
-                      <div className="flex items-center gap-2">
-                        {device.batteryLevel !== null ? (
-                          <>
-                            <div className="flex-1 bg-white/20 rounded-full h-2">
-                              <div 
-                                className={cn(
-                                  'h-2 rounded-full transition-all duration-300',
-                                  device.batteryLevel > 60 ? 'bg-green-400' :
-                                  device.batteryLevel > 30 ? 'bg-amber-400' : 'bg-red-400'
-                                )}
-                                style={{ width: `${device.batteryLevel}%` }}
-                              ></div>
-                            </div>
-                            <span className="text-white text-xs font-bold">{device.batteryLevel}%</span>
-                          </>
-                        ) : (
-                          <>
-                            <div className="flex-1 bg-white/20 rounded-full h-2">
-                              <div className="h-2 rounded-full bg-gray-500 w-full opacity-50"></div>
-                            </div>
-                            <span className="text-white/60 text-xs font-medium">N/A</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="bg-white/5 rounded-lg p-3">
-                      <div className="text-white/60 text-xs font-medium mb-1">Signal</div>
-                      <div className="flex items-center gap-2">
-                        {device.signalStrength !== null ? (
-                          <>
-                            <div className="flex-1 bg-white/20 rounded-full h-2">
-                              <div 
-                                className={cn(
-                                  'h-2 rounded-full transition-all duration-300',
-                                  device.signalStrength > 70 ? 'bg-green-400' :
-                                  device.signalStrength > 40 ? 'bg-amber-400' : 'bg-red-400'
-                                )}
-                                style={{ width: `${device.signalStrength}%` }}
-                              ></div>
-                            </div>
-                            <span className="text-white text-xs font-bold">{device.signalStrength}%</span>
-                          </>
-                        ) : (
-                          <>
-                            <div className="flex-1 bg-white/20 rounded-full h-2">
-                              <div className="h-2 rounded-full bg-gray-500 w-full opacity-50"></div>
-                            </div>
-                            <span className="text-white/60 text-xs font-medium">N/A</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Device Info */}
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-white/60">Temperature:</span>
-                      <span className="text-white font-medium">
-                        {device.temperature !== null ? `${device.temperature}°C` : 'N/A'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-white/60">Geo ID:</span>
-                      <span className="text-white font-medium">{device.geoid}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-white/60">Created:</span>
-                      <span className="text-white font-medium text-xs">{device.createdAt}</span>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="glass"
-                      size="sm"
-                      className="flex-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/devices/${device.imei}`);
-                      }}
-                    >
-                      View Details
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/devices/${device.imei}/settings`);
-                      }}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                    </Button>
-                  </div>
+      {/* Device Display - Table View */}
+      <EnhancedTableContainer variant="enhanced" colorScheme="blue" padding="lg">
+        <EnhancedTable
+          variant="enhanced"
+          size="md"
+          colorScheme="blue"
+          hoverable={true}
+          striped={true}
+          loading={loading}
+          loadingRows={5}
+          loadingColumns={7}
+          data={filteredDevices}
+          colorCoded={true}
+          showBadges={true}
+          responsive={true}
+          columns={[
+            {
+              key: 'status',
+              header: 'Status',
+              sortable: true,
+              render: (value) => (
+                <StatusBadge 
+                  type={value === 'active' ? 'success' : 'warning'} 
+                  value={value === 'active' ? 'Active' : 'Inactive'}
+                  size="sm"
+                />
+              )
+            },
+            {
+              key: 'topic',
+              header: 'Topic',
+              sortable: true,
+              render: (value) => (
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-2 h-2 bg-teal-400 rounded-full flex-shrink-0"></div>
+                  <span className="font-semibold text-white break-all text-sm leading-tight max-w-[200px]">{value}</span>
                 </div>
-              </Card.Content>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        /* Table View */
-        <EnhancedTableContainer variant="enhanced" colorScheme="blue" padding="lg">
-          <EnhancedTable
-            variant="enhanced"
-            size="md"
-            colorScheme="blue"
-            hoverable={true}
-            striped={true}
-            loading={loading}
-            loadingRows={5}
-            loadingColumns={7}
-            data={filteredDevices}
-            colorCoded={true}
-            showBadges={true}
-            responsive={true}
-            columns={[
-              {
-                key: 'status',
-                header: 'Status',
-                sortable: true,
-                render: (value) => (
-                  <StatusBadge 
-                    type={value === 'active' ? 'success' : 'warning'} 
-                    value={value === 'active' ? 'Active' : 'Inactive'}
+              )
+            },
+            {
+              key: 'imei',
+              header: 'IMEI',
+              sortable: true,
+              render: (value) => (
+                <span className="font-mono text-xs text-slate-300 bg-slate-800/50 px-2 py-1.5 rounded break-all leading-relaxed max-w-[180px] block">
+                  {value}
+                </span>
+              )
+            },
+            {
+              key: 'batteryLevel',
+              header: 'Battery',
+              sortable: true,
+              render: (value) => (
+                <div className="flex items-center gap-2">
+                  {value !== null ? (
+                    <>
+                      <div className="w-16 bg-white/20 rounded-full h-2">
+                        <div 
+                          className={cn(
+                            'h-2 rounded-full',
+                            value > 60 ? 'bg-green-400' :
+                            value > 30 ? 'bg-amber-400' : 'bg-red-400'
+                          )}
+                          style={{ width: `${value}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-xs font-medium">{value}%</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-16 bg-white/20 rounded-full h-2">
+                        <div className="h-2 rounded-full bg-gray-500 w-full opacity-50"></div>
+                      </div>
+                      <span className="text-xs font-medium text-slate-400">N/A</span>
+                    </>
+                  )}
+                </div>
+              )
+            },
+            {
+              key: 'signalStrength',
+              header: 'Signal',
+              sortable: true,
+              render: (value) => (
+                <div className="flex items-center gap-2">
+                  {value !== null ? (
+                    <>
+                      <div className="w-16 bg-white/20 rounded-full h-2">
+                        <div 
+                          className={cn(
+                            'h-2 rounded-full',
+                            value > 70 ? 'bg-green-400' :
+                            value > 40 ? 'bg-amber-400' : 'bg-red-400'
+                          )}
+                          style={{ width: `${value}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-xs font-medium">{value}%</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-16 bg-white/20 rounded-full h-2">
+                        <div className="h-2 rounded-full bg-gray-500 w-full opacity-50"></div>
+                      </div>
+                      <span className="text-xs font-medium text-slate-400">N/A</span>
+                    </>
+                  )}
+                </div>
+              )
+            },
+            {
+              key: 'temperature',
+              header: 'Temperature',
+              sortable: true,
+              render: (value) => (
+                <span className={cn(
+                  'text-sm font-medium',
+                  value !== null ? (
+                    value > 50 ? 'text-red-400' :
+                    value > 30 ? 'text-amber-400' : 'text-green-400'
+                  ) : 'text-slate-400'
+                )}>
+                  {value !== null ? `${value}°C` : 'N/A'}
+                </span>
+              )
+            },
+            {
+              key: 'actions',
+              header: 'Actions',
+              sortable: false,
+              render: (value, device) => (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="glass"
+                    colorScheme="teal"
                     size="sm"
-                  />
-                )
-              },
-              {
-                key: 'topic',
-                header: 'Topic',
-                sortable: true,
-                render: (value) => (
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-2 h-2 bg-teal-400 rounded-full flex-shrink-0"></div>
-                    <span className="font-semibold text-white break-all text-sm leading-tight max-w-[200px]">{value}</span>
-                  </div>
-                )
-              },
-              {
-                key: 'imei',
-                header: 'IMEI',
-                sortable: true,
-                render: (value) => (
-                  <span className="font-mono text-xs text-slate-300 bg-slate-800/50 px-2 py-1.5 rounded break-all leading-relaxed max-w-[180px] block">
-                    {value}
-                  </span>
-                )
-              },
-              {
-                key: 'batteryLevel',
-                header: 'Battery',
-                sortable: true,
-                render: (value) => (
-                  <div className="flex items-center gap-2">
-                    {value !== null ? (
-                      <>
-                        <div className="w-16 bg-white/20 rounded-full h-2">
-                          <div 
-                            className={cn(
-                              'h-2 rounded-full',
-                              value > 60 ? 'bg-green-400' :
-                              value > 30 ? 'bg-amber-400' : 'bg-red-400'
-                            )}
-                            style={{ width: `${value}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-xs font-medium">{value}%</span>
-                      </>
-                    ) : (
-                      <>
-                        <div className="w-16 bg-white/20 rounded-full h-2">
-                          <div className="h-2 rounded-full bg-gray-500 w-full opacity-50"></div>
-                        </div>
-                        <span className="text-xs font-medium text-slate-400">N/A</span>
-                      </>
-                    )}
-                  </div>
-                )
-              },
-              {
-                key: 'signalStrength',
-                header: 'Signal',
-                sortable: true,
-                render: (value) => (
-                  <div className="flex items-center gap-2">
-                    {value !== null ? (
-                      <>
-                        <div className="w-16 bg-white/20 rounded-full h-2">
-                          <div 
-                            className={cn(
-                              'h-2 rounded-full',
-                              value > 70 ? 'bg-green-400' :
-                              value > 40 ? 'bg-amber-400' : 'bg-red-400'
-                            )}
-                            style={{ width: `${value}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-xs font-medium">{value}%</span>
-                      </>
-                    ) : (
-                      <>
-                        <div className="w-16 bg-white/20 rounded-full h-2">
-                          <div className="h-2 rounded-full bg-gray-500 w-full opacity-50"></div>
-                        </div>
-                        <span className="text-xs font-medium text-slate-400">N/A</span>
-                      </>
-                    )}
-                  </div>
-                )
-              },
-              {
-                key: 'temperature',
-                header: 'Temperature',
-                sortable: true,
-                render: (value) => (
-                  <span className={cn(
-                    'text-sm font-medium',
-                    value !== null ? (
-                      value > 50 ? 'text-red-400' :
-                      value > 30 ? 'text-amber-400' : 'text-green-400'
-                    ) : 'text-slate-400'
-                  )}>
-                    {value !== null ? `${value}°C` : 'N/A'}
-                  </span>
-                )
-              },
-              {
-                key: 'actions',
-                header: 'Actions',
-                sortable: false,
-                render: (value, device) => (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="glass"
-                      colorScheme="teal"
-                      size="sm"
-                      onClick={() => navigate(`/devices/${device.imei}`)}
-                    >
-                      View
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/devices/${device.imei}/settings`)}
-                      className="text-slate-400 hover:text-white"
-                    >
-                      Settings
-                    </Button>
-                  </div>
-                )
-              }
-            ]}
-            emptyMessage="No devices found matching your criteria"
-            onRowClick={(device) => navigate(`/devices/${device.imei}`)}
-          />
-        </EnhancedTableContainer>
-      )}
+                    onClick={() => navigate(`/devices/${device.imei}`)}
+                  >
+                    View
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/devices/${device.imei}/settings`)}
+                    className="text-slate-400 hover:text-white"
+                  >
+                    Settings
+                  </Button>
+                </div>
+              )
+            }
+          ]}
+          emptyMessage="No devices found matching your criteria"
+          onRowClick={(device) => navigate(`/devices/${device.imei}`)}
+        />
+      </EnhancedTableContainer>
 
       {/* Empty State */}
       {filteredDevices.length === 0 && !loading && (
