@@ -1,6 +1,7 @@
 import React, { forwardRef } from 'react';
 import { cva } from 'class-variance-authority';
 import { cn } from '../utils/cn';
+import { TechLoader } from '../../components/TechLoader';
 
 /**
  * Enhanced Loading Components
@@ -40,7 +41,7 @@ const loadingContainerVariants = cva(
   }
 );
 
-// Spinner component with enhanced animations
+// Spinner component with enhanced animations - Now uses TechLoader
 const Spinner = forwardRef(({
   size = 'md',
   color = 'primary',
@@ -48,60 +49,11 @@ const Spinner = forwardRef(({
   className,
   ...props
 }, ref) => {
-  const spinnerSizes = {
-    xs: 'w-3 h-3',
-    sm: 'w-4 h-4',
-    md: 'w-6 h-6',
-    lg: 'w-8 h-8',
-    xl: 'w-12 h-12',
-  };
-
-  const spinnerColors = {
-    primary: 'text-violet-500',
-    secondary: 'text-slate-400',
-    accent: 'text-teal-400',
-    success: 'text-green-500',
-    warning: 'text-yellow-500',
-    error: 'text-red-500',
-    white: 'text-white',
-  };
-
-  const strokeWidths = {
-    thin: '2',
-    normal: '3',
-    thick: '4',
-  };
-
+  // Use TechLoader instead of the old spinner
   return (
-    <svg
-      ref={ref}
-      className={cn(
-        'animate-spin',
-        spinnerSizes[size],
-        spinnerColors[color],
-        className
-      )}
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      role="status"
-      aria-label="Loading"
-      {...props}
-    >
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth={strokeWidths[thickness]}
-      />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-      />
-    </svg>
+    <div ref={ref} className={className}>
+      <TechLoader size={size} text="" {...props} />
+    </div>
   );
 });
 Spinner.displayName = 'Spinner';
@@ -329,7 +281,7 @@ const Loading = forwardRef(({
   const renderLoadingIndicator = () => {
     switch (type) {
       case 'spinner':
-        return <Spinner size={size} color={color} />;
+        return <TechLoader size={size} text="" />;
       case 'dots':
         return <Dots size={size} color={color} />;
       case 'pulse':
@@ -337,7 +289,7 @@ const Loading = forwardRef(({
       case 'skeleton':
         return <Skeleton {...props} />;
       default:
-        return <Spinner size={size} color={color} />;
+        return <TechLoader size={size} text="" />;
     }
   };
 
@@ -417,4 +369,5 @@ export {
   Pulse,
   Skeleton,
   ProgressBar,
+  TechLoader,
 };

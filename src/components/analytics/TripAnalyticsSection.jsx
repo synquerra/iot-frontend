@@ -1,8 +1,5 @@
 // src/components/analytics/TripAnalyticsSection.jsx
 import React, { useMemo, useState } from 'react';
-import { ContentSection, SectionDivider } from '../../design-system/components/LayoutComponents';
-import { Card } from '../../design-system/components/Card';
-import TripSummaryCard from './TripSummaryCard';
 import TripHistoryTimeline from './TripHistoryTimeline';
 import FuelEfficiencyChart from './FuelEfficiencyChart';
 import { detectTrips, getTripStatistics, calculateIdleTime } from '../../utils/tripAnalytics';
@@ -22,6 +19,18 @@ export default function TripAnalyticsSection({
 
   // Calculate trip statistics
   const tripStats = useMemo(() => {
+    if (!trips || trips.length === 0) {
+      return {
+        totalTrips: 0,
+        totalDistance: 0,
+        totalDuration: 0,
+        avgDistance: 0,
+        avgDuration: 0,
+        avgSpeed: 0,
+        maxSpeed: 0,
+        totalFuel: 0
+      };
+    }
     return getTripStatistics(trips);
   }, [trips]);
 
@@ -36,171 +45,202 @@ export default function TripAnalyticsSection({
   };
 
   return (
-    <ContentSection 
-      variant="accent" 
-      colorScheme="blue" 
-      padding="lg" 
-      spacing="md" 
-      bordered={true} 
-      elevated={true}
-    >
-      <Card 
-        variant="glass" 
-        padding="lg" 
-        colorScheme="blue" 
-        glowEffect={true}
-        hover={false}
-        className="relative overflow-hidden backdrop-blur-2xl bg-gradient-to-br from-blue-600/25 via-cyan-600/20 to-teal-600/25 border border-blue-400/40"
-      >
-        {/* Background Effects */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/8 via-transparent to-cyan-500/8 animate-pulse" />
-          <div className="absolute top-6 left-6 w-32 h-32 bg-blue-400/15 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-8 right-6 w-40 h-40 bg-teal-400/10 rounded-full blur-3xl animate-pulse delay-1000" />
+    <div className="space-y-4">
+      {/* Trip Summary Stats - AdminLTE v3 Info Boxes */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Total Trips */}
+        <div className="bg-white rounded shadow">
+          <div className="flex items-center p-3">
+            <div className="flex-shrink-0 w-16 h-16 bg-[#007bff] rounded flex items-center justify-center text-white text-2xl">
+              🚗
+            </div>
+            <div className="ml-3 flex-1">
+              <div className="text-xs font-semibold text-gray-600 uppercase">Total Trips</div>
+              <div className="text-xl font-bold text-gray-900">{tripStats.totalTrips}</div>
+              <div className="text-xs text-gray-500">Detected</div>
+            </div>
+          </div>
         </div>
 
-        <Card.Header className="relative z-10">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
-            <div className="flex-1">
-              <Card.Title className="text-white text-2xl font-bold bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
-                Trip Analytics
-              </Card.Title>
-              <Card.Description className="text-blue-100/80 mt-1">
-                Comprehensive journey analysis with distance, duration, and fuel estimates
-              </Card.Description>
+        {/* Total Distance */}
+        <div className="bg-white rounded shadow">
+          <div className="flex items-center p-3">
+            <div className="flex-shrink-0 w-16 h-16 bg-[#28a745] rounded flex items-center justify-center text-white text-2xl">
+              📏
             </div>
-            
-            {selectedDevice && (
-              <div className="px-4 py-2 bg-white/15 backdrop-blur-xl rounded-lg border border-white/30">
-                <div className="text-blue-200/80 text-xs font-medium">Device</div>
-                <div className="text-white text-sm font-bold">{selectedDevice}</div>
-              </div>
-            )}
+            <div className="ml-3 flex-1">
+              <div className="text-xs font-semibold text-gray-600 uppercase">Distance</div>
+              <div className="text-xl font-bold text-gray-900">{tripStats.totalDistance.toFixed(1)}</div>
+              <div className="text-xs text-gray-500">km</div>
+            </div>
           </div>
-        </Card.Header>
+        </div>
 
-        <Card.Content className="pt-6 relative z-10 space-y-8">
-          {/* Trip Summary */}
-          <TripSummaryCard tripStats={tripStats} loading={loading} />
+        {/* Total Duration */}
+        <div className="bg-white rounded shadow">
+          <div className="flex items-center p-3">
+            <div className="flex-shrink-0 w-16 h-16 bg-[#ffc107] rounded flex items-center justify-center text-white text-2xl">
+              ⏱️
+            </div>
+            <div className="ml-3 flex-1">
+              <div className="text-xs font-semibold text-gray-600 uppercase">Duration</div>
+              <div className="text-xl font-bold text-gray-900">{Math.floor(tripStats.totalDuration / 60)}</div>
+              <div className="text-xs text-gray-500">minutes</div>
+            </div>
+          </div>
+        </div>
 
-          <SectionDivider variant="gradient" colorScheme="cyan" spacing="md" animated={true} />
+        {/* Average Speed */}
+        <div className="bg-white rounded shadow">
+          <div className="flex items-center p-3">
+            <div className="flex-shrink-0 w-16 h-16 bg-[#17a2b8] rounded flex items-center justify-center text-white text-2xl">
+              ⚡
+            </div>
+            <div className="ml-3 flex-1">
+              <div className="text-xs font-semibold text-gray-600 uppercase">Avg Speed</div>
+              <div className="text-xl font-bold text-gray-900">{(tripStats.avgSpeed || 0).toFixed(1)}</div>
+              <div className="text-xs text-gray-500">km/h</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-          {/* Idle Time Stats */}
-          {idleTimeStats && idleTimeStats.totalTime > 0 && (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card variant="glass" colorScheme="green" padding="md">
-                  <Card.Content>
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
-                        <svg className="w-6 h-6 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-green-200/80 text-xs font-medium">Moving Time</div>
-                        <div className="text-white text-xl font-bold">
-                          {Math.floor(idleTimeStats.movingTime / 60)} min
-                        </div>
-                        <div className="text-green-300 text-xs">{idleTimeStats.movingPercentage}%</div>
-                      </div>
-                    </div>
-                  </Card.Content>
-                </Card>
-
-                <Card variant="glass" colorScheme="amber" padding="md">
-                  <Card.Content>
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-amber-500/20 rounded-lg flex items-center justify-center">
-                        <svg className="w-6 h-6 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-amber-200/80 text-xs font-medium">Idle Time</div>
-                        <div className="text-white text-xl font-bold">
-                          {Math.floor(idleTimeStats.idleTime / 60)} min
-                        </div>
-                        <div className="text-amber-300 text-xs">{idleTimeStats.idlePercentage}%</div>
-                      </div>
-                    </div>
-                  </Card.Content>
-                </Card>
-
-                <Card variant="glass" colorScheme="blue" padding="md">
-                  <Card.Content>
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                        <svg className="w-6 h-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-blue-200/80 text-xs font-medium">Total Time</div>
-                        <div className="text-white text-xl font-bold">
-                          {Math.floor(idleTimeStats.totalTime / 60)} min
-                        </div>
-                        <div className="text-blue-300 text-xs">100%</div>
-                      </div>
-                    </div>
-                  </Card.Content>
-                </Card>
+      {/* Idle Time Stats - AdminLTE v3 Small Boxes */}
+      {idleTimeStats && idleTimeStats.totalTime > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Moving Time */}
+          <div className="relative overflow-hidden rounded shadow bg-gradient-to-br from-[#28a745] to-[#1e7e34] text-white">
+            <div className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium opacity-90">Moving Time</div>
+                  <div className="text-3xl font-bold mt-1">{Math.floor(idleTimeStats.movingTime / 60)}</div>
+                  <div className="text-xs opacity-75 mt-1">minutes ({idleTimeStats.movingPercentage}%)</div>
+                </div>
+                <div className="text-5xl opacity-30">🚀</div>
               </div>
+            </div>
+            <div className="bg-black/20 px-4 py-2">
+              <div className="w-full bg-white/30 rounded-full h-1.5">
+                <div
+                  className="bg-white h-1.5 rounded-full"
+                  style={{ width: `${idleTimeStats.movingPercentage}%` }}
+                />
+              </div>
+            </div>
+          </div>
 
-              <SectionDivider variant="gradient" colorScheme="purple" spacing="md" animated={true} />
-            </>
-          )}
+          {/* Idle Time */}
+          <div className="relative overflow-hidden rounded shadow bg-gradient-to-br from-[#ffc107] to-[#e0a800] text-white">
+            <div className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium opacity-90">Idle Time</div>
+                  <div className="text-3xl font-bold mt-1">{Math.floor(idleTimeStats.idleTime / 60)}</div>
+                  <div className="text-xs opacity-75 mt-1">minutes ({idleTimeStats.idlePercentage}%)</div>
+                </div>
+                <div className="text-5xl opacity-30">⏸️</div>
+              </div>
+            </div>
+            <div className="bg-black/20 px-4 py-2">
+              <div className="w-full bg-white/30 rounded-full h-1.5">
+                <div
+                  className="bg-white h-1.5 rounded-full"
+                  style={{ width: `${idleTimeStats.idlePercentage}%` }}
+                />
+              </div>
+            </div>
+          </div>
 
-          {/* Trip History and Fuel Chart */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Total Time */}
+          <div className="relative overflow-hidden rounded shadow bg-gradient-to-br from-[#007bff] to-[#0056b3] text-white">
+            <div className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium opacity-90">Total Time</div>
+                  <div className="text-3xl font-bold mt-1">{Math.floor(idleTimeStats.totalTime / 60)}</div>
+                  <div className="text-xs opacity-75 mt-1">minutes (100%)</div>
+                </div>
+                <div className="text-5xl opacity-30">⏰</div>
+              </div>
+            </div>
+            <div className="bg-black/20 px-4 py-2">
+              <div className="w-full bg-white/30 rounded-full h-1.5">
+                <div className="bg-white h-1.5 rounded-full" style={{ width: '100%' }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Trip History and Fuel Chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Trip History Timeline */}
+        <div className="bg-white rounded shadow">
+          <div className="border-b border-gray-200 px-4 py-3">
+            <h4 className="text-base font-semibold text-gray-700">
+              <i className="fas fa-history mr-2 text-[#007bff]"></i>
+              Trip History
+            </h4>
+          </div>
+          <div className="p-4">
             <TripHistoryTimeline 
               trips={trips} 
               onTripSelect={handleTripSelect}
               loading={loading}
             />
+          </div>
+        </div>
+
+        {/* Fuel Efficiency Chart */}
+        <div className="bg-white rounded shadow">
+          <div className="border-b border-gray-200 px-4 py-3">
+            <h4 className="text-base font-semibold text-gray-700">
+              <i className="fas fa-gas-pump mr-2 text-[#28a745]"></i>
+              Fuel Efficiency
+            </h4>
+          </div>
+          <div className="p-4">
             <FuelEfficiencyChart trips={trips} loading={loading} />
           </div>
+        </div>
+      </div>
 
-          {/* Selected Trip Details */}
-          {selectedTrip && (
-            <>
-              <SectionDivider variant="dotted" colorScheme="teal" spacing="md" animated={true} />
-              
-              <Card variant="glass" colorScheme="teal" padding="lg">
-                <Card.Header>
-                  <Card.Title className="text-white text-lg font-bold">
-                    Selected Trip Details
-                  </Card.Title>
-                </Card.Header>
-                <Card.Content className="pt-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center p-3 bg-white/5 rounded-lg">
-                      <div className="text-teal-200/80 text-xs font-medium mb-1">Start</div>
-                      <div className="text-white text-sm font-bold">
-                        {new Date(selectedTrip.startTime).toLocaleTimeString()}
-                      </div>
-                    </div>
-                    <div className="text-center p-3 bg-white/5 rounded-lg">
-                      <div className="text-teal-200/80 text-xs font-medium mb-1">End</div>
-                      <div className="text-white text-sm font-bold">
-                        {new Date(selectedTrip.endTime).toLocaleTimeString()}
-                      </div>
-                    </div>
-                    <div className="text-center p-3 bg-white/5 rounded-lg">
-                      <div className="text-teal-200/80 text-xs font-medium mb-1">Data Points</div>
-                      <div className="text-white text-sm font-bold">{selectedTrip.points.length}</div>
-                    </div>
-                    <div className="text-center p-3 bg-white/5 rounded-lg">
-                      <div className="text-teal-200/80 text-xs font-medium mb-1">Device</div>
-                      <div className="text-white text-sm font-bold">{selectedTrip.deviceImei}</div>
-                    </div>
-                  </div>
-                </Card.Content>
-              </Card>
-            </>
-          )}
-        </Card.Content>
-      </Card>
-    </ContentSection>
+      {/* Selected Trip Details */}
+      {selectedTrip && (
+        <div className="bg-white rounded shadow">
+          <div className="border-b border-gray-200 px-4 py-3">
+            <h4 className="text-base font-semibold text-gray-700">
+              <i className="fas fa-info-circle mr-2 text-[#17a2b8]"></i>
+              Selected Trip Details
+            </h4>
+          </div>
+          <div className="p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-3 bg-gray-50 rounded border border-gray-200">
+                <div className="text-xs font-semibold text-gray-600 uppercase mb-1">Start Time</div>
+                <div className="text-sm font-bold text-gray-900">
+                  {new Date(selectedTrip.startTime).toLocaleTimeString()}
+                </div>
+              </div>
+              <div className="text-center p-3 bg-gray-50 rounded border border-gray-200">
+                <div className="text-xs font-semibold text-gray-600 uppercase mb-1">End Time</div>
+                <div className="text-sm font-bold text-gray-900">
+                  {new Date(selectedTrip.endTime).toLocaleTimeString()}
+                </div>
+              </div>
+              <div className="text-center p-3 bg-gray-50 rounded border border-gray-200">
+                <div className="text-xs font-semibold text-gray-600 uppercase mb-1">Data Points</div>
+                <div className="text-sm font-bold text-gray-900">{selectedTrip.points.length}</div>
+              </div>
+              <div className="text-center p-3 bg-gray-50 rounded border border-gray-200">
+                <div className="text-xs font-semibold text-gray-600 uppercase mb-1">Device IMEI</div>
+                <div className="text-sm font-bold text-gray-900 font-mono">{selectedTrip.deviceImei}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

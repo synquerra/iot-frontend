@@ -1,7 +1,5 @@
 // src/components/analytics/TripHistoryTimeline.jsx
 import React, { useState } from 'react';
-import { Card } from '../../design-system/components/Card';
-import { cn } from '../../design-system/utils/cn';
 import { formatDistance, formatDuration } from '../../utils/tripAnalytics';
 
 export default function TripHistoryTimeline({ trips, onTripSelect, loading = false }) {
@@ -9,32 +7,25 @@ export default function TripHistoryTimeline({ trips, onTripSelect, loading = fal
 
   if (loading) {
     return (
-      <Card variant="glass" colorScheme="purple" padding="lg">
-        <Card.Content>
-          <div className="space-y-4">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-24 bg-white/10 rounded-lg animate-pulse"></div>
-            ))}
-          </div>
-        </Card.Content>
-      </Card>
+      <div className="space-y-3">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-20 bg-gray-100 rounded animate-pulse"></div>
+        ))}
+      </div>
     );
   }
 
   if (!trips || trips.length === 0) {
     return (
-      <Card variant="glass" colorScheme="purple" padding="lg">
-        <Card.Content>
-          <div className="text-center py-8">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-purple-500/20 flex items-center justify-center">
-              <svg className="w-8 h-8 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div className="text-purple-200 font-medium">No trip history</div>
-          </div>
-        </Card.Content>
-      </Card>
+      <div className="text-center py-12">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div className="text-gray-500 font-medium">No trip history available</div>
+        <div className="text-gray-400 text-sm mt-1">Trips will appear here once detected</div>
+      </div>
     );
   }
 
@@ -46,108 +37,92 @@ export default function TripHistoryTimeline({ trips, onTripSelect, loading = fal
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-bold text-white">Trip History</h3>
-        <div className="text-purple-200/80 text-sm">{trips.length} trips</div>
-      </div>
+    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+      {trips.slice(0, 10).map((trip, index) => {
+        const isSelected = selectedTripId === trip.id;
+        const startTime = new Date(trip.startTime);
+        const endTime = new Date(trip.endTime);
 
-      <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-        {trips.map((trip, index) => {
-          const isSelected = selectedTripId === trip.id;
-          const startTime = new Date(trip.startTime);
-          const endTime = new Date(trip.endTime);
+        return (
+          <div
+            key={trip.id}
+            className={`border rounded p-3 cursor-pointer transition-all ${
+              isSelected 
+                ? 'border-[#007bff] bg-[#007bff]/5 shadow-sm' 
+                : 'border-gray-200 hover:border-[#007bff]/50 hover:bg-gray-50'
+            }`}
+            onClick={() => handleTripClick(trip)}
+          >
+            <div className="flex items-start gap-3">
+              {/* Trip Number Badge */}
+              <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                isSelected ? 'bg-[#007bff] text-white' : 'bg-gray-200 text-gray-600'
+              }`}>
+                {index + 1}
+              </div>
 
-          return (
-            <Card
-              key={trip.id}
-              variant="glass"
-              colorScheme={isSelected ? "purple" : "slate"}
-              padding="md"
-              hover={true}
-              className={cn(
-                "cursor-pointer transition-all duration-200",
-                isSelected && "ring-2 ring-purple-400/50 scale-[1.02]"
-              )}
-              onClick={() => handleTripClick(trip)}
-            >
-              <Card.Content>
-                <div className="flex items-start gap-4">
-                  {/* Timeline indicator */}
-                  <div className="flex flex-col items-center">
-                    <div className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center",
-                      isSelected ? "bg-purple-500/30 border-2 border-purple-400" : "bg-white/10 border border-white/20"
-                    )}>
-                      <span className="text-white font-bold text-sm">{index + 1}</span>
-                    </div>
-                    {index < trips.length - 1 && (
-                      <div className="w-0.5 h-full bg-gradient-to-b from-purple-400/50 to-transparent mt-2"></div>
-                    )}
+              {/* Trip Details */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <i className="fas fa-calendar-alt text-[#007bff] text-xs"></i>
+                    <span className="text-sm font-semibold text-gray-700">
+                      {startTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
                   </div>
+                  <span className="px-2 py-0.5 bg-[#28a745] text-white rounded text-xs font-semibold">
+                    {formatDistance(trip.distance)}
+                  </span>
+                </div>
 
-                  {/* Trip details */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <svg className="w-4 h-4 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <span className="text-white font-medium text-sm">
-                          {startTime.toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-1 bg-purple-500/20 text-purple-200 rounded text-xs font-medium">
-                          {formatDistance(trip.distance)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <div className="text-white/60 text-xs mb-1">Start Time</div>
-                        <div className="text-white font-medium">{startTime.toLocaleTimeString()}</div>
-                      </div>
-                      <div>
-                        <div className="text-white/60 text-xs mb-1">End Time</div>
-                        <div className="text-white font-medium">{endTime.toLocaleTimeString()}</div>
-                      </div>
-                      <div>
-                        <div className="text-white/60 text-xs mb-1">Duration</div>
-                        <div className="text-white font-medium">{formatDuration(trip.duration)}</div>
-                      </div>
-                      <div>
-                        <div className="text-white/60 text-xs mb-1">Avg Speed</div>
-                        <div className="text-white font-medium">{trip.avgSpeed.toFixed(1)} km/h</div>
-                      </div>
-                    </div>
-
-                    {isSelected && (
-                      <div className="mt-3 pt-3 border-t border-white/10">
-                        <div className="grid grid-cols-3 gap-2 text-xs">
-                          <div className="text-center p-2 bg-white/5 rounded">
-                            <div className="text-white/60 mb-1">Max Speed</div>
-                            <div className="text-white font-bold">{trip.maxSpeed.toFixed(1)} km/h</div>
-                          </div>
-                          <div className="text-center p-2 bg-white/5 rounded">
-                            <div className="text-white/60 mb-1">Points</div>
-                            <div className="text-white font-bold">{trip.points.length}</div>
-                          </div>
-                          <div className="text-center p-2 bg-white/5 rounded">
-                            <div className="text-white/60 mb-1">Device</div>
-                            <div className="text-white font-bold text-[10px]">{trip.deviceImei.slice(-4)}</div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-gray-500">Start:</span>
+                    <span className="text-gray-900 font-medium ml-1">{startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">End:</span>
+                    <span className="text-gray-900 font-medium ml-1">{endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Duration:</span>
+                    <span className="text-gray-900 font-medium ml-1">{formatDuration(trip.duration)}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Avg Speed:</span>
+                    <span className="text-gray-900 font-medium ml-1">{trip.avgSpeed.toFixed(1)} km/h</span>
                   </div>
                 </div>
-              </Card.Content>
-            </Card>
-          );
-        })}
-      </div>
+
+                {isSelected && (
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="text-center p-2 bg-gray-50 rounded border border-gray-200">
+                        <div className="text-xs text-gray-500 mb-1">Max Speed</div>
+                        <div className="text-sm font-bold text-gray-900">{trip.maxSpeed.toFixed(1)} km/h</div>
+                      </div>
+                      <div className="text-center p-2 bg-gray-50 rounded border border-gray-200">
+                        <div className="text-xs text-gray-500 mb-1">Data Points</div>
+                        <div className="text-sm font-bold text-gray-900">{trip.points.length}</div>
+                      </div>
+                      <div className="text-center p-2 bg-gray-50 rounded border border-gray-200">
+                        <div className="text-xs text-gray-500 mb-1">Device</div>
+                        <div className="text-sm font-bold text-gray-900 font-mono">...{trip.deviceImei.slice(-4)}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      
+      {trips.length > 10 && (
+        <div className="text-center py-2 text-xs text-gray-500">
+          Showing 10 of {trips.length} trips
+        </div>
+      )}
     </div>
   );
 }

@@ -9,7 +9,6 @@ import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Telemetry from "./pages/Telemetry";
 import Configuration from "./pages/Configuration";
 import DeviceSettings from "./pages/DeviceSettings";
 import Geofence from "./pages/Geofence";
@@ -37,7 +36,6 @@ export default function App() {
           <Route path="devices/:imei" element={<DeviceDetails />} />
           <Route path="devices/:imei/settings" element={<DeviceSettings />} />
           <Route path="device-settings" element={<DeviceSettings />} />
-          <Route path="telemetry" element={<Telemetry />} />
           <Route path="configuration" element={<Configuration />} />
           <Route path="geofence" element={<Geofence />} />
           <Route path="analytics" element={<Analytics />} />

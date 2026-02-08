@@ -39,6 +39,7 @@ export {
   Pulse,
   Skeleton,
   ProgressBar,
+  TechLoader,
 } from './Loading.jsx';
 
 // Gradient and glassmorphism components

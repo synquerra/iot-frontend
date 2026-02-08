@@ -25,3 +25,24 @@
 }
 
 body { @apply bg-bg text-slate-100 font-sans; }
+
+/* Fix input text visibility */
+input[type="text"],
+input[type="tel"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+select,
+textarea {
+  color: #1f2937 !important;
+}
+
+input[type="text"]::placeholder,
+input[type="tel"]::placeholder,
+input[type="email"]::placeholder,
+input[type="password"]::placeholder,
+input[type="number"]::placeholder,
+select::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important;
+}

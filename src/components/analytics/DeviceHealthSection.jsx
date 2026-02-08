@@ -1,8 +1,5 @@
 // src/components/analytics/DeviceHealthSection.jsx
 import React, { useMemo } from 'react';
-import { ContentSection, SectionDivider } from '../../design-system/components/LayoutComponents';
-import { Card } from '../../design-system/components/Card';
-import { KpiCard } from '../../design-system/components/KpiCard';
 import {
   calculateHealthScore,
   getBatteryTrend,
@@ -68,244 +65,127 @@ export default function DeviceHealthSection({
 
   if (loading) {
     return (
-      <ContentSection variant="accent" colorScheme="green" padding="lg">
-        <Card variant="glass" colorScheme="green" padding="lg">
-          <Card.Content>
-            <div className="h-64 bg-white/10 rounded-lg animate-pulse"></div>
-          </Card.Content>
-        </Card>
-      </ContentSection>
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-24 bg-gray-100 rounded animate-pulse"></div>
+          ))}
+        </div>
+        <div className="h-64 bg-gray-100 rounded animate-pulse"></div>
+      </div>
     );
   }
 
   if (!devices || devices.length === 0) {
     return (
-      <ContentSection variant="accent" colorScheme="green" padding="lg">
-        <Card variant="glass" colorScheme="green" padding="lg">
-          <Card.Content>
-            <div className="text-center py-8">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
-                <svg className="w-8 h-8 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="text-green-200 font-medium">No devices to monitor</div>
-            </div>
-          </Card.Content>
-        </Card>
-      </ContentSection>
+      <div className="text-center py-12">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div className="text-gray-500 font-medium">No devices to monitor</div>
+        <div className="text-gray-400 text-sm mt-1">Device health data will appear here</div>
+      </div>
     );
   }
 
   return (
-    <ContentSection variant="accent" colorScheme="green" padding="lg" spacing="md" bordered={true} elevated={true}>
-      <Card 
-        variant="glass" 
-        padding="lg" 
-        colorScheme="green" 
-        glowEffect={true}
-        className="relative overflow-hidden backdrop-blur-2xl bg-gradient-to-br from-green-600/25 via-teal-600/20 to-emerald-600/25 border border-green-400/40"
-      >
-        {/* Background Effects */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-green-500/8 via-transparent to-teal-500/8 animate-pulse" />
-          <div className="absolute top-6 left-6 w-32 h-32 bg-green-400/15 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-8 right-6 w-40 h-40 bg-teal-400/10 rounded-full blur-3xl animate-pulse delay-1000" />
+    <div className="space-y-3">
+      {/* Fleet Overview Stats - Compact for Sidebar */}
+      <div className="space-y-2">
+        {/* Fleet Health */}
+        <div className="bg-gradient-to-r from-green-50 to-green-100 rounded p-3 border-l-4 border-[#28a745]">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs text-gray-600 font-medium">Fleet Health</div>
+              <div className="text-2xl font-bold text-gray-900">{fleetAverages.avgHealth}%</div>
+            </div>
+            <div className="text-3xl">💚</div>
+          </div>
         </div>
 
-        <Card.Header className="relative z-10">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
-            <div className="flex-1">
-              <Card.Title className="text-white text-2xl font-bold bg-gradient-to-r from-white to-green-100 bg-clip-text text-transparent">
-                Device Health Monitoring
-              </Card.Title>
-              <Card.Description className="text-green-100/80 mt-1">
-                Real-time health metrics, connectivity status, and maintenance predictions
-              </Card.Description>
+        {/* Healthy Devices */}
+        <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded p-3 border-l-4 border-[#17a2b8]">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs text-gray-600 font-medium">Healthy Devices</div>
+              <div className="text-2xl font-bold text-gray-900">{fleetAverages.healthyDevices}</div>
             </div>
-            
-            <div className="px-4 py-2 bg-white/15 backdrop-blur-xl rounded-lg border border-white/30">
-              <div className="text-green-200/80 text-xs font-medium">Monitoring</div>
-              <div className="text-white text-sm font-bold">{devices.length} Devices</div>
+            <div className="text-3xl">✅</div>
+          </div>
+        </div>
+
+        {/* Average Uptime */}
+        <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded p-3 border-l-4 border-[#6f42c1]">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs text-gray-600 font-medium">Avg Uptime</div>
+              <div className="text-2xl font-bold text-gray-900">{fleetAverages.avgUptime}%</div>
             </div>
+            <div className="text-3xl">⏰</div>
           </div>
-        </Card.Header>
+        </div>
 
-        <Card.Content className="pt-6 relative z-10 space-y-8">
-          {/* Fleet Overview KPIs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard
-              title="Fleet Health"
-              value={`${fleetAverages.avgHealth}%`}
-              subtitle="Average health score"
-              colorScheme="green"
-              trend={fleetAverages.avgHealth >= 70 ? "up" : "down"}
-              size="md"
-            />
-            <KpiCard
-              title="Healthy Devices"
-              value={fleetAverages.healthyDevices}
-              subtitle={`${Math.round((fleetAverages.healthyDevices / devices.length) * 100)}% of fleet`}
-              colorScheme="teal"
-              size="md"
-            />
-            <KpiCard
-              title="Avg Uptime"
-              value={`${fleetAverages.avgUptime}%`}
-              subtitle="Last 7 days"
-              colorScheme="blue"
-              size="md"
-            />
-            <KpiCard
-              title="Critical Devices"
-              value={fleetAverages.criticalDevices}
-              subtitle="Need attention"
-              colorScheme={fleetAverages.criticalDevices > 0 ? "red" : "green"}
-              size="md"
-            />
-          </div>
-
-          <SectionDivider variant="gradient" colorScheme="teal" spacing="md" animated={true} />
-
-          {/* Device Health Cards */}
-          <div className="space-y-4">
-            <h3 className="text-xl font-bold text-white mb-4">Individual Device Health</h3>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-              {deviceHealthData.map(({ device, healthScore, signalStrength, uptime, connectionQuality }) => {
-                const statusInfo = formatHealthStatus(healthScore.status);
-                
-                return (
-                  <Card
-                    key={device.imei}
-                    variant="glass"
-                    colorScheme={statusInfo.color}
-                    padding="md"
-                    hover={true}
-                    className="transition-all duration-200"
-                  >
-                    <Card.Content>
-                      <div className="space-y-4">
-                        {/* Device Header */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-12 h-12 rounded-full bg-${statusInfo.color}-500/20 flex items-center justify-center`}>
-                              <span className="text-2xl">{statusInfo.icon}</span>
-                            </div>
-                            <div>
-                              <div className="text-white font-bold text-sm">Device {device.imei.slice(-4)}</div>
-                              <div className="text-white/70 text-xs">{device.topic || 'Unknown'}</div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-white text-2xl font-bold">{healthScore.overall}%</div>
-                            <div className={`text-${statusInfo.color}-300 text-xs font-medium`}>
-                              {statusInfo.label}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Health Breakdown */}
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="p-2 bg-white/5 rounded-lg">
-                            <div className="text-white/60 text-xs mb-1">Battery</div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 bg-white/20 rounded-full h-1.5">
-                                <div 
-                                  className="bg-green-400 h-1.5 rounded-full transition-all duration-300"
-                                  style={{ width: `${healthScore.breakdown.battery}%` }}
-                                />
-                              </div>
-                              <span className="text-white text-xs font-bold">{healthScore.breakdown.battery}%</span>
-                            </div>
-                          </div>
-                          
-                          <div className="p-2 bg-white/5 rounded-lg">
-                            <div className="text-white/60 text-xs mb-1">Connectivity</div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 bg-white/20 rounded-full h-1.5">
-                                <div 
-                                  className="bg-blue-400 h-1.5 rounded-full transition-all duration-300"
-                                  style={{ width: `${healthScore.breakdown.connectivity}%` }}
-                                />
-                              </div>
-                              <span className="text-white text-xs font-bold">{healthScore.breakdown.connectivity}%</span>
-                            </div>
-                          </div>
-                          
-                          <div className="p-2 bg-white/5 rounded-lg">
-                            <div className="text-white/60 text-xs mb-1">Data Quality</div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 bg-white/20 rounded-full h-1.5">
-                                <div 
-                                  className="bg-purple-400 h-1.5 rounded-full transition-all duration-300"
-                                  style={{ width: `${healthScore.breakdown.dataQuality}%` }}
-                                />
-                              </div>
-                              <span className="text-white text-xs font-bold">{healthScore.breakdown.dataQuality}%</span>
-                            </div>
-                          </div>
-                          
-                          <div className="p-2 bg-white/5 rounded-lg">
-                            <div className="text-white/60 text-xs mb-1">Uptime</div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 bg-white/20 rounded-full h-1.5">
-                                <div 
-                                  className="bg-teal-400 h-1.5 rounded-full transition-all duration-300"
-                                  style={{ width: `${healthScore.breakdown.uptime}%` }}
-                                />
-                              </div>
-                              <span className="text-white text-xs font-bold">{healthScore.breakdown.uptime}%</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Signal and Connection */}
-                        <div className="flex items-center justify-between pt-2 border-t border-white/10">
-                          <div className="flex items-center gap-2">
-                            <div className="flex gap-0.5">
-                              {[...Array(4)].map((_, i) => (
-                                <div
-                                  key={i}
-                                  className={`w-1 rounded-sm ${
-                                    i < signalStrength.bars ? 'bg-green-400' : 'bg-white/20'
-                                  }`}
-                                  style={{ height: `${(i + 1) * 4}px` }}
-                                />
-                              ))}
-                            </div>
-                            <span className="text-white/80 text-xs">{signalStrength.strength}</span>
-                          </div>
-                          <div className="text-white/80 text-xs">
-                            Uptime: {uptime}%
-                          </div>
-                          <div className="text-white/80 text-xs">
-                            Quality: {connectionQuality.status}
-                          </div>
-                        </div>
-
-                        {/* Alerts */}
-                        {healthScore.alerts.length > 0 && (
-                          <div className="pt-2 border-t border-white/10">
-                            {healthScore.alerts.map((alert, idx) => (
-                              <div key={idx} className="flex items-center gap-2 text-xs text-amber-300 mb-1">
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                </svg>
-                                <span>{alert.message}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </Card.Content>
-                  </Card>
-                );
-              })}
+        {/* Critical Devices */}
+        <div className={`bg-gradient-to-r rounded p-3 border-l-4 ${
+          fleetAverages.criticalDevices > 0 
+            ? 'from-red-50 to-red-100 border-[#dc3545]' 
+            : 'from-green-50 to-green-100 border-[#28a745]'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs text-gray-600 font-medium">Critical</div>
+              <div className="text-2xl font-bold text-gray-900">{fleetAverages.criticalDevices}</div>
             </div>
+            <div className="text-3xl">{fleetAverages.criticalDevices > 0 ? '⚠️' : '🛡️'}</div>
           </div>
-        </Card.Content>
-      </Card>
-    </ContentSection>
+        </div>
+      </div>
+
+      {/* Device List - Compact */}
+      <div className="space-y-2 max-h-96 overflow-y-auto">
+        <div className="text-xs font-semibold text-gray-600 uppercase mb-2">Device Status</div>
+        {deviceHealthData.slice(0, 5).map(({ device, healthScore }) => {
+          const statusInfo = formatHealthStatus(healthScore.status);
+          
+          return (
+            <div key={device.imei} className="bg-white border border-gray-200 rounded p-2">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-lg ${
+                    healthScore.overall >= 70 ? 'bg-green-100' :
+                    healthScore.overall >= 40 ? 'bg-yellow-100' : 'bg-red-100'
+                  }`}>
+                    {statusInfo.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-mono text-gray-900 truncate">...{device.imei.slice(-6)}</div>
+                    <div className="text-xs text-gray-500 truncate">{device.topic || 'Unknown'}</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-gray-900">{healthScore.overall}%</div>
+                </div>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                <div 
+                  className={`h-1.5 rounded-full ${
+                    healthScore.overall >= 70 ? 'bg-[#28a745]' :
+                    healthScore.overall >= 40 ? 'bg-[#ffc107]' : 'bg-[#dc3545]'
+                  }`}
+                  style={{ width: `${healthScore.overall}%` }}
+                />
+              </div>
+            </div>
+          );
+        })}
+        {deviceHealthData.length > 5 && (
+          <div className="text-center text-xs text-gray-500 py-2">
+            +{deviceHealthData.length - 5} more devices
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

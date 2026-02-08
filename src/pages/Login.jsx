@@ -3,6 +3,9 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import { authenticateUser } from "../utils/auth";
 import { persistUserContext } from "../utils/authResponseParser";
 import { useUserContext } from "../contexts/UserContext";
+import { AuthLayout } from "../components/auth/AuthLayout";
+import { AuthCard } from "../components/auth/AuthCard";
+import { AuthHeader } from "../components/auth/AuthHeader";
 import { Input } from "../design-system/components/Input";
 import { Button } from "../design-system/components/Button";
 
@@ -78,24 +81,33 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-900 to-surface-background px-4">
-      <div className="w-full max-w-md animate-fade-in">
-        {/* Login Card */}
-        <div className="bg-surface-primary border border-border-primary rounded-2xl p-8 shadow-xl">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-text-primary mb-2">
-              Welcome back
-            </h1>
-            <p className="text-text-secondary">
-              Sign in to your Synquerra account
-            </p>
-          </div>
+    <AuthLayout
+      showHelp={true}
+      helpContent={
+        <span>
+          Having trouble signing in?{" "}
+          <button 
+            type="button"
+            className="text-accent hover:text-accent/80 underline transition-colors duration-200"
+            onClick={() => {
+              alert("Please contact support for assistance with your account.");
+            }}
+          >
+            Get help
+          </button>
+        </span>
+      }
+    >
+      <AuthCard>
+        <AuthHeader 
+          title="Welcome back"
+          subtitle="Sign in to your Synquerra account"
+        />
 
           {/* Success Message */}
           {success && (
-            <div className="mb-6 p-4 bg-status-success/10 border border-status-success/20 rounded-lg">
-              <p className="text-status-success text-sm font-medium">
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-green-700 text-sm font-medium">
                 {success}
               </p>
             </div>
@@ -103,8 +115,8 @@ export default function Login() {
 
           {/* Global Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-status-error/10 border border-status-error/20 rounded-lg">
-              <p className="text-status-error text-sm font-medium">
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-700 text-sm font-medium">
                 {error}
               </p>
             </div>
@@ -163,37 +175,19 @@ export default function Login() {
             </Button>
           </form>
 
-          {/* Footer */}
-          <div className="mt-8 text-center">
-            <p className="text-text-tertiary text-sm">
-              Don't have an account?{" "}
-              <Link 
-                to="/signup" 
-                className="text-accent hover:text-accent/80 font-medium transition-colors duration-200"
-              >
-                Sign up
-              </Link>
-            </p>
-          </div>
-        </div>
-
-        {/* Additional Help Text */}
-        <div className="mt-6 text-center">
-          <p className="text-text-tertiary text-xs">
-            Having trouble signing in?{" "}
-            <button 
-              type="button"
-              className="text-accent hover:text-accent/80 underline transition-colors duration-200"
-              onClick={() => {
-                // This could be expanded to show a help modal or redirect to support
-                alert("Please contact support for assistance with your account.");
-              }}
+        {/* Footer */}
+        <div className="mt-8 text-center">
+          <p className="text-text-tertiary text-sm">
+            Don't have an account?{" "}
+            <Link 
+              to="/signup" 
+              className="text-accent hover:text-accent/80 font-medium transition-colors duration-200"
             >
-              Get help
-            </button>
+              Sign up
+            </Link>
           </p>
         </div>
-      </div>
-    </div>
+      </AuthCard>
+    </AuthLayout>
   );
 }

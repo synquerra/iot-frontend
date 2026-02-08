@@ -224,7 +224,7 @@ export const EnhancedBarChart = ({
             </>
           ) : (
             <>
-              <XAxis {...modernChartConfig.axis} />
+              <XAxis {...modernChartConfig.axis} angle={-45} textAnchor="end" height={80} />
               <YAxis {...modernChartConfig.axis} />
             </>
           )}

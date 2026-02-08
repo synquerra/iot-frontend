@@ -23,6 +23,9 @@ import {
   EnhancedPieChart,
 } from "../components/LazyCharts";
 
+// User Context
+import { useUserContext } from "../contexts/UserContext";
+
 // Speed Distribution Card
 import SpeedDistributionCard from "../components/dashboard/SpeedDistributionCard";
 
@@ -74,14 +77,17 @@ import TripAnalyticsSection from "../components/analytics/TripAnalyticsSection";
 // Device Health Section
 import DeviceHealthSection from "../components/analytics/DeviceHealthSection";
 
-// Geofence Analytics Section
-import GeofenceAnalyticsSection from "../components/analytics/GeofenceAnalyticsSection";
+// Device Activity Timeline Section
+import DeviceActivityTimeline from "../components/analytics/DeviceActivityTimeline";
 
 
 /* ------------------------------------------------
    MAIN DASHBOARD
 ---------------------------------------------------*/
 export default function Dashboard() {
+  // User context for role-based logic
+  const { isAdmin, userType } = useUserContext();
+  
   // Device filtering hook (Requirement 4.2)
   const { filterDevices, shouldFilterDevices } = useDeviceFilter();
   
@@ -96,6 +102,17 @@ export default function Dashboard() {
   const [locationLoading, setLocationLoading] = useState(false);
   const [error, setError] = useState(null);
   const [geofences, setGeofences] = useState([]);
+  
+  // Global device filter for dashboard data
+  const [selectedDeviceFilter, setSelectedDeviceFilter] = useState("all");
+  
+  // Device Management table state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [speedFilter, setSpeedFilter] = useState("all");
+  const [geoidFilter, setGeoidFilter] = useState("all");
   
   // Previous stats for trend calculation
   const [previousStats, setPreviousStats] = useState({
@@ -130,6 +147,79 @@ export default function Dashboard() {
     return filterDevices(devices);
   }, [devices, filterDevices]);
 
+  // Determine if device filter should be shown
+  // Show filter if: ADMIN (always) OR Parent with 2+ devices
+  const shouldShowDeviceFilter = useMemo(() => {
+    if (isAdmin()) {
+      return true; // Always show for ADMIN
+    }
+    // For PARENTS, only show if they have 2 or more devices
+    return filteredDevices.length >= 2;
+  }, [isAdmin, filteredDevices.length]);
+
+  // Apply search, status, speed, and geoid filters to devices for Device Management table
+  const filteredDevicesForTable = useMemo(() => {
+    let filtered = filteredDevices;
+    
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(d => 
+        d.imei?.toLowerCase().includes(query) ||
+        d.topic?.toLowerCase().includes(query) ||
+        d.geoid?.toLowerCase().includes(query)
+      );
+    }
+    
+    // Status filter (based on interval)
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(d => {
+        const interval = Number(d.interval);
+        if (statusFilter === "active") return interval <= 30;
+        if (statusFilter === "normal") return interval > 30 && interval <= 120;
+        if (statusFilter === "slow") return interval > 120 && interval <= 600;
+        if (statusFilter === "very-slow") return interval > 600;
+        return true;
+      });
+    }
+    
+    // Speed filter (based on interval)
+    if (speedFilter !== "all") {
+      filtered = filtered.filter(d => {
+        const interval = Number(d.interval);
+        if (speedFilter === "fast") return interval <= 30;
+        if (speedFilter === "normal") return interval > 30 && interval <= 120;
+        if (speedFilter === "slow") return interval > 120;
+        return true;
+      });
+    }
+    
+    // Geoid filter
+    if (geoidFilter !== "all") {
+      filtered = filtered.filter(d => d.geoid === geoidFilter);
+    }
+    
+    return filtered;
+  }, [filteredDevices, searchQuery, statusFilter, speedFilter, geoidFilter]);
+
+  // Pagination for Device Management table
+  const paginatedDevices = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredDevicesForTable.slice(startIndex, endIndex);
+  }, [filteredDevicesForTable, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredDevicesForTable.length / itemsPerPage);
+
+  // Get unique geoids for filter dropdown
+  const uniqueGeoids = useMemo(() => {
+    const geoids = new Set();
+    filteredDevices.forEach(d => {
+      if (d.geoid) geoids.add(d.geoid);
+    });
+    return Array.from(geoids).sort();
+  }, [filteredDevices]);
+
   // Get allowed IMEIs for analytics filtering
   const allowedIMEIs = useMemo(() => {
     if (!shouldFilterDevices()) {
@@ -140,6 +230,7 @@ export default function Dashboard() {
 
   // Filter analytics data by allowed devices (Requirement 4.2)
   // AND filter by packet type: only packet_N, packet_A, and packet_E
+  // AND filter by selected device (if specific device is selected)
   const filteredAnalytics = useMemo(() => {
     let filtered = allAnalytics;
     
@@ -174,8 +265,17 @@ export default function Dashboard() {
     console.log('   After:', filtered.length, 'records (packet_N + packet_A + packet_E only)');
     console.log('   Filtered out:', beforeTypeFilter - filtered.length, 'records (packet_H, etc.)');
     
+    // Filter by selected device (Global Device Filter)
+    if (selectedDeviceFilter !== "all") {
+      filtered = filtered.filter(a => 
+        a.imei && a.imei.toLowerCase() === selectedDeviceFilter.toLowerCase()
+      );
+      console.log('🎯 Selected Device Filter Applied:', selectedDeviceFilter);
+      console.log('   Filtered to:', filtered.length, 'records');
+    }
+    
     return filtered;
-  }, [allAnalytics, allowedIMEIs]);
+  }, [allAnalytics, allowedIMEIs, selectedDeviceFilter]);
 
   // Filter recent analytics by allowed devices (Requirement 4.2)
   // AND filter by packet type: only packet_N, packet_A, and packet_E
@@ -643,6 +743,22 @@ export default function Dashboard() {
     loadDashboardData();
   }, []);
 
+  // Auto-select device for parents with only 1 device
+  useEffect(() => {
+    // Only auto-select if:
+    // 1. Not ADMIN
+    // 2. Has exactly 1 device
+    // 3. Device filter is not shown (shouldShowDeviceFilter is false)
+    // 4. No device is currently selected
+    if (!isAdmin() && filteredDevices.length === 1 && !shouldShowDeviceFilter && selectedDeviceFilter === "all") {
+      const singleDevice = filteredDevices[0];
+      console.log('🎯 Auto-selecting single device for parent:', singleDevice.imei);
+      setSelectedDeviceFilter(singleDevice.imei);
+      setSelectedImei(singleDevice.imei);
+      loadHistory(singleDevice.imei);
+    }
+  }, [isAdmin, filteredDevices, shouldShowDeviceFilter, selectedDeviceFilter]);
+
   /* ------------------------------------------------
        Render
   ---------------------------------------------------*/
@@ -734,938 +850,614 @@ export default function Dashboard() {
     );
 
   return (
-    <div className="space-y-4">
-      {/* Enhanced Dashboard Header with Gradient Design */}
-      <DashboardHeader
-        title="IoT Analytics Dashboard"
-        subtitle="Live analytics dashboard with comprehensive device monitoring and real-time insights"
-        stats={{
-          devicesCount: stats.devicesCount,
-          recentCount: stats.recentCount,
-          totalAnalytics: stats.totalAnalytics,
-          // Use calculated trend data
-          devicesTrend: stats.devicesTrend,
-          devicesTrendValue: stats.devicesTrendValue,
-          recentTrend: stats.recentTrend,
-          recentTrendValue: stats.recentTrendValue,
-          totalTrend: stats.totalAnalyticsTrend,
-          totalTrendValue: stats.totalAnalyticsTrendValue
-        }}
-        onRefresh={refreshDashboard}
-        loading={loading}
-        colorScheme="violet"
-        size="lg"
-        showStats={true}
-        showFilterIndicator={shouldFilterDevices()}
-      />
-
-      {/* Enhanced KPI Section with Gradient Backgrounds and Responsive Layout */}
-      <HierarchySection level={1} colorScheme="violet" spacing="sm">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-          {/* Total Analytics KPI with Performance Styling */}
-          <div className="transform transition-all duration-300 hover:scale-105 hover:shadow-2xl">
-            <KpiCard
-              title="Total Analytics"
-              value={stats.totalAnalytics}
-              subtitle="Normal, Alert & Error packets"
-              type="performance"
-              colorScheme="blue"
-              trend={stats.totalAnalyticsTrend}
-              trendValue={stats.totalAnalyticsTrendValue}
-              size="lg"
-              animated={true}
-              className="relative overflow-hidden group border-2 border-blue-500/50"
-              style={{
-                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.25) 100%)',
-                borderColor: 'rgba(59, 130, 246, 0.5)',
-                backdropFilter: 'blur(12px)',
-              }}
-            />
-          </div>
-
-          {/* Total Devices KPI with Status Styling */}
-          <div className="transform transition-all duration-300 hover:scale-105 hover:shadow-2xl">
-            <KpiCard
-              title="Active Devices"
-              value={stats.devicesCount}
-              subtitle="Connected IoT devices"
-              type="status"
-              colorScheme="green"
-              trend={stats.devicesTrend}
-              trendValue={stats.devicesTrendValue}
-              size="lg"
-              animated={true}
-              className="relative overflow-hidden group border-2 border-green-500/50"
-              style={{
-                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.25) 100%)',
-                borderColor: 'rgba(34, 197, 94, 0.5)',
-                backdropFilter: 'blur(12px)',
-              }}
-            />
-          </div>
-
-          {/* Recent Data KPI with Growth Styling */}
-          <div className="transform transition-all duration-300 hover:scale-105 hover:shadow-2xl sm:col-span-2 lg:col-span-1">
-            <KpiCard
-              title="Recent Activity"
-              value={stats.recentCount}
-              subtitle="Latest data points"
-              type="growth"
-              colorScheme="amber"
-              trend={stats.recentTrend}
-              trendValue={stats.recentTrendValue}
-              size="lg"
-              animated={true}
-              className="relative overflow-hidden group border-2 border-amber-500/50"
-              style={{
-                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.25) 100%)',
-                borderColor: 'rgba(245, 158, 11, 0.5)',
-                backdropFilter: 'blur(12px)',
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Enhanced Visual Effects for KPI Section */}
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Animated gradient overlay */}
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-green-500 to-amber-500 opacity-30 animate-pulse" />
-          
-          {/* Subtle glow effects */}
-          <div className="absolute top-4 left-4 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute top-4 right-4 w-32 h-32 bg-green-500/5 rounded-full blur-3xl animate-pulse delay-1000" />
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl animate-pulse delay-2000" />
-        </div>
-      </HierarchySection>
-
-      {/* Colorful Section Divider */}
-      <SectionDivider 
-        variant="rainbow" 
-        spacing="sm" 
-        animated={true}
-      />
-
-      {/* ENHANCED MAP SECTION with Glassmorphism and Improved Interactions */}
-      <ContentSection variant="accent" colorScheme="blue" padding="md" spacing="sm" bordered={true} elevated={true}>
-        {/* Enhanced Gradient Card Wrapper with Advanced Glassmorphism Effects */}
-        <Card 
-          variant="glass" 
-          padding="lg" 
-          colorScheme="blue" 
-          glowEffect={true}
-          hover={true}
-          className="relative overflow-hidden backdrop-blur-2xl bg-gradient-to-br from-blue-600/25 via-cyan-600/20 to-teal-600/25 border-2 border-blue-400/50 shadow-2xl shadow-blue-500/30 transition-all duration-500 ease-out hover:shadow-blue-500/40 hover:border-blue-300/60"
-        >
-          {/* Enhanced Background Effects with Multiple Layers */}
-          <div className="absolute inset-0 pointer-events-none">
-            {/* Primary animated gradient mesh */}
-            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/8 via-transparent to-cyan-500/8 animate-pulse" />
-            
-            {/* Secondary gradient layer for depth */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-blue-400/5 to-teal-400/8 animate-pulse delay-1000" />
-            
-            {/* Enhanced glassmorphism overlay with noise texture */}
-            <div className="absolute inset-0 bg-white/8 backdrop-blur-sm" 
-                 style={{
-                   backgroundImage: `radial-gradient(circle at 25% 25%, rgba(255,255,255,0.1) 0%, transparent 50%), 
-                                    radial-gradient(circle at 75% 75%, rgba(59,130,246,0.1) 0%, transparent 50%)`,
-                 }} />
-            
-            {/* Floating glow effects with staggered animations */}
-            <div className="absolute top-6 left-6 w-32 h-32 bg-blue-400/15 rounded-full blur-3xl animate-pulse" />
-            <div className="absolute top-12 right-8 w-24 h-24 bg-cyan-400/12 rounded-full blur-2xl animate-pulse delay-700" />
-            <div className="absolute bottom-8 right-6 w-40 h-40 bg-teal-400/10 rounded-full blur-3xl animate-pulse delay-1400" />
-            <div className="absolute bottom-6 left-12 w-28 h-28 bg-blue-300/8 rounded-full blur-2xl animate-pulse delay-2100" />
-            
-            {/* Subtle animated border highlight */}
-            <div className="absolute inset-0 rounded-xl border border-white/10 animate-pulse delay-500" />
-          </div>
-
-          <Card.Header className="relative z-10">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
-              <div className="flex-1">
-                <Card.Title className="text-white text-xl font-bold bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
-                  Street-Level Device Tracking
-                </Card.Title>
-                <Card.Description className="text-blue-100/80 mt-1">
-                  Interactive street-by-street device location history with detailed waypoint tracking
-                </Card.Description>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                {/* Enhanced Device Selection Dropdown */}
-                <div className="relative group">
-                  <select
-                    value={selectedImei}
-                    onChange={(e) => loadHistory(e.target.value)}
-                    className={cn(
-                      'px-5 py-3.5 min-w-[200px] rounded-xl',
-                      'bg-white/15 backdrop-blur-xl border border-white/30',
-                      'text-white placeholder-white/70',
-                      'shadow-xl shadow-black/30',
-                      'hover:bg-white/20 hover:border-white/40 hover:shadow-2xl hover:shadow-blue-500/25',
-                      'focus:bg-white/25 focus:border-blue-300/60 focus:outline-none focus:ring-4 focus:ring-blue-400/20',
-                      'active:scale-[0.98] active:bg-white/30',
-                      'transition-all duration-300 ease-out',
-                      'text-sm font-semibold tracking-wide',
-                      'sm:min-w-[240px] md:min-w-[260px] lg:min-w-[280px]',
-                      'backdrop-saturate-150 backdrop-contrast-125'
-                    )}
-                  >
-                    <option value="" className="bg-slate-900/95 text-white font-medium">
-                      🗺️ Select device to track
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6 bg-gray-50 min-h-screen">
+      {/* Global Device Filter - Only show if ADMIN or Parent with 2+ devices */}
+      {shouldShowDeviceFilter && (
+        <div className="bg-white rounded-lg shadow-md p-4">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+              <i className="fas fa-filter text-[#007bff] text-xl"></i>
+              <h3 className="text-lg font-semibold text-gray-700">Dashboard View</h3>
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-600">Show data for:</label>
+              <select
+                value={selectedDeviceFilter}
+                onChange={(e) => {
+                  setSelectedDeviceFilter(e.target.value);
+                  // Auto-select device in map if specific device is chosen
+                  if (e.target.value !== "all") {
+                    setSelectedImei(e.target.value);
+                    loadHistory(e.target.value);
+                  } else {
+                    setSelectedImei("");
+                    setLocationPath([]);
+                  }
+                }}
+                className="form-select px-4 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#007bff] focus:border-[#007bff] cursor-pointer min-w-[250px]"
+              >
+                <option value="all">🌐 All Devices (Combined Data)</option>
+                <optgroup label="Individual Devices">
+                  {filteredDevices.map((d) => (
+                    <option key={d.imei} value={d.imei}>
+                      📱 {d.topic || d.imei} ({d.imei.slice(-6)})
                     </option>
-                    {filteredDevices.map((d) => (
-                      <option 
-                        key={d.imei} 
-                        value={d.imei} 
-                        className="bg-slate-900/95 text-white hover:bg-slate-800/95 font-medium py-2"
-                      >
-                        📱 Device: {d.imei}
-                      </option>
-                    ))}
-                  </select>
-                  
-                  {/* Enhanced dropdown icon overlay with animation */}
-                  <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none transition-transform duration-200 group-hover:scale-110">
-                    <svg 
-                      className="w-5 h-5 text-white/80 drop-shadow-lg" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                  
-                  {/* Subtle glow effect on hover */}
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-400/0 via-cyan-400/0 to-teal-400/0 group-hover:from-blue-400/10 group-hover:via-cyan-400/5 group-hover:to-teal-400/10 transition-all duration-300 pointer-events-none" />
-                </div>
+                  ))}
+                </optgroup>
+              </select>
+              {selectedDeviceFilter !== "all" && (
+                <button
+                  onClick={() => {
+                    setSelectedDeviceFilter("all");
+                    setSelectedImei("");
+                    setLocationPath([]);
+                  }}
+                  className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                  title="Clear filter"
+                >
+                  <i className="fas fa-times mr-1"></i>
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+          {selectedDeviceFilter !== "all" && (
+            <div className="mt-3 p-3 bg-blue-50 border-l-4 border-[#007bff] rounded">
+              <p className="text-sm text-gray-700">
+                <i className="fas fa-info-circle text-[#007bff] mr-2"></i>
+                Showing data for device: <span className="font-mono font-semibold">{selectedDeviceFilter}</span>
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* AdminLTE v3 Small Boxes */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        {/* Total Analytics - Info Color */}
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#17a2b8] to-[#138496] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.totalAnalytics.toLocaleString()}</div>
+            <div className="text-sm font-medium mt-1">Total Analytics</div>
+          </div>
+          <div className="absolute top-2 right-3 text-white/30">
+            <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+            </svg>
+          </div>
+          <a href="#" className="block bg-black/20 hover:bg-black/30 transition-colors px-4 py-2 text-center text-sm">
+            More info <span className="ml-1">→</span>
+          </a>
+        </div>
+
+        {/* Active Devices - Success Color */}
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#28a745] to-[#218838] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.devicesCount}</div>
+            <div className="text-sm font-medium mt-1">Active Devices</div>
+          </div>
+          <div className="absolute top-2 right-3 text-white/30">
+            <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/>
+            </svg>
+          </div>
+          <a href="#" className="block bg-black/20 hover:bg-black/30 transition-colors px-4 py-2 text-center text-sm">
+            More info <span className="ml-1">→</span>
+          </a>
+        </div>
+
+        {/* Recent Activity - Warning Color */}
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#ffc107] to-[#e0a800] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.recentCount}</div>
+            <div className="text-sm font-medium mt-1">Recent Activity</div>
+          </div>
+          <div className="absolute top-2 right-3 text-white/30">
+            <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M13 2.05v3.03c3.39.49 6 3.39 6 6.92 0 .9-.18 1.75-.48 2.54l2.6 1.53c.56-1.24.88-2.62.88-4.07 0-5.18-3.95-9.45-9-9.95zM12 19c-3.87 0-7-3.13-7-7 0-3.53 2.61-6.43 6-6.92V2.05c-5.06.5-9 4.76-9 9.95 0 5.52 4.47 10 9.99 10 3.31 0 6.24-1.61 8.06-4.09l-2.6-1.53C16.17 17.98 14.21 19 12 19z"/>
+            </svg>
+          </div>
+          <a href="#" className="block bg-black/20 hover:bg-black/30 transition-colors px-4 py-2 text-center text-sm">
+            More info <span className="ml-1">→</span>
+          </a>
+        </div>
+      </div>
+
+      {/* 2-Column Layout for Better Organization */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        {/* Left Column - 2/3 width */}
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+          {/* Device Location Tracking */}
+          <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
+            <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-700">
+                <i className="fas fa-map-marked-alt mr-2 text-[#007bff]"></i>
+                Device Location Tracking
+              </h3>
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedImei}
+                  onChange={(e) => loadHistory(e.target.value)}
+                  className="form-select px-3 py-2 border border-gray-300 rounded text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#007bff] focus:border-[#007bff] cursor-pointer"
+                  style={{ minWidth: '200px' }}
+                >
+                  <option value="">Select Device</option>
+                  {filteredDevices.map((d) => (
+                    <option key={d.imei} value={d.imei}>
+                      {d.imei}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
-          </Card.Header>
-
-          <Card.Content className="pt-6 relative z-10">
-            {selectedImei ? (
-              <div className="relative">
-                {/* Map Container with proper dimensions (Requirement 1.4) */}
-                <div className="relative rounded-xl overflow-hidden border border-white/20 shadow-xl bg-slate-800"
-                     style={{ width: '100%', height: '400px', minHeight: '400px' }}>
+            <div className="p-4">
+              {selectedImei ? (
+                <div className="relative rounded border border-gray-200" style={{ height: '450px' }}>
                   {locationLoading ? (
-                    <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80">
-                      <div className="text-center space-y-4">
-                        <Loading 
-                          type="spinner" 
-                          size="xl" 
-                          color="white"
-                          className="drop-shadow-2xl"
-                        />
-                        <div className="text-white font-medium">
-                          Loading location data...
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+                      <div className="text-center">
+                        <div className="spinner-border text-[#007bff]" role="status">
+                          <Loading type="spinner" size="lg" />
                         </div>
-                        
-                        {/* Location Loading Progress */}
+                        <div className="text-sm text-gray-600 mt-3 font-medium">Loading location data...</div>
                         {loadingProgress.location.percentage > 0 && (
-                          <div className="max-w-xs mx-auto">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs text-white/80">Progress</span>
-                              <span className="text-xs text-white/60">
-                                {loadingProgress.location.current} / {loadingProgress.location.total || '?'}
-                              </span>
-                            </div>
-                            <div className="w-full bg-white/20 rounded-full h-2">
+                          <div className="mt-4 max-w-xs mx-auto">
+                            <div className="w-full bg-gray-200 rounded-full h-2.5">
                               <div 
-                                className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full transition-all duration-300"
+                                className="bg-[#007bff] h-2.5 rounded-full transition-all duration-300"
                                 style={{ width: `${Math.min(loadingProgress.location.percentage, 100)}%` }}
                               />
                             </div>
-                            <div className="text-xs text-white/60 mt-1">
-                              {loadingProgress.location.percentage.toFixed(1)}% complete
+                            <div className="text-xs text-gray-500 mt-2 font-medium">
+                              {loadingProgress.location.percentage.toFixed(0)}% complete
                             </div>
                           </div>
                         )}
                       </div>
                     </div>
                   ) : (
-                    <div className="w-full h-full relative">
-                      {/* Clean Journey Map - Realistic and smooth */}
-                      <CleanJourneyMap
-                        path={locationPath}
-                        className="w-full h-full"
-                      />
-                    </div>
+                    <CleanJourneyMap path={locationPath} className="w-full h-full" />
                   )}
                 </div>
-              </div>
-            ) : (
-              /* Enhanced Empty State with Advanced Glassmorphism */
-              <div className={cn(
-                'text-center py-20 px-10 rounded-xl relative overflow-hidden',
-                'bg-gradient-to-br from-blue-500/15 via-cyan-500/10 to-teal-500/15',
-                'border border-white/20 backdrop-blur-xl shadow-2xl shadow-blue-500/20'
-              )}>
-                {/* Animated background effects */}
-                <div className="absolute inset-0 pointer-events-none">
-                  <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-400/5 via-transparent to-cyan-400/5 animate-pulse" />
-                  <div className="absolute inset-0 bg-white/5 backdrop-blur-sm" />
-                  
-                  {/* Floating particles effect */}
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="absolute w-2 h-2 bg-blue-400/30 rounded-full animate-pulse"
-                      style={{
-                        top: `${20 + (i * 15)}%`,
-                        left: `${10 + (i * 12)}%`,
-                        animationDelay: `${i * 0.5}s`,
-                        animationDuration: '3s',
-                      }}
-                    />
-                  ))}
-                </div>
-                
-                {/* Enhanced icon with glassmorphism */}
-                <div className="mx-auto w-20 h-20 mb-8 rounded-2xl bg-gradient-to-br from-blue-400/25 to-cyan-400/25 flex items-center justify-center backdrop-blur-md border border-white/30 shadow-xl relative group">
-                  {/* Icon glow effect */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  
-                  <svg className="w-10 h-10 text-blue-300 relative z-10 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </div>
-                
-                {/* Enhanced text content with better typography */}
-                <div className="relative z-10">
-                  <div className="text-2xl font-bold mb-4 bg-gradient-to-r from-blue-300 via-cyan-300 to-teal-300 bg-clip-text text-transparent animate-pulse">
-                    No device selected
+              ) : (
+                <div className="text-center py-20 bg-gray-50 rounded border border-gray-200">
+                  <div className="w-20 h-20 mx-auto mb-4 bg-[#007bff]/10 rounded-full flex items-center justify-center">
+                    <svg className="w-10 h-10 text-[#007bff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
                   </div>
-                  <div className="text-blue-200/90 text-base max-w-lg mx-auto leading-relaxed font-medium">
-                    Choose a device from the dropdown above to view its detailed street-by-street location history with enhanced waypoint tracking and movement patterns
-                  </div>
-                  
-                  {/* Enhanced call to action with glassmorphism */}
-                  <div className="mt-8">
-                    <div className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-white/15 backdrop-blur-md border border-white/30 text-blue-200 text-sm font-semibold shadow-lg hover:bg-white/20 hover:scale-105 transition-all duration-200 cursor-pointer group">
-                      <svg className="w-5 h-5 group-hover:animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
-                      </svg>
-                      <span>Select device above</span>
-                    </div>
-                  </div>
+                  <h4 className="text-lg font-semibold text-gray-700 mb-2">No Device Selected</h4>
+                  <p className="text-sm text-gray-500">Select a device from the dropdown above to view its location history</p>
                 </div>
-              </div>
-            )}
-          </Card.Content>
-        </Card>
-      </ContentSection>
-
-      {/* Colorful Section Divider */}
-      <SectionDivider 
-        variant="gradient" 
-        colorScheme="teal" 
-        spacing="sm" 
-        animated={true}
-      />
-
-      {/* ENHANCED CHARTS SECTION with Advanced Visual Effects and Responsive Layout */}
-      <HierarchySection level={2} colorScheme="teal" spacing="sm">
-        {/* Enhanced Charts Container with Advanced Glassmorphism and Gradient Effects */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-teal-500/50 bg-gradient-to-br from-teal-900/20 via-slate-900/20 to-teal-900/20 backdrop-blur-sm">
-          {/* Multi-layered Background Effects */}
-          <div className="absolute inset-0 pointer-events-none">
-            {/* Primary animated gradient mesh */}
-            <div className="absolute inset-0 bg-gradient-to-br from-teal-600/20 via-cyan-600/15 to-blue-600/20 animate-pulse" />
-            
-            {/* Secondary gradient layer for depth */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-teal-400/8 to-cyan-400/12 animate-pulse delay-1000" />
-            
-            {/* Floating glow effects with staggered animations */}
-            <div className="absolute top-8 left-8 w-40 h-40 bg-teal-400/15 rounded-full blur-3xl animate-pulse" />
-            <div className="absolute top-12 right-12 w-32 h-32 bg-cyan-400/12 rounded-full blur-2xl animate-pulse delay-700" />
-            <div className="absolute bottom-8 right-8 w-48 h-48 bg-blue-400/10 rounded-full blur-3xl animate-pulse delay-1400" />
-            <div className="absolute bottom-12 left-16 w-36 h-36 bg-teal-300/8 rounded-full blur-2xl animate-pulse delay-2100" />
+              )}
+            </div>
           </div>
 
-          {/* Responsive Grid Layout: Full width for speed distribution, side column for geo */}
-          <div className="relative z-10 p-8">
+          {/* Trip Analytics Section */}
+          <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
+            <div className="border-b border-gray-200 px-4 py-3">
+              <h3 className="text-lg font-semibold text-gray-700">
+                <i className="fas fa-route mr-2 text-[#007bff]"></i>
+                Trip Analytics
+              </h3>
+            </div>
+            <div className="p-4">
+              <TripAnalyticsSection
+                analyticsData={filteredAnalytics}
+                selectedDevice={selectedImei}
+                loading={loading}
+              />
+            </div>
+          </div>
 
-            {/* Enhanced Speed Distribution Card - Full Width */}
-            <div className="mb-4">
+          {/* Device Activity Timeline Section */}
+          <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
+            <div className="border-b border-gray-200 px-4 py-3">
+              <h3 className="text-lg font-semibold text-gray-700">
+                <i className="fas fa-chart-area mr-2 text-[#007bff]"></i>
+                Device Activity Timeline
+              </h3>
+            </div>
+            <div className="p-4">
+              <DeviceActivityTimeline
+                analyticsData={filteredAnalytics}
+                loading={loading}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - 1/3 width */}
+        <div className="lg:col-span-1 space-y-4 sm:space-y-6">
+          {/* Speed Distribution Analytics */}
+          <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
+            <div className="border-b border-gray-200 px-4 py-3">
+              <h3 className="text-lg font-semibold text-gray-700">
+                <i className="fas fa-tachometer-alt mr-2 text-[#ffc107]"></i>
+                Speed Distribution
+              </h3>
+            </div>
+            <div className="p-4">
               <SpeedDistributionCard speedDistributionData={speedDistributionData} />
             </div>
           </div>
 
-          {/* Enhanced Section Footer with Interactive Elements */}
-          <div className="relative z-10 px-8 pb-4">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-white/10 backdrop-blur-md border border-white/20">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500/30 to-cyan-500/30 flex items-center justify-center backdrop-blur-sm border border-white/20">
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                </div>
+          {/* Quick Stats Card */}
+          <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
+            <div className="border-b border-gray-200 px-4 py-3">
+              <h3 className="text-base font-semibold text-gray-700">
+                <i className="fas fa-chart-pie mr-2 text-[#17a2b8]"></i>
+                Quick Stats
+              </h3>
+            </div>
+            <div className="p-4 space-y-3">
+              {/* Total Distance */}
+              <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded border-l-4 border-[#007bff]">
                 <div>
-                  <div className="text-white text-sm font-bold">
-                    Enhanced Analytics Visualization
-                  </div>
-                  <div className="text-white/80 text-xs font-medium">
-                    Interactive charts with real-time data updates
+                  <div className="text-xs text-gray-600 font-medium">Total Distance</div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {(filteredAnalytics.reduce((sum, a) => sum + (Number(a.speed) || 0), 0) * 0.016).toFixed(1)} km
                   </div>
                 </div>
+                <div className="text-3xl">🛣️</div>
               </div>
-              
-              <div className="flex items-center gap-2 text-xs text-white/70 font-medium">
-                <div className="w-2 h-2 bg-teal-400 rounded-full animate-pulse"></div>
-                <span>Auto-refresh enabled</span>
+
+              {/* Active Now */}
+              <div className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-green-100 rounded border-l-4 border-[#28a745]">
+                <div>
+                  <div className="text-xs text-gray-600 font-medium">Active Now</div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {filteredDevices.filter(d => Number(d.interval) <= 30).length}
+                  </div>
+                </div>
+                <div className="text-3xl">✅</div>
               </div>
+
+              {/* Data Points Today */}
+              <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-purple-100 rounded border-l-4 border-[#6f42c1]">
+                <div>
+                  <div className="text-xs text-gray-600 font-medium">Data Points</div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {filteredAnalytics.length.toLocaleString()}
+                  </div>
+                </div>
+                <div className="text-3xl">📊</div>
+              </div>
+
+              {/* Avg Response Time */}
+              <div className="flex items-center justify-between p-3 bg-gradient-to-r from-orange-50 to-orange-100 rounded border-l-4 border-[#fd7e14]">
+                <div>
+                  <div className="text-xs text-gray-600 font-medium">Avg Interval</div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {filteredDevices.length > 0 
+                      ? Math.round(filteredDevices.reduce((sum, d) => sum + Number(d.interval), 0) / filteredDevices.length)
+                      : 0}s
+                  </div>
+                </div>
+                <div className="text-3xl">⏱️</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Top Active Devices Card */}
+          <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
+            <div className="border-b border-gray-200 px-4 py-3">
+              <h3 className="text-base font-semibold text-gray-700">
+                <i className="fas fa-star mr-2 text-[#ffc107]"></i>
+                Top Active Devices
+              </h3>
+            </div>
+            <div className="p-4">
+              <div className="space-y-2">
+                {filteredDevices
+                  .sort((a, b) => Number(a.interval) - Number(b.interval))
+                  .slice(0, 5)
+                  .map((device, idx) => {
+                    const interval = Number(device.interval);
+                    let badgeColor = 'bg-green-500';
+                    if (interval > 120) badgeColor = 'bg-orange-500';
+                    else if (interval > 30) badgeColor = 'bg-yellow-500';
+                    
+                    return (
+                      <div key={device.imei} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded transition-colors">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className={`w-8 h-8 rounded-full ${badgeColor} flex items-center justify-center text-white text-xs font-bold`}>
+                            #{idx + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-mono text-gray-900 truncate">...{device.imei.slice(-8)}</div>
+                            <div className="text-xs text-gray-500">{device.topic || 'Unknown'}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-bold text-gray-900">{interval}s</div>
+                          <div className="text-xs text-gray-500">interval</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                {filteredDevices.length === 0 && (
+                  <div className="text-center py-4 text-gray-500 text-sm">
+                    No devices available
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Device Health Monitoring */}
+          <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
+            <div className="border-b border-gray-200 px-4 py-3">
+              <h3 className="text-base font-semibold text-gray-700">
+                <i className="fas fa-heartbeat mr-2 text-[#28a745]"></i>
+                Device Health
+              </h3>
+            </div>
+            <div className="p-4">
+              <DeviceHealthSection
+                devices={filteredDevices}
+                analyticsData={filteredAnalytics}
+                loading={loading}
+              />
             </div>
           </div>
         </div>
-      </HierarchySection>
+      </div>
 
-      {/* Colorful Section Divider */}
-      <SectionDivider 
-        variant="dotted" 
-        colorScheme="pink" 
-        spacing="sm" 
-        animated={true}
-      />
-
-      {/* Recent Analytics Table with Enhanced Styling - HIDDEN */}
-      {/* 
-      <ContentSection variant="subtle" colorScheme="purple" padding="md" spacing="sm" bordered={true}>
-        <EnhancedTableContainer 
-          variant="enhanced" 
-          colorScheme="purple" 
-          padding="md"
-          className="relative overflow-hidden border-2 border-purple-500/50 rounded-xl bg-gradient-to-br from-purple-900/20 via-slate-900/20 to-purple-900/20 backdrop-blur-sm"
-        >
-          {/* Enhanced Header with Gradient Design *-/}
-          <div className="mb-4">
-            <div className="flex items-center justify-between w-full mb-4">
-              <div className="flex-1">
-                <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-white via-purple-100 to-pink-100 bg-clip-text text-transparent">
-                  Latest Analytics (Moving Device)
-                </h2>
-                <p className="text-purple-100/90 text-sm font-medium leading-relaxed">
-                  Last 5 Normal data (packet_N) with speed &gt; 0 km/h
-                </p>
-              </div>
-              
-              {/* Refresh Button and Statistics Badge *-/}
-              <div className="ml-6 flex items-center gap-3">
-                <button
-                  onClick={refreshDashboard}
-                  disabled={loading}
-                  className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl border border-white/20 transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Refresh Analytics"
-                >
-                  <svg 
-                    className={`w-5 h-5 text-white ${loading ? 'animate-spin' : ''}`}
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                </button>
-                <StatusBadge 
-                  type="info" 
-                  value={`${stats.recentCount} records`}
-                  size="md"
-                />
-              </div>
+      {/* Full Width Section - Device Management Table */}
+      <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
+        <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold text-gray-700">Device Management</h3>
+            <span className="px-2.5 py-0.5 bg-green-500 text-white text-xs font-semibold rounded">
+              {filteredDevicesForTable.length} devices
+            </span>
+          </div>
+          
+          {/* Search and Filters */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Search */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search devices..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1); // Reset to first page on search
+                }}
+                className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#007bff] focus:border-[#007bff]"
+                style={{ minWidth: '200px' }}
+              />
+              <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
             </div>
             
-            {/* Enhanced Visual Divider *-/}
-            <div className="h-px bg-gradient-to-r from-transparent via-purple-400/40 to-transparent" />
-          </div>
-
-          {/* Enhanced Table with Color-Coded Cells and Improved Typography *-/}
-          <EnhancedTable
-            variant="enhanced"
-            size="md"
-            colorScheme="purple"
-            hoverable={true}
-            striped={true}
-            loading={loading}
-            loadingRows={5}
-            loadingColumns={6}
-            data={displayRecentAnalytics}
-            colorCoded={true}
-            showBadges={true}
-            responsive={true}
-            columns={[
-              {
-                key: 'imei',
-                header: 'Device IMEI',
-                sortable: true,
-                render: (value) => (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs opacity-70">📱</span>
-                    <span className="font-mono text-purple-300 bg-purple-500/15 px-2.5 py-1.5 rounded-lg border border-purple-500/30 text-xs font-medium backdrop-blur-sm hover:scale-105 hover:shadow-lg transition-all duration-200">
-                      {value}
-                    </span>
-                  </div>
-                )
-              },
-              {
-                key: 'speed',
-                header: 'Speed',
-                sortable: true,
-                render: (value) => {
-                  const speed = Number(value);
-                  let colorScheme, icon;
-                  
-                  if (speed > 80) {
-                    colorScheme = { bg: 'bg-red-500/15', text: 'text-red-300', border: 'border-red-500/30' };
-                    icon = '🚀';
-                  } else if (speed > 40) {
-                    colorScheme = { bg: 'bg-amber-500/15', text: 'text-amber-300', border: 'border-amber-500/30' };
-                    icon = '🚗';
-                  } else if (speed > 0) {
-                    colorScheme = { bg: 'bg-green-500/15', text: 'text-green-300', border: 'border-green-500/30' };
-                    icon = '🚶';
-                  } else {
-                    colorScheme = { bg: 'bg-gray-500/15', text: 'text-gray-300', border: 'border-gray-500/30' };
-                    icon = '🅿️';
-                  }
-                  
-                  return (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs opacity-70">{icon}</span>
-                      <span className={`px-2.5 py-1.5 rounded-lg border font-medium text-xs backdrop-blur-sm hover:scale-105 hover:shadow-lg transition-all duration-200 ${colorScheme.bg} ${colorScheme.text} ${colorScheme.border}`}>
-                        {value} km/h
-                      </span>
-                    </div>
-                  );
-                }
-              },
-              {
-                key: 'latitude',
-                header: 'Latitude',
-                sortable: true,
-                render: (value) => (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs opacity-70">📍</span>
-                    <span className="font-mono text-teal-300 bg-teal-500/15 px-2.5 py-1.5 rounded-lg border border-teal-500/30 text-xs font-medium backdrop-blur-sm hover:scale-105 hover:shadow-lg transition-all duration-200">
-                      {Number(value).toFixed(4)}°
-                    </span>
-                  </div>
-                )
-              },
-              {
-                key: 'longitude',
-                header: 'Longitude',
-                sortable: true,
-                render: (value) => (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs opacity-70">📍</span>
-                    <span className="font-mono text-cyan-300 bg-cyan-500/15 px-2.5 py-1.5 rounded-lg border border-cyan-500/30 text-xs font-medium backdrop-blur-sm hover:scale-105 hover:shadow-lg transition-all duration-200">
-                      {Number(value).toFixed(4)}°
-                    </span>
-                  </div>
-                )
-              },
-              {
-                key: 'timestamp',
-                header: 'Date & Time (IST)',
-                sortable: true,
-                render: (value, row) => {
-                  // Use deviceTimestamp first, then timestamp
-                  let timestampValue = row.deviceTimestamp || row.timestamp || value;
-                  
-                  if (!timestampValue) {
-                    return (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs opacity-70">❓</span>
-                        <span className="px-2.5 py-1.5 rounded-lg border font-medium text-xs backdrop-blur-sm bg-gray-500/15 text-gray-300 border-gray-500/30">
-                          No timestamp
-                        </span>
-                      </div>
-                    );
-                  }
-                  
-                  // Parse timestamp manually to extract components
-                  let dateStr, timeStr;
-                  if (typeof timestampValue === 'string') {
-                    // Extract date/time components from ISO string
-                    // Handles: 2026-01-17T19:37:39.940Z or 2026-01-17T19:37:39.940+00:00
-                    const match = timestampValue.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
-                    if (match) {
-                      const [, year, month, day, hour, minute, second] = match;
-                      
-                      // Format date as "Jan 17, 2026"
-                      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                      dateStr = `${monthNames[parseInt(month) - 1]} ${parseInt(day)}, ${year}`;
-                      
-                      // Format time as "07:44:45 PM" (12-hour format)
-                      let hourNum = parseInt(hour);
-                      const ampm = hourNum >= 12 ? 'PM' : 'AM';
-                      hourNum = hourNum % 12 || 12; // Convert to 12-hour format
-                      timeStr = `${String(hourNum).padStart(2, '0')}:${minute}:${second} ${ampm}`;
-                    } else {
-                      // Fallback to standard parsing
-                      const date = new Date(timestampValue);
-                      if (!isNaN(date.getTime())) {
-                        dateStr = date.toLocaleDateString('en-US', { 
-                          year: 'numeric', 
-                          month: 'short', 
-                          day: 'numeric'
-                        });
-                        timeStr = date.toLocaleTimeString('en-US', { 
-                          hour: '2-digit', 
-                          minute: '2-digit', 
-                          second: '2-digit',
-                          hour12: true
-                        });
-                      }
-                    }
-                  } else {
-                    const date = new Date(timestampValue);
-                    if (!isNaN(date.getTime())) {
-                      dateStr = date.toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'short', 
-                        day: 'numeric'
-                      });
-                      timeStr = date.toLocaleTimeString('en-US', { 
-                        hour: '2-digit', 
-                        minute: '2-digit', 
-                        second: '2-digit',
-                        hour12: true
-                      });
-                    }
-                  }
-                  
-                  // Check if parsing was successful
-                  if (!dateStr || !timeStr) {
-                    return (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs opacity-70">❓</span>
-                        <span className="px-2.5 py-1.5 rounded-lg border font-medium text-xs backdrop-blur-sm bg-gray-500/15 text-gray-300 border-gray-500/30">
-                          Invalid date
-                        </span>
-                      </div>
-                    );
-                  }
-                  
-                  // Check if recent (within 1 hour) - use rough comparison
-                  const now = new Date();
-                  const isRecent = false; // Simplified for now since we're doing manual parsing
-                  
-                  return (
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs opacity-70">📅</span>
-                        <span className={`px-2.5 py-1.5 rounded-lg border font-medium text-xs backdrop-blur-sm hover:scale-105 hover:shadow-lg transition-all duration-200 ${
-                          isRecent 
-                            ? 'bg-green-500/15 text-green-300 border-green-500/30' 
-                            : 'bg-slate-500/15 text-slate-300 border-slate-500/30'
-                        }`}>
-                          {dateStr}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs opacity-70">🕒</span>
-                        <span className={`px-2.5 py-1.5 rounded-lg border font-medium text-xs backdrop-blur-sm hover:scale-105 hover:shadow-lg transition-all duration-200 ${
-                          isRecent 
-                            ? 'bg-green-500/15 text-green-300 border-green-500/30' 
-                            : 'bg-slate-500/15 text-slate-300 border-slate-500/30'
-                        }`}>
-                          {timeStr}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                }
-              },
-              {
-                key: 'type',
-                header: 'Data Type',
-                sortable: true,
-                render: (value) => (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs opacity-70">📊</span>
-                    <span className="px-2.5 py-1.5 bg-purple-500/20 text-purple-300 rounded-lg text-xs font-semibold border border-purple-500/40 backdrop-blur-sm hover:scale-105 hover:shadow-lg transition-all duration-200">
-                      {value}
-                    </span>
-                  </div>
-                )
-              }
-            ]}
-            emptyMessage="No recent analytics data with speed > 0 available"
-            onRowClick={(row) => {
-              console.log('Selected analytics row:', row);
-              // Could implement row selection or detail view
-            }}
-          />
-          
-          {/* Enhanced Table Footer with Statistics *-/}
-          <div className="mt-4 pt-4 border-t border-white/10">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-purple-400 rounded-full animate-pulse shadow-lg shadow-purple-400/50"></div>
-                  <span className="text-purple-200/90 text-sm font-medium">
-                    Real-time data updates
-                  </span>
-                </div>
-                <div className="text-purple-200/70 text-sm font-medium">
-                  Last updated: {new Date().toLocaleTimeString()}
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <StatusBadge type="success" value="Live" size="sm" />
-                <StatusBadge type="info" value={`${stats.recentCount} total`} size="sm" />
-              </div>
-            </div>
-          </div>
-        </EnhancedTableContainer>
-      </ContentSection>
-      */}
-
-      {/* Trip Analytics Section */}
-      <SectionDivider 
-        variant="rainbow" 
-        colorScheme="blue" 
-        spacing="sm" 
-        animated={true}
-      />
-
-      <TripAnalyticsSection
-        analyticsData={filteredAnalytics}
-        selectedDevice={selectedImei}
-        loading={loading}
-      />
-
-      {/* Device Health Section */}
-      <SectionDivider 
-        variant="gradient" 
-        colorScheme="green" 
-        spacing="sm" 
-        animated={true}
-      />
-
-      <DeviceHealthSection
-        devices={filteredDevices}
-        analyticsData={filteredAnalytics}
-        loading={loading}
-      />
-
-      {/* Geofence Analytics Section */}
-      <SectionDivider 
-        variant="gradient" 
-        colorScheme="teal" 
-        spacing="sm" 
-        animated={true}
-      />
-
-      <GeofenceAnalyticsSection
-        analyticsData={filteredAnalytics}
-        geofences={geofences}
-        loading={loading}
-      />
-
-      {/* Final Section Divider */}
-      <SectionDivider 
-        variant="gradient" 
-        colorScheme="orange" 
-        spacing="md" 
-        animated={true}
-      />
-
-      {/* Devices Table with Enhanced Styling and Status Indicators */}
-      <ContentSection variant="accent" colorScheme="red" padding="md" spacing="sm" bordered={true} elevated={true}>
-        <EnhancedTableContainer 
-          variant="enhanced" 
-          colorScheme="red" 
-          padding="md"
-          className="relative overflow-hidden border-2 border-red-500/50 rounded-xl bg-gradient-to-br from-red-900/20 via-slate-900/20 to-red-900/20 backdrop-blur-sm"
-        >
-          {/* Enhanced Header with Gradient Design */}
-          <div className="mb-4">
-            <div className="flex items-center justify-between w-full mb-4">
-              <div className="flex-1">
-                <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-white via-red-100 to-pink-100 bg-clip-text text-transparent">
-                  Device Management
-                </h2>
-                <p className="text-red-100/90 text-sm font-medium leading-relaxed">
-                  Overview of registered devices with enhanced status indicators and responsive formatting
-                </p>
-              </div>
-              
-              {/* Enhanced Statistics Badge */}
-              <div className="ml-6">
-                <StatusBadge 
-                  type="success" 
-                  value={`${stats.devicesCount} devices`}
-                  size="md"
-                />
-              </div>
-            </div>
+            {/* Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#007bff] focus:border-[#007bff] bg-white"
+              style={{ backgroundColor: 'white', color: '#111827' }}
+            >
+              <option value="all" style={{ backgroundColor: 'white', color: '#111827' }}>All Status</option>
+              <option value="active" style={{ backgroundColor: 'white', color: '#111827' }}>Active (≤30s)</option>
+              <option value="normal" style={{ backgroundColor: 'white', color: '#111827' }}>Normal (31-120s)</option>
+              <option value="slow" style={{ backgroundColor: 'white', color: '#111827' }}>Slow (121-600s)</option>
+              <option value="very-slow" style={{ backgroundColor: 'white', color: '#111827' }}>Very Slow (>600s)</option>
+            </select>
             
-            {/* Enhanced Visual Divider */}
-            <div className="h-px bg-gradient-to-r from-transparent via-red-400/40 to-transparent" />
+            {/* Speed Filter */}
+            <select
+              value={speedFilter}
+              onChange={(e) => {
+                setSpeedFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#007bff] focus:border-[#007bff] bg-white"
+              style={{ backgroundColor: 'white', color: '#111827' }}
+            >
+              <option value="all" style={{ backgroundColor: 'white', color: '#111827' }}>All Speeds</option>
+              <option value="fast" style={{ backgroundColor: 'white', color: '#111827' }}>Fast (≤30s)</option>
+              <option value="normal" style={{ backgroundColor: 'white', color: '#111827' }}>Normal (31-120s)</option>
+              <option value="slow" style={{ backgroundColor: 'white', color: '#111827' }}>Slow (>120s)</option>
+            </select>
+            
+            {/* Geoid Filter */}
+            <select
+              value={geoidFilter}
+              onChange={(e) => {
+                setGeoidFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#007bff] focus:border-[#007bff] bg-white"
+              style={{ backgroundColor: 'white', color: '#111827' }}
+            >
+              <option value="all" style={{ backgroundColor: 'white', color: '#111827' }}>All Locations</option>
+              {uniqueGeoids.map(geoid => (
+                <option key={geoid} value={geoid} style={{ backgroundColor: 'white', color: '#111827' }}>{geoid}</option>
+              ))}
+            </select>
+            
+            {/* Clear Filters */}
+            {(searchQuery || statusFilter !== "all" || speedFilter !== "all" || geoidFilter !== "all") && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setStatusFilter("all");
+                  setSpeedFilter("all");
+                  setGeoidFilter("all");
+                  setCurrentPage(1);
+                }}
+                className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+              >
+                <i className="fas fa-times mr-1"></i>
+                Clear
+              </button>
+            )}
           </div>
-
-          {/* Enhanced Table with Color-Coded Status Indicators */}
-          <EnhancedTable
-            variant="enhanced"
-            size="md"
-            colorScheme="red"
-            hoverable={true}
-            striped={true}
-            loading={loading}
-            loadingRows={5}
-            loadingColumns={4}
-            data={filteredDevices}
-            colorCoded={true}
-            showBadges={true}
-            responsive={true}
-            columns={[
-              {
-                key: 'topic',
-                header: 'Topic',
-                sortable: true,
-                render: (value) => (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs opacity-70">📡</span>
-                    <span className="font-semibold text-cyan-300 bg-cyan-500/15 px-2.5 py-1.5 rounded-lg border border-cyan-500/30 text-xs backdrop-blur-sm hover:scale-105 hover:shadow-lg transition-all duration-200">
-                      {value}
-                    </span>
-                  </div>
-                )
-              },
-              {
-                key: 'imei',
-                header: 'Device IMEI',
-                sortable: true,
-                render: (value) => (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs opacity-70">📱</span>
-                    <span className="font-mono text-slate-300 bg-slate-500/15 px-2.5 py-1.5 rounded-lg border border-slate-500/30 text-xs font-medium backdrop-blur-sm hover:scale-105 hover:shadow-lg transition-all duration-200">
-                      {value}
-                    </span>
-                  </div>
-                )
-              },
-              {
-                key: 'interval',
-                header: 'Update Interval',
-                sortable: true,
-                render: (value) => {
-                  const interval = Number(value);
-                  let colorScheme, icon, status;
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Topic</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Device IMEI</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Interval</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Geographic ID</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white">
+              {loading ? (
+                <tr>
+                  <td colSpan="5" className="px-4 py-12 text-center">
+                    <Loading type="spinner" size="md" />
+                  </td>
+                </tr>
+              ) : paginatedDevices.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="px-4 py-12 text-center text-gray-500 text-sm">
+                    {searchQuery || statusFilter !== "all" || speedFilter !== "all" || geoidFilter !== "all" 
+                      ? "No devices match your filters" 
+                      : "No devices found"}
+                  </td>
+                </tr>
+              ) : (
+                paginatedDevices.map((device, idx) => {
+                  const interval = Number(device.interval);
+                  let speedBadge, speedColor, speedTooltip, speedIcon;
                   
-                  if (interval < 30) {
-                    colorScheme = { bg: 'bg-green-500/15', text: 'text-green-300', border: 'border-green-500/30' };
-                    icon = '⚡';
-                    status = 'Fast';
-                  } else if (interval < 60) {
-                    colorScheme = { bg: 'bg-amber-500/15', text: 'text-amber-300', border: 'border-amber-500/30' };
-                    icon = '⏱️';
-                    status = 'Normal';
+                  // Speed indicator based on interval:
+                  // 0-30s: Fast (Green)
+                  // 31-120s: Normal (Yellow)
+                  // 121-600s: Slow (Orange)
+                  // 600+s: Very Slow (Red)
+                  
+                  if (interval <= 30) {
+                    speedBadge = '●';
+                    speedIcon = '⚡';
+                    speedColor = 'text-[#28a745]';
+                    speedTooltip = 'Fast';
+                  } else if (interval <= 120) {
+                    speedBadge = '●';
+                    speedIcon = '⏱️';
+                    speedColor = 'text-[#ffc107]';
+                    speedTooltip = 'Normal';
+                  } else if (interval <= 600) {
+                    speedBadge = '●';
+                    speedIcon = '🐌';
+                    speedColor = 'text-[#fd7e14]';
+                    speedTooltip = 'Slow';
                   } else {
-                    colorScheme = { bg: 'bg-red-500/15', text: 'text-red-300', border: 'border-red-500/30' };
-                    icon = '🐌';
-                    status = 'Slow';
+                    speedBadge = '●';
+                    speedIcon = '⚠️';
+                    speedColor = 'text-[#dc3545]';
+                    speedTooltip = 'Very Slow';
                   }
                   
                   return (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs opacity-70">{icon}</span>
-                      <div className="flex flex-col gap-1">
-                        <span className={`px-2.5 py-1.5 rounded-lg border font-medium text-xs backdrop-blur-sm hover:scale-105 hover:shadow-lg transition-all duration-200 ${colorScheme.bg} ${colorScheme.text} ${colorScheme.border}`}>
-                          {value}s
+                    <tr key={device.imei || idx} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 text-sm text-gray-700">{device.topic}</td>
+                      <td className="px-4 py-3 text-sm font-mono text-gray-900">{device.imei}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-700 font-medium">{device.interval}s</span>
+                          <div className="flex items-center gap-1">
+                            <span 
+                              className={`text-xl ${speedColor} font-bold`}
+                              title={speedTooltip}
+                            >
+                              {speedBadge}
+                            </span>
+                            <span className="text-base" title={speedTooltip}>
+                              {speedIcon}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{device.geoid || 'Unknown'}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-1 inline-flex items-center gap-1 text-xs font-semibold rounded text-white bg-[#28a745]">
+                          <i className="fas fa-check-circle"></i>
+                          Active
                         </span>
-                        <span className="text-xs opacity-60 font-medium">
-                          {status}
-                        </span>
-                      </div>
-                    </div>
+                      </td>
+                    </tr>
                   );
-                }
-              },
-              {
-                key: 'geoid',
-                header: 'Geographic ID',
-                sortable: true,
-                render: (value) => (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs opacity-70">🌍</span>
-                    <span className="px-2.5 py-1.5 bg-pink-500/20 text-pink-300 rounded-lg text-xs font-semibold border border-pink-500/40 backdrop-blur-sm hover:scale-105 hover:shadow-lg transition-all duration-200">
-                      {value || 'Unknown'}
-                    </span>
-                  </div>
-                )
-              },
-              {
-                key: 'status',
-                header: 'Device Status',
-                sortable: true,
-                render: (value, row) => {
-                  // Simulate device status based on interval (lower interval = more active)
-                  const interval = Number(row.interval);
-                  let status, colorScheme, icon;
-                  
-                  if (interval < 30) {
-                    status = 'Online';
-                    colorScheme = { bg: 'bg-green-500/15', text: 'text-green-300', border: 'border-green-500/30' };
-                    icon = '🟢';
-                  } else if (interval < 60) {
-                    status = 'Active';
-                    colorScheme = { bg: 'bg-amber-500/15', text: 'text-amber-300', border: 'border-amber-500/30' };
-                    icon = '🟡';
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="border-t border-gray-200 px-4 py-3 flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredDevicesForTable.length)} of {filteredDevicesForTable.length} devices
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className={`px-3 py-1 rounded border ${
+                  currentPage === 1 
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
+                }`}
+              >
+                <i className="fas fa-chevron-left"></i>
+              </button>
+              
+              {/* Page numbers */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
                   } else {
-                    status = 'Idle';
-                    colorScheme = { bg: 'bg-red-500/15', text: 'text-red-300', border: 'border-red-500/30' };
-                    icon = '🔴';
+                    pageNum = currentPage - 2 + i;
                   }
                   
                   return (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs">{icon}</span>
-                      <span className={`px-2.5 py-1.5 rounded-lg border font-semibold text-xs backdrop-blur-sm hover:scale-105 hover:shadow-lg transition-all duration-200 ${colorScheme.bg} ${colorScheme.text} ${colorScheme.border}`}>
-                        {status}
-                      </span>
-                    </div>
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-3 py-1 rounded border ${
+                        currentPage === pageNum
+                          ? 'bg-[#007bff] text-white border-[#007bff]'
+                          : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
                   );
-                }
-              }
-            ]}
-            emptyMessage="No devices found in the system"
-            onRowClick={(row) => {
-              console.log('Selected device:', row);
-              // Could implement device detail view or management actions
-            }}
-          />
-          
-          {/* Enhanced Table Footer with Device Statistics */}
-          <div className="mt-4 pt-4 border-t border-white/10">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-red-400 rounded-full animate-pulse shadow-lg shadow-red-400/50"></div>
-                  <span className="text-red-200/90 text-sm font-medium">
-                    Device monitoring active
-                  </span>
-                </div>
-                <div className="text-red-200/70 text-sm font-medium">
-                  System status: Operational
-                </div>
+                })}
               </div>
               
-              <div className="flex items-center gap-3">
-                <StatusBadge type="success" value="All Connected" size="sm" />
-                <StatusBadge type="info" value={`${stats.devicesCount} total`} size="sm" />
-              </div>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className={`px-3 py-1 rounded border ${
+                  currentPage === totalPages 
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
+                }`}
+              >
+                <i className="fas fa-chevron-right"></i>
+              </button>
             </div>
           </div>
-        </EnhancedTableContainer>
-      </ContentSection>
+        )}
+      </div>
     </div>
   );
 }

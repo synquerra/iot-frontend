@@ -600,29 +600,25 @@ export default function DeviceDetails() {
 
   if (!packets.length) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Card variant="glass" colorScheme="amber" padding="xl" className="max-w-md">
-          <Card.Content className="text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-500/20 flex items-center justify-center">
-              <svg className="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <div className="text-amber-400 text-lg font-semibold mb-2">
-              No Data Found
-            </div>
-            <div className="text-amber-300 text-sm mb-4">
-              No telemetry data found for device {imei}
-            </div>
-            <Button
-              variant="outline"
-              colorScheme="amber"
-              onClick={() => navigate('/devices')}
-            >
-              Back to Devices
-            </Button>
-          </Card.Content>
-        </Card>
+      <div className="flex items-center justify-center min-h-[60vh] p-4">
+        <div className="bg-white rounded-lg shadow-md p-8 max-w-md text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-100 flex items-center justify-center">
+            <i className="fas fa-exclamation-triangle text-3xl text-[#ffc107]"></i>
+          </div>
+          <div className="text-gray-800 text-lg font-semibold mb-2">
+            No Data Found
+          </div>
+          <div className="text-gray-600 text-sm mb-4">
+            No telemetry data found for device {imei}
+          </div>
+          <button
+            onClick={() => navigate('/devices')}
+            className="px-6 py-3 bg-[#ffc107] hover:bg-[#e0a800] text-white rounded-lg font-medium transition-colors"
+          >
+            <i className="fas fa-arrow-left mr-2"></i>
+            Back to Devices
+          </button>
+        </div>
       </div>
     );
   }
@@ -677,7 +673,7 @@ export default function DeviceDetails() {
   ];
 
   return (
-    <div className="space-y-8 p-6">
+    <div className="space-y-6 p-4 bg-gray-50 min-h-screen">
       {/* Notification Display */}
       {notification && (
         <Notification
@@ -687,135 +683,119 @@ export default function DeviceDetails() {
         />
       )}
 
-      {/* Enhanced Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600/20 via-purple-600/20 to-teal-600/20 border border-blue-500/30 backdrop-blur-xl">
-        {/* Background Effects */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/10 via-transparent to-purple-500/10 animate-pulse" />
-          <div className="absolute top-6 left-6 w-32 h-32 bg-blue-400/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-6 right-6 w-40 h-40 bg-purple-400/15 rounded-full blur-3xl animate-pulse delay-1000" />
-        </div>
-
-        <div className="relative z-10 p-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate('/devices')}
-                  className="text-blue-200 hover:text-white"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Back to Devices
-                </Button>
-                <div className="w-1 h-6 bg-blue-400/50 rounded-full"></div>
-                <div className={cn(
-                  'px-3 py-1 rounded-full text-xs font-medium',
-                  latest.packetType === 'N' ? 'bg-green-500/20 text-green-300' :
-                  latest.packetType === 'A' ? 'bg-amber-500/20 text-amber-300' :
-                  'bg-red-500/20 text-red-300'
-                )}>
-                  {latest.packetType === 'N' ? 'Online' : 
-                   latest.packetType === 'A' ? 'Alert' : 'Error'}
-                </div>
-              </div>
-              
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent mb-2">
-                Device Telemetry
-              </h1>
-              <p className="text-blue-100/90 text-lg leading-relaxed">
-                Real-time monitoring and analytics for device <span className="font-mono text-blue-200">{imei}</span>
-              </p>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="text-blue-200/80 text-sm">Last Seen</div>
-                <div className="text-white text-xl font-bold">
-                  {timeAgo(latest.serverTimestampISO || latest.deviceRawTimestamp)}
-                </div>
-                <div className="text-blue-200/70 text-xs">
-                  {formatIST(latest.serverTimestampISO || latest.deviceRawTimestamp)}
-                </div>
-              </div>
-              <Button
-                variant="glass"
-                colorScheme="teal"
-                size="lg"
-                onClick={() => window.location.reload()}
-                className="backdrop-blur-xl"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Refresh
-              </Button>
+      {/* AdminLTE v3 Header */}
+      <div className="bg-white rounded-lg shadow-md p-4">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/devices')}
+              className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded transition-colors text-sm font-medium"
+            >
+              <i className="fas fa-arrow-left mr-2"></i>
+              Back to Devices
+            </button>
+            <div className="w-px h-6 bg-gray-300"></div>
+            <div className={cn(
+              'px-3 py-1 rounded text-xs font-semibold',
+              latest.packetType === 'N' ? 'bg-[#28a745] text-white' :
+              latest.packetType === 'A' ? 'bg-[#ffc107] text-white' :
+              'bg-[#dc3545] text-white'
+            )}>
+              {latest.packetType === 'N' ? 'Online' : 
+               latest.packetType === 'A' ? 'Alert' : 'Error'}
             </div>
           </div>
+          
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <div className="text-gray-600 text-xs">Last Seen</div>
+              <div className="text-gray-900 text-lg font-bold">
+                {timeAgo(latest.serverTimestampISO || latest.deviceRawTimestamp)}
+              </div>
+              <div className="text-gray-500 text-xs">
+                {formatIST(latest.serverTimestampISO || latest.deviceRawTimestamp)}
+              </div>
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-[#17a2b8] hover:bg-[#138496] text-white rounded transition-colors text-sm font-medium"
+            >
+              <i className="fas fa-redo mr-2"></i>
+              Refresh
+            </button>
+          </div>
+        </div>
+        
+        <div className="mt-3 pt-3 border-t border-gray-200">
+          <h1 className="text-2xl font-bold text-gray-800">
+            <i className="fas fa-microchip mr-2 text-[#007bff]"></i>
+            Device Telemetry
+          </h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Real-time monitoring and analytics for device <span className="font-mono font-semibold text-gray-900">{imei}</span>
+          </p>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <Card variant="glass" colorScheme="slate" padding="sm" className="backdrop-blur-xl">
-        <Card.Content>
-          <div className="flex flex-wrap gap-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2',
-                  activeTab === tab.id
-                    ? 'bg-blue-500/80 text-white shadow-lg'
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
-                )}
-              >
-                <span>{tab.icon}</span>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </Card.Content>
-      </Card>
+      {/* Navigation Tabs - AdminLTE Style */}
+      <div className="bg-white rounded-lg shadow-md p-3">
+        <div className="flex flex-wrap gap-2">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2',
+                activeTab === tab.id
+                  ? 'bg-[#007bff] text-white shadow-md'
+                  : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+              )}
+            >
+              <span>{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {/* Status Section - GPS, Speed, Battery, Signal at Top */}
+      {/* Status Section - GPS, Speed, Battery, Signal at Top - AdminLTE Small Boxes */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card variant="glass" colorScheme="green" padding="lg" hover={true} className="group">
-          <Card.Content>
+        {/* GPS & Speed Small Box */}
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="p-4 bg-gradient-to-br from-[#28a745] to-[#20c997]">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <div className="text-green-200/80 text-sm font-medium mb-1">GPS & Speed</div>
+                <div className="text-white/90 text-sm font-medium mb-1">GPS & Speed</div>
                 <div className="text-white text-2xl font-bold mb-2">
                   {normal.speed != null && !isNaN(Number(normal.speed)) ? `${normal.speed} km/h` : '-'}
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <div className={cn('w-2 h-2 rounded-full animate-pulse', getGpsStatus(normal).color.replace('bg-', 'bg-'))}></div>
-                    <span className="text-green-200/70 text-xs">{getGpsStatus(normal).text}</span>
+                    <div className={cn('w-2 h-2 rounded-full', getGpsStatus(normal).color)}></div>
+                    <span className="text-white/80 text-xs">{getGpsStatus(normal).text}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className={cn('w-2 h-2 rounded-full animate-pulse', getSpeedStatus(normal).color.replace('bg-', 'bg-'))}></div>
-                    <span className="text-green-200/70 text-xs">{getSpeedStatus(normal).text}</span>
+                    <div className={cn('w-2 h-2 rounded-full', getSpeedStatus(normal).color)}></div>
+                    <span className="text-white/80 text-xs">{getSpeedStatus(normal).text}</span>
                   </div>
                 </div>
               </div>
-              <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+              <div className="text-white/30">
+                <i className="fas fa-tachometer-alt text-5xl"></i>
               </div>
             </div>
-          </Card.Content>
-        </Card>
+          </div>
+          <div className="bg-white px-4 py-2 text-center">
+            <span className="text-gray-600 text-xs">Real-time tracking</span>
+          </div>
+        </div>
 
-        <Card variant="glass" colorScheme="purple" padding="lg" hover={true} className="group">
-          <Card.Content>
+        {/* Battery Small Box */}
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="p-4 bg-gradient-to-br from-[#6f42c1] to-[#9561e2]">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <div className="text-purple-200/80 text-sm font-medium mb-1">Battery</div>
+                <div className="text-white/90 text-sm font-medium mb-1">Battery</div>
                 <div className="text-white text-2xl font-bold mb-2">
                   {(() => {
                     const b = normal.battery;
@@ -825,285 +805,276 @@ export default function DeviceDetails() {
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <div className={cn('w-2 h-2 rounded-full animate-pulse', getBatteryStatus(normal).color.replace('bg-', 'bg-'))}></div>
-                    <span className="text-purple-200/70 text-xs">{getBatteryStatus(normal).text}</span>
+                    <div className={cn('w-2 h-2 rounded-full', getBatteryStatus(normal).color)}></div>
+                    <span className="text-white/80 text-xs">{getBatteryStatus(normal).text}</span>
                   </div>
-                  <div className="text-purple-200/60 text-xs">
+                  <div className="text-white/70 text-xs">
                     Drain: {computeBatteryDrainTime(packets)}
                   </div>
-                  <div className="text-purple-200/60 text-xs">
+                  <div className="text-white/70 text-xs">
                     Runtime: {computeBatteryRuntimeHours(packets)} hrs
-                  </div>
-                  <div className="text-purple-200/60 text-xs">
-                    Updated: {timeAgo(normal.deviceTimestamp)}
                   </div>
                 </div>
               </div>
-              <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <rect x="2" y="7" width="18" height="11" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M22 10v4" strokeLinecap="round" strokeLinejoin="round"/>
-                  <rect x="5" y="10" width="12" height="5" fill="currentColor" opacity="0.6"/>
-                </svg>
+              <div className="text-white/30">
+                <i className="fas fa-battery-three-quarters text-5xl"></i>
               </div>
             </div>
-          </Card.Content>
-        </Card>
+          </div>
+          <div className="bg-white px-4 py-2 text-center">
+            <span className="text-gray-600 text-xs">Updated: {timeAgo(normal.deviceTimestamp)}</span>
+          </div>
+        </div>
 
-        <Card variant="glass" colorScheme="amber" padding="lg" hover={true} className="group">
-          <Card.Content>
+        {/* Signal Small Box */}
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="p-4 bg-gradient-to-br from-[#ffc107] to-[#ffca2c]">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <div className="text-amber-200/80 text-sm font-medium mb-1">Signal</div>
+                <div className="text-white/90 text-sm font-medium mb-1">Signal</div>
                 <div className="text-white text-2xl font-bold mb-2">
                   {normal.signal != null && !isNaN(Number(normal.signal)) ? normal.signal : '-'}
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
-                  <span className="text-amber-200/70 text-xs">Strength</span>
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                  <span className="text-white/80 text-xs">Strength</span>
                 </div>
               </div>
-              <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-                </svg>
+              <div className="text-white/30">
+                <i className="fas fa-signal text-5xl"></i>
               </div>
             </div>
-          </Card.Content>
-        </Card>
+          </div>
+          <div className="bg-white px-4 py-2 text-center">
+            <span className="text-gray-600 text-xs">Network status</span>
+          </div>
+        </div>
       </div>
 
-      {/* Latest Packet Information */}
+      {/* Latest Packet Information - AdminLTE White Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Latest Packet (Any Type) */}
-        <Card variant="glass" colorScheme={
-          latest.packetType === 'N' ? 'green' : 
-          (() => {
-            const alertCode = String(latest.alert || '').toUpperCase();
-            if (alertCode.startsWith('A')) return 'amber';
-            if (alertCode.startsWith('E')) return 'red';
-            return latest.packetType === 'A' ? 'amber' : 'red';
-          })()
-        } padding="lg">
-          <Card.Content>
-            <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
-              <div className={cn(
-                'w-3 h-3 rounded-full animate-pulse',
-                latest.packetType === 'N' ? 'bg-green-400' : 
-                (() => {
-                  const alertCode = String(latest.alert || '').toUpperCase();
-                  if (alertCode.startsWith('A')) return 'bg-amber-400';
-                  if (alertCode.startsWith('E')) return 'bg-red-400';
-                  return latest.packetType === 'A' ? 'bg-amber-400' : 'bg-red-400';
-                })()
-              )}></div>
-              {(() => {
-                if (latest.packetType === 'N') {
-                  return 'Latest Normal Packet';
-                } else if (latest.alert) {
-                  // Auto-detect packet type from alert code if needed
-                  let detectedPacketType = latest.packetType;
-                  const alertCode = String(latest.alert).toUpperCase();
-                  
-                  // If alert code starts with E, it's an error
-                  if (alertCode.startsWith('E')) {
-                    detectedPacketType = 'E';
-                  }
-                  // If alert code starts with A, it's an alert
-                  else if (alertCode.startsWith('A')) {
-                    detectedPacketType = 'A';
-                  }
-                  
-                  const mapped = mapAlertErrorCode(latest.alert, detectedPacketType);
-                  return mapped.description;
-                } else {
-                  return `Latest ${latest.packetType === 'A' ? 'Alert' : 'Error'} Packet`;
+        <div className="bg-white rounded-lg shadow-md p-4">
+          <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
+            <div className={cn(
+              'w-3 h-3 rounded-full',
+              latest.packetType === 'N' ? 'bg-[#28a745]' : 
+              (() => {
+                const alertCode = String(latest.alert || '').toUpperCase();
+                if (alertCode.startsWith('A')) return 'bg-[#ffc107]';
+                if (alertCode.startsWith('E')) return 'bg-[#dc3545]';
+                return latest.packetType === 'A' ? 'bg-[#ffc107]' : 'bg-[#dc3545]';
+              })()
+            )}></div>
+            {(() => {
+              if (latest.packetType === 'N') {
+                return 'Latest Normal Packet';
+              } else if (latest.alert) {
+                // Auto-detect packet type from alert code if needed
+                let detectedPacketType = latest.packetType;
+                const alertCode = String(latest.alert).toUpperCase();
+                   
+                // If alert code starts with E, it's an error
+                if (alertCode.startsWith('E')) {
+                  detectedPacketType = 'E';
                 }
-              })()}
-            </h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between items-center py-2 border-b border-white/10">
-                <span className="text-white/70">Device IMEI</span>
-                <span className="font-mono text-white bg-white/10 px-2 py-1 rounded text-xs">{latest.imei}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-white/10">
-                <span className="text-white/70">Timestamp</span>
-                <span className="text-white text-xs">{formatIST(latest.serverTimestampISO || latest.deviceRawTimestamp)}</span>
-              </div>
-              <div className="flex justify-between items-center py-2">
-                <span className="text-white/70">Received</span>
-                <span className="text-white font-medium">{timeAgo(latest.serverTimestampISO || latest.deviceRawTimestamp)}</span>
-              </div>
+                // If alert code starts with A, it's an alert
+                else if (alertCode.startsWith('A')) {
+                  detectedPacketType = 'A';
+                }
+                
+                const mapped = mapAlertErrorCode(latest.alert, detectedPacketType);
+                return mapped.description;
+              } else {
+                return `Latest ${latest.packetType === 'A' ? 'Alert' : 'Error'} Packet`;
+              }
+            })()}
+          </h3>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between items-center py-2 border-b border-gray-200">
+              <span className="text-gray-600">Device IMEI</span>
+              <span className="font-mono text-gray-800 bg-gray-100 px-2 py-1 rounded text-xs">{latest.imei}</span>
             </div>
-          </Card.Content>
-        </Card>
+            <div className="flex justify-between items-center py-2 border-b border-gray-200">
+              <span className="text-gray-600">Timestamp</span>
+              <span className="text-gray-800 text-xs">{formatIST(latest.serverTimestampISO || latest.deviceRawTimestamp)}</span>
+            </div>
+            <div className="flex justify-between items-center py-2">
+              <span className="text-gray-600">Received</span>
+              <span className="text-gray-800 font-medium">{timeAgo(latest.serverTimestampISO || latest.deviceRawTimestamp)}</span>
+            </div>
+          </div>
+        </div>
 
-        {/* Latest Normal Packet Data */}
-        <Card variant="glass" colorScheme="green" padding="lg">
-          <Card.Content>
-            <h3 className="text-green-300 text-lg font-semibold mb-4 flex items-center gap-2">
-              <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-              Device Status
-              <div className="flex gap-2 ml-auto">
-                <span className={cn('text-xs px-2 py-1 rounded', getGpsStatus(normal).color)}>
-                  {getGpsStatus(normal).text}
-                </span>
-                <span className={cn('text-xs px-2 py-1 rounded', getSpeedStatus(normal).color)}>
-                  {getSpeedStatus(normal).text}
-                </span>
-                <span className={cn('text-xs px-2 py-1 rounded', getBatteryStatus(normal).color)}>
-                  {getBatteryStatus(normal).text}
-                </span>
+        {/* Latest Normal Packet Data - Enhanced Device Status */}
+        <div className="bg-white rounded-lg shadow-md p-4">
+          <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
+            <i className="fas fa-heartbeat text-[#28a745]"></i>
+            Device Status
+          </h3>
+          
+          {/* Status Badges - More Prominent */}
+          <div className="grid grid-cols-3 gap-3 mb-4 pb-4 border-b border-gray-200">
+            <div className="text-center">
+              <div className={cn('w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center', getGpsStatus(normal).color)}>
+                <i className="fas fa-satellite text-white text-lg"></i>
               </div>
-            </h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-green-200/80" title="Geofence ID when device enters any geofence">GEO ID</span>
-                  <span className="text-white">{normal.geoid ?? "-"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-green-200/80" title="View device location on Google Maps">View on Map</span>
-                  {(() => {
-                    const lat = Number(normal.latitude);
-                    const lon = Number(normal.longitude);
-                    const hasValidCoords = lat && lon && !isNaN(lat) && !isNaN(lon);
-                    
-                    return hasValidCoords ? (
-                      <a
-                        href={`https://www.google.com/maps?q=${lat},${lon}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-green-400 hover:text-green-300 text-xs underline flex items-center gap-1"
-                      >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        Open Maps
-                      </a>
-                    ) : (
-                      <span className="text-white/50 text-xs">No location</span>
-                    );
-                  })()}
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-green-200/80" title="Current speed in kilometers per hour">Speed</span>
-                  <span className="text-white">{normal.speed ?? "-"} km/h</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-green-200/80" title="Current signal strength percentage">Signal</span>
-                  <span className="text-white">{normal.signal ?? "-"}%</span>
-                </div>
+              <div className="text-xs font-semibold text-gray-800">{getGpsStatus(normal).text}</div>
+              <div className="text-xs text-gray-500">GPS</div>
+            </div>
+            <div className="text-center">
+              <div className={cn('w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center', getSpeedStatus(normal).color)}>
+                <i className="fas fa-tachometer-alt text-white text-lg"></i>
               </div>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-green-200/80" title="Time interval for normal packet transmission">Interval</span>
-                  <span className="text-white">-</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-green-200/80" title="Current device temperature in Celsius">Temperature</span>
-                  <span className="text-white">{parseTemperature(normal.rawTemperature)}°C</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-green-200/80" title="Current date and time from device">Timestamp</span>
-                  <span className="text-white text-xs">{formatIST(normal.deviceTimestamp)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-green-200/80" title="Current battery percentage">Battery</span>
-                  <span className="text-white">{normal.battery ?? "-"}%</span>
-                </div>
+              <div className="text-xs font-semibold text-gray-800">{getSpeedStatus(normal).text}</div>
+              <div className="text-xs text-gray-500">Speed</div>
+            </div>
+            <div className="text-center">
+              <div className={cn('w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center', getBatteryStatus(normal).color)}>
+                <i className="fas fa-battery-three-quarters text-white text-lg"></i>
+              </div>
+              <div className="text-xs font-semibold text-gray-800">{getBatteryStatus(normal).text}</div>
+              <div className="text-xs text-gray-500">Battery</div>
+            </div>
+          </div>
+          
+          {/* Device Details */}
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600" title="Geofence ID when device enters any geofence">GEO ID</span>
+                <span className="text-gray-800 font-medium">{normal.geoid ?? "-"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600" title="View device location on Google Maps">View on Map</span>
+                {(() => {
+                  const lat = Number(normal.latitude);
+                  const lon = Number(normal.longitude);
+                  const hasValidCoords = lat && lon && !isNaN(lat) && !isNaN(lon);
+                  
+                  return hasValidCoords ? (
+                    <a
+                      href={`https://www.google.com/maps?q=${lat},${lon}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#007bff] hover:text-[#0056b3] text-xs underline flex items-center gap-1"
+                    >
+                      <i className="fas fa-map-marker-alt"></i>
+                      Open Maps
+                    </a>
+                  ) : (
+                    <span className="text-gray-400 text-xs">No location</span>
+                  );
+                })()}
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600" title="Current speed in kilometers per hour">Speed</span>
+                <span className="text-gray-800 font-medium">{normal.speed ?? "-"} km/h</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600" title="Current signal strength percentage">Signal</span>
+                <span className="text-gray-800 font-medium">{normal.signal ?? "-"}%</span>
               </div>
             </div>
-          </Card.Content>
-        </Card>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600" title="Time interval for normal packet transmission">Interval</span>
+                <span className="text-gray-800 font-medium">-</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600" title="Current device temperature in Celsius">Temperature</span>
+                <span className="text-gray-800 font-medium">{parseTemperature(normal.rawTemperature)}°C</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600" title="Current date and time from device">Timestamp</span>
+                <span className="text-gray-800 text-xs">{formatIST(normal.deviceTimestamp)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600" title="Current battery percentage">Battery</span>
+                <span className="text-gray-800 font-medium">{normal.battery ?? "-"}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Tab Content */}
       {activeTab === "overview" && (
         <div className="space-y-6">
 
-          {/* Device Information */}
+          {/* Device Information - AdminLTE White Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card variant="glass" colorScheme="slate" padding="lg">
-              <Card.Content>
-                <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Device Information
-                </h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-white/70">IMEI</span>
-                    <span className="font-mono text-white bg-white/10 px-2 py-1 rounded text-xs">{latest.imei}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-white/70">GEO ID</span>
-                    <span className="text-white">{normal.geoid || "-"}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-white/70">Firmware</span>
-                    <span className="text-white">-</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-white/70">Temperature</span>
-                    <span className="text-white">{parseTemperature(normal.rawTemperature)}°C</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-white/70">Last Update</span>
-                    <span className="text-white text-xs">{formatIST(normal.deviceTimestamp)}</span>
-                  </div>
+            <div className="bg-white rounded-lg shadow-md p-4">
+              <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
+                <i className="fas fa-info-circle text-[#007bff]"></i>
+                Device Information
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="text-gray-600">IMEI</span>
+                  <span className="font-mono text-gray-800 bg-gray-100 px-2 py-1 rounded text-xs">{latest.imei}</span>
                 </div>
-              </Card.Content>
-            </Card>
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="text-gray-600">GEO ID</span>
+                  <span className="text-gray-800">{normal.geoid || "-"}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="text-gray-600">Firmware</span>
+                  <span className="text-gray-800">-</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="text-gray-600">Temperature</span>
+                  <span className="text-gray-800">{parseTemperature(normal.rawTemperature)}°C</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-600">Last Update</span>
+                  <span className="text-gray-800 text-xs">{formatIST(normal.deviceTimestamp)}</span>
+                </div>
+              </div>
+            </div>
 
-            <Card variant="glass" colorScheme="slate" padding="lg">
-              <Card.Content>
-                <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  </svg>
-                  Location & Movement
-                </h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-white/70">Distance Today</span>
-                    <span className="text-white">{computeTodayDistance(packets)} km</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-white/70">Movement</span>
-                    <div className="text-right">
-                      {(() => {
-                        const m = movementBreakdown(packets);
-                        return (
-                          <div className="text-xs">
-                            <span className="text-green-400">{m.movingPct}% moving</span>
-                            <span className="text-white/50 mx-1">•</span>
-                            <span className="text-amber-400">{m.idlePct}% idle</span>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-white/70">View on Map</span>
-                    {latest.latitude && latest.longitude ? (
-                      <a
-                        href={`https://www.google.com/maps?q=${latest.latitude},${latest.longitude}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 hover:text-blue-300 text-xs underline"
-                      >
-                        Open Maps
-                      </a>
-                    ) : (
-                      <span className="text-white/50 text-xs">No location</span>
-                    )}
+            <div className="bg-white rounded-lg shadow-md p-4">
+              <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
+                <i className="fas fa-map-marker-alt text-[#28a745]"></i>
+                Location & Movement
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="text-gray-600">Distance Today</span>
+                  <span className="text-gray-800">{computeTodayDistance(packets)} km</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="text-gray-600">Movement</span>
+                  <div className="text-right">
+                    {(() => {
+                      const m = movementBreakdown(packets);
+                      return (
+                        <div className="text-xs">
+                          <span className="text-[#28a745]">{m.movingPct}% moving</span>
+                          <span className="text-gray-400 mx-1">•</span>
+                          <span className="text-[#ffc107]">{m.idlePct}% idle</span>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
-              </Card.Content>
-            </Card>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-600">View on Map</span>
+                  {latest.latitude && latest.longitude ? (
+                    <a
+                      href={`https://www.google.com/maps?q=${latest.latitude},${latest.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#007bff] hover:text-[#0056b3] text-xs underline"
+                    >
+                      Open Maps
+                    </a>
+                  ) : (
+                    <span className="text-gray-400 text-xs">No location</span>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
         </div>
@@ -1113,155 +1084,139 @@ export default function DeviceDetails() {
         <div className="space-y-6">
           {/* Health Analytics */}
           {health && (
-            <Card variant="glass" colorScheme="purple" padding="lg">
-              <Card.Content>
-                <h3 className="text-purple-300 text-lg font-semibold mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 00-2-2z" />
-                  </svg>
-                  Device Health Analytics
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center py-2 border-b border-white/10">
-                      <span className="text-purple-200/80">GPS Health Score</span>
-                      <span className="text-purple-300 font-bold text-lg">{health.gpsScore}/100</span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-white/10">
-                      <span className="text-purple-200/80">Temperature Status</span>
-                      <span className="text-cyan-300">{health.temperatureStatus}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-purple-200/80">Temperature Index</span>
-                      <span className="text-white">{health.temperatureHealthIndex}</span>
-                    </div>
+            <div className="bg-white rounded-lg shadow-md p-4">
+              <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
+                <i className="fas fa-chart-bar text-[#6f42c1]"></i>
+                Device Health Analytics
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                    <span className="text-gray-600">GPS Health Score</span>
+                    <span className="text-[#6f42c1] font-bold text-lg">{health.gpsScore}/100</span>
                   </div>
-                  <div>
-                    <div className="text-purple-200/80 text-sm mb-2">Movement Pattern</div>
-                    <div className="text-xs text-slate-300 bg-white/5 p-3 rounded-lg leading-relaxed max-h-32 overflow-y-auto">
-                      <span>{health.movement.slice(0, 10).join(", ")}</span>
-                      {health.movement.length > 10 && (
-                        <span className="text-slate-500 ml-1">+ {health.movement.length - 10} more</span>
-                      )}
-                    </div>
-                    <div className="mt-3">
-                      <div className="text-purple-200/80 text-sm mb-2">Movement Stats</div>
-                      <div className="flex flex-wrap gap-2 text-xs">
-                        {health.movementStats.map((stat, i) => (
-                          <span key={i} className="px-2 py-1 rounded bg-white/10 border border-white/20 text-slate-200">
-                            {stat}
-                          </span>
-                        ))}
-                      </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                    <span className="text-gray-600">Temperature Status</span>
+                    <span className="text-[#17a2b8]">{health.temperatureStatus}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-gray-600">Temperature Index</span>
+                    <span className="text-gray-800">{health.temperatureHealthIndex}</span>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-600 text-sm mb-2">Movement Pattern</div>
+                  <div className="text-xs text-gray-700 bg-gray-50 p-3 rounded-lg leading-relaxed max-h-32 overflow-y-auto">
+                    <span>{health.movement.slice(0, 10).join(", ")}</span>
+                    {health.movement.length > 10 && (
+                      <span className="text-gray-500 ml-1">+ {health.movement.length - 10} more</span>
+                    )}
+                  </div>
+                  <div className="mt-3">
+                    <div className="text-gray-600 text-sm mb-2">Movement Stats</div>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {health.movementStats.map((stat, i) => (
+                        <span key={i} className="px-2 py-1 rounded bg-gray-100 border border-gray-300 text-gray-700">
+                          {stat}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 </div>
-              </Card.Content>
-            </Card>
+              </div>
+            </div>
           )}
 
           {/* Uptime Analytics */}
           {uptime && (
-            <Card variant="glass" colorScheme="amber" padding="lg">
-              <Card.Content>
-                <h3 className="text-amber-300 text-lg font-semibold mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Uptime Reliability Score
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-white/5 rounded-lg p-4 text-center">
-                    <div className="text-amber-200/80 text-xs font-medium mb-2">Score</div>
-                    <div className="text-amber-300 font-bold text-2xl">{uptime.score}/100</div>
-                  </div>
-                  <div className="bg-white/5 rounded-lg p-4 text-center">
-                    <div className="text-amber-200/80 text-xs font-medium mb-2">Expected</div>
-                    <div className="text-white font-bold text-2xl">{uptime.expectedPackets}</div>
-                  </div>
-                  <div className="bg-white/5 rounded-lg p-4 text-center">
-                    <div className="text-amber-200/80 text-xs font-medium mb-2">Received</div>
-                    <div className="text-white font-bold text-2xl">{uptime.receivedPackets}</div>
-                  </div>
-                  <div className="bg-white/5 rounded-lg p-4 text-center">
-                    <div className="text-amber-200/80 text-xs font-medium mb-2">Dropouts</div>
-                    <div className="text-white font-bold text-2xl">{uptime.dropouts}</div>
-                  </div>
+            <div className="bg-white rounded-lg shadow-md p-4">
+              <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
+                <i className="fas fa-clock text-[#ffc107]"></i>
+                Uptime Reliability Score
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-gray-50 rounded-lg p-4 text-center border border-gray-200">
+                  <div className="text-gray-600 text-xs font-medium mb-2">Score</div>
+                  <div className="text-[#ffc107] font-bold text-2xl">{uptime.score}/100</div>
                 </div>
-                <div className="mt-4 pt-4 border-t border-white/10">
-                  <div className="flex justify-between items-center">
-                    <span className="text-amber-200/80 text-sm">Largest Gap</span>
-                    <span className="text-white font-medium">{Math.round(uptime.largestGapSec)} seconds</span>
-                  </div>
+                <div className="bg-gray-50 rounded-lg p-4 text-center border border-gray-200">
+                  <div className="text-gray-600 text-xs font-medium mb-2">Expected</div>
+                  <div className="text-gray-800 font-bold text-2xl">{uptime.expectedPackets}</div>
                 </div>
-              </Card.Content>
-            </Card>
+                <div className="bg-gray-50 rounded-lg p-4 text-center border border-gray-200">
+                  <div className="text-gray-600 text-xs font-medium mb-2">Received</div>
+                  <div className="text-gray-800 font-bold text-2xl">{uptime.receivedPackets}</div>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 text-center border border-gray-200">
+                  <div className="text-gray-600 text-xs font-medium mb-2">Dropouts</div>
+                  <div className="text-gray-800 font-bold text-2xl">{uptime.dropouts}</div>
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 text-sm">Largest Gap</span>
+                  <span className="text-gray-800 font-medium">{Math.round(uptime.largestGapSec)} seconds</span>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Telemetry Alerts Summary */}
-          <Card variant="glass" colorScheme="red" padding="lg">
-            <Card.Content>
-              <h3 className="text-red-300 text-lg font-semibold mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                Telemetry Alerts
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white/5 rounded-lg p-4 text-center">
-                  <div className="text-red-200/80 text-xs font-medium mb-2">High Speed</div>
-                  <div className="text-red-300 font-bold text-2xl">{highSpeedCount}</div>
-                  <div className="text-red-200/60 text-xs mt-1">&gt;70 km/h</div>
-                </div>
-                <div className="bg-white/5 rounded-lg p-4 text-center">
-                  <div className="text-red-200/80 text-xs font-medium mb-2">High Temperature</div>
-                  <div className="text-red-300 font-bold text-2xl">{highTempCount}</div>
-                  <div className="text-red-200/60 text-xs mt-1">&gt;50°C</div>
-                </div>
-                <div className="bg-white/5 rounded-lg p-4 text-center">
-                  <div className="text-red-200/80 text-xs font-medium mb-2">Low Battery</div>
-                  <div className="text-red-300 font-bold text-2xl">{lowBatteryCount}</div>
-                  <div className="text-red-200/60 text-xs mt-1">&lt;20%</div>
-                </div>
+          <div className="bg-white rounded-lg shadow-md p-4">
+            <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
+              <i className="fas fa-exclamation-triangle text-[#dc3545]"></i>
+              Telemetry Alerts
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-gray-50 rounded-lg p-4 text-center border border-gray-200">
+                <div className="text-gray-600 text-xs font-medium mb-2">High Speed</div>
+                <div className="text-[#dc3545] font-bold text-2xl">{highSpeedCount}</div>
+                <div className="text-gray-500 text-xs mt-1">&gt;70 km/h</div>
               </div>
-            </Card.Content>
-          </Card>
+              <div className="bg-gray-50 rounded-lg p-4 text-center border border-gray-200">
+                <div className="text-gray-600 text-xs font-medium mb-2">High Temperature</div>
+                <div className="text-[#dc3545] font-bold text-2xl">{highTempCount}</div>
+                <div className="text-gray-500 text-xs mt-1">&gt;50°C</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4 text-center border border-gray-200">
+                <div className="text-gray-600 text-xs font-medium mb-2">Low Battery</div>
+                <div className="text-[#dc3545] font-bold text-2xl">{lowBatteryCount}</div>
+                <div className="text-gray-500 text-xs mt-1">&lt;20%</div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
       {activeTab === "trips" && (
         <div className="space-y-6">
-          {/* Trip Filter Controls */}
-          <Card variant="glass" colorScheme="slate" padding="lg">
-            <Card.Content>
-              <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                </svg>
-                Filter Trips by Date & Time
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-white/70 text-sm block mb-2">Start Date & Time</label>
-                  <input
-                    type="datetime-local"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:bg-white/15 focus:border-blue-400/60 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-white/70 text-sm block mb-2">End Date & Time</label>
-                  <input
-                    type="datetime-local"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:bg-white/15 focus:border-blue-400/60 focus:outline-none"
-                  />
-                </div>
+          {/* Trip Filter Controls - AdminLTE White Card */}
+          <div className="bg-white rounded-lg shadow-md p-4">
+            <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
+              <i className="fas fa-filter text-[#007bff]"></i>
+              Filter Trips by Date & Time
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-gray-600 text-sm block mb-2">Start Date & Time</label>
+                <input
+                  type="datetime-local"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-800 focus:border-[#007bff] focus:outline-none"
+                />
               </div>
-            </Card.Content>
-          </Card>
+              <div>
+                <label className="text-gray-600 text-sm block mb-2">End Date & Time</label>
+                <input
+                  type="datetime-local"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-800 focus:border-[#007bff] focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
 
           {/* Trip Summary Component */}
           <TripSummary
@@ -1274,254 +1229,226 @@ export default function DeviceDetails() {
 
       {activeTab === "alerts" && (
         <div className="space-y-6">
-          {/* Alert Packets */}
-          <Card variant="glass" colorScheme="amber" padding="lg">
-            <Card.Content>
-              <h3 className="text-amber-300 text-lg font-semibold mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                Alert Packets (A)
-                <span className="ml-2 px-2 py-1 bg-amber-500/20 text-amber-300 text-xs rounded-full">
-                  {alertPackets.length}
-                </span>
-              </h3>
-              {alertPackets.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
-                    <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div className="text-green-400 font-semibold mb-2">No Alerts</div>
-                  <div className="text-white/70 text-sm">Your device is operating normally</div>
+          {/* Alert Packets - AdminLTE White Card */}
+          <div className="bg-white rounded-lg shadow-md p-4">
+            <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
+              <i className="fas fa-exclamation-triangle text-[#ffc107]"></i>
+              Alert Packets (A)
+              <span className="ml-2 px-2 py-1 bg-[#ffc107] text-white text-xs rounded-full">
+                {alertPackets.length}
+              </span>
+            </h3>
+            {alertPackets.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
+                  <i className="fas fa-check-circle text-3xl text-[#28a745]"></i>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {alertPackets.map((alert, i) => {
-                    // Auto-detect packet type from alert code
-                    let detectedPacketType = 'A';
-                    const alertCode = String(alert.alert || '').toUpperCase();
-                    
-                    if (alertCode.startsWith('E')) {
-                      detectedPacketType = 'E';
+                <div className="text-[#28a745] font-semibold mb-2">No Alerts</div>
+                <div className="text-gray-600 text-sm">Your device is operating normally</div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {alertPackets.map((alert, i) => {
+                  // Auto-detect packet type from alert code
+                  let detectedPacketType = 'A';
+                  const alertCode = String(alert.alert || '').toUpperCase();
+                  
+                  if (alertCode.startsWith('E')) {
+                    detectedPacketType = 'E';
                     } else if (alertCode.startsWith('A')) {
-                      detectedPacketType = 'A';
-                    }
-                    
-                    const mapped = mapAlertErrorCode(alert.alert, detectedPacketType);
-                    return (
-                      <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-amber-500/20">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-amber-500/20 rounded-full flex items-center justify-center">
-                            <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                          </div>
-                          <div>
-                            <div className="text-amber-300 font-semibold text-sm">{mapped.description}</div>
-                            <div className="text-white/70 text-xs">{timeAgo(alert.deviceRawTimestamp)}</div>
-                          </div>
+                    detectedPacketType = 'A';
+                  }
+                  
+                  const mapped = mapAlertErrorCode(alert.alert, detectedPacketType);
+                  return (
+                    <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-[#ffc107] bg-opacity-20 rounded-full flex items-center justify-center">
+                          <i className="fas fa-exclamation-triangle text-[#ffc107]"></i>
                         </div>
-                        <div className="text-amber-200 text-sm">
-                          {formatIST(alert.deviceRawTimestamp)}
+                        <div>
+                          <div className="text-gray-800 font-semibold text-sm">{mapped.description}</div>
+                          <div className="text-gray-600 text-xs">{timeAgo(alert.deviceRawTimestamp)}</div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Card.Content>
-          </Card>
+                      <div className="text-gray-700 text-sm">
+                        {formatIST(alert.deviceRawTimestamp)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
-          {/* Error Packets */}
-          <Card variant="glass" colorScheme="red" padding="lg">
-            <Card.Content>
-              <h3 className="text-red-300 text-lg font-semibold mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Error Packets (E)
-                <span className="ml-2 px-2 py-1 bg-red-500/20 text-red-300 text-xs rounded-full">
-                  {errorPackets.length}
-                </span>
-              </h3>
-              {errorPackets.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
-                    <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div className="text-green-400 font-semibold mb-2">No Errors</div>
-                  <div className="text-white/70 text-sm">Your device is running smoothly</div>
+          {/* Error Packets - AdminLTE White Card */}
+          <div className="bg-white rounded-lg shadow-md p-4">
+            <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
+              <i className="fas fa-times-circle text-[#dc3545]"></i>
+              Error Packets (E)
+              <span className="ml-2 px-2 py-1 bg-[#dc3545] text-white text-xs rounded-full">
+                {errorPackets.length}
+              </span>
+            </h3>
+            {errorPackets.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
+                  <i className="fas fa-check-circle text-3xl text-[#28a745]"></i>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {errorPackets.map((error, i) => {
-                    // Auto-detect packet type from alert code
-                    let detectedPacketType = 'E';
-                    const alertCode = String(error.alert || '').toUpperCase();
-                    
-                    if (alertCode.startsWith('E')) {
-                      detectedPacketType = 'E';
-                    } else if (alertCode.startsWith('A')) {
-                      detectedPacketType = 'A';
-                    }
-                    
-                    const mapped = mapAlertErrorCode(error.alert, detectedPacketType);
-                    return (
-                      <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-red-500/20">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
-                            <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          </div>
-                          <div>
-                            <div className="text-red-300 font-semibold text-sm">{mapped.description}</div>
-                            <div className="text-white/70 text-xs">{timeAgo(error.deviceRawTimestamp)}</div>
-                          </div>
+                <div className="text-[#28a745] font-semibold mb-2">No Errors</div>
+                <div className="text-gray-600 text-sm">Your device is running smoothly</div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {errorPackets.map((error, i) => {
+                  // Auto-detect packet type from alert code
+                  let detectedPacketType = 'E';
+                  const alertCode = String(error.alert || '').toUpperCase();
+                  
+                  if (alertCode.startsWith('E')) {
+                    detectedPacketType = 'E';
+                  } else if (alertCode.startsWith('A')) {
+                    detectedPacketType = 'A';
+                  }
+                  
+                  const mapped = mapAlertErrorCode(error.alert, detectedPacketType);
+                  return (
+                    <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-[#dc3545] bg-opacity-20 rounded-full flex items-center justify-center">
+                          <i className="fas fa-times-circle text-[#dc3545]"></i>
                         </div>
-                        <div className="text-red-200 text-sm">
-                          {formatIST(error.deviceRawTimestamp)}
+                        <div>
+                          <div className="text-gray-800 font-semibold text-sm">{mapped.description}</div>
+                          <div className="text-gray-600 text-xs">{timeAgo(error.deviceRawTimestamp)}</div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Card.Content>
-          </Card>
+                      <div className="text-gray-700 text-sm">
+                        {formatIST(error.deviceRawTimestamp)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
-          {/* SOS Panel */}
-          <Card variant="glass" colorScheme="slate" padding="lg">
-            <Card.Content>
-              <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
-                </svg>
-                SOS Emergency
-              </h3>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex flex-col gap-2">
-                    <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
-                    <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse"></div>
-                    <div className="w-4 h-4 bg-amber-400 rounded-full animate-pulse"></div>
-                  </div>
-                  <div className="text-white/70 text-sm">
-                    <div>System Status: Normal</div>
-                    <div>Emergency: Not Active</div>
-                    <div>Response: Ready</div>
-                  </div>
+          {/* SOS Panel - AdminLTE White Card */}
+          <div className="bg-white rounded-lg shadow-md p-4">
+            <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
+              <i className="fas fa-microphone text-[#dc3545]"></i>
+              SOS Emergency
+            </h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex flex-col gap-2">
+                  <div className="w-4 h-4 bg-[#28a745] rounded-full"></div>
+                  <div className="w-4 h-4 bg-[#dc3545] rounded-full"></div>
+                  <div className="w-4 h-4 bg-[#ffc107] rounded-full"></div>
                 </div>
-                <div className="flex gap-3">
-                  <Button 
-                    variant="glass" 
-                    colorScheme="amber" 
-                    size="sm"
-                    onClick={handleAckSOS}
-                    disabled={sosLoading}
-                  >
-                    {sosLoading ? (
-                      <>
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Sending...
-                      </>
-                    ) : (
-                      "ACK"
-                    )}
-                  </Button>
-                  <Button variant="glass" colorScheme="green" size="sm">
-                    Reset
-                  </Button>
+                <div className="text-gray-600 text-sm">
+                  <div>System Status: Normal</div>
+                  <div>Emergency: Not Active</div>
+                  <div>Response: Ready</div>
                 </div>
               </div>
-            </Card.Content>
-          </Card>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleAckSOS}
+                  disabled={sosLoading}
+                  className="px-4 py-2 bg-[#ffc107] hover:bg-[#e0a800] text-white rounded transition-colors text-sm font-medium disabled:opacity-50"
+                >
+                  {sosLoading ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin mr-2"></i>
+                      Sending...
+                    </>
+                  ) : (
+                    "ACK"
+                  )}
+                </button>
+                <button className="px-4 py-2 bg-[#28a745] hover:bg-[#218838] text-white rounded transition-colors text-sm font-medium">
+                  Reset
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
       {activeTab === "esim" && (
         <div className="space-y-6">
-          {/* E-SIM Management */}
-          <Card variant="glass" colorScheme="slate" padding="lg">
-            <Card.Content>
-              <h3 className="text-white text-lg font-semibold mb-6 text-center flex items-center justify-center gap-2">
-                <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-                E-SIM Management
-              </h3>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {[1, 2].map((sim) => (
-                  <Card key={sim} variant="glass" colorScheme={sim === 1 ? "green" : "red"} padding="lg">
-                    <Card.Content>
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-white font-semibold text-lg">SIM {sim}</h4>
-                        <div className="flex gap-2">
-                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                          <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                          <div className="w-3 h-3 bg-white rounded-full"></div>
-                          <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
-                        </div>
-                      </div>
-                      <div className="space-y-3 text-sm">
-                        <div className="flex justify-between items-center py-2 border-b border-white/10">
-                          <span className="text-white/70">SIM No.</span>
-                          <span className="text-white">-</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 border-b border-white/10">
-                          <span className="text-white/70">MSDN No.</span>
-                          <span className="text-white font-mono">654135135</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 border-b border-white/10">
-                          <span className="text-white/70">Profile Code</span>
-                          <span className="text-white font-mono">654135135</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 border-b border-white/10">
-                          <span className="text-white/70">Data Usage</span>
-                          <span className="text-white">{sim === 1 ? "38/50 MB" : "3/10 MB"}</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 border-b border-white/10">
-                          <span className="text-white/70">SMS</span>
-                          <span className="text-white">{sim === 1 ? "5/100" : "3/100"}</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 border-b border-white/10">
-                          <span className="text-white/70">Signal Strength</span>
-                          <span className={cn(
-                            'font-semibold',
-                            sim === 1 ? "text-green-400" : "text-red-400"
-                          )}>
-                            {sim === 1 ? "75%" : "23%"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 border-b border-white/10">
-                          <span className="text-white/70">Roaming</span>
-                          <span className={cn(
-                            'font-semibold',
-                            sim === 1 ? "text-gray-300" : "text-amber-400"
-                          )}>
-                            {sim === 1 ? "Disabled" : "Active"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center py-2">
-                          <span className="text-white/70">Fallback History</span>
-                          <span className="text-white text-xs">
-                            {sim === 1 ? "SIM 2 → SIM 1" : "05-11-2022 12:35:11"}
-                          </span>
-                        </div>
-                      </div>
-                    </Card.Content>
-                  </Card>
-                ))}
-              </div>
-            </Card.Content>
-          </Card>
+          {/* E-SIM Management - AdminLTE White Card */}
+          <div className="bg-white rounded-lg shadow-md p-4">
+            <h3 className="text-gray-800 text-lg font-semibold mb-6 text-center flex items-center justify-center gap-2">
+              <i className="fas fa-sim-card text-[#007bff]"></i>
+              E-SIM Management
+            </h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {[1, 2].map((sim) => (
+                <div key={sim} className={cn(
+                  "bg-white rounded-lg shadow-md p-4 border-l-4",
+                  sim === 1 ? "border-[#28a745]" : "border-[#dc3545]"
+                )}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-gray-800 font-semibold text-lg">SIM {sim}</h4>
+                    <div className="flex gap-2">
+                      <div className="w-3 h-3 bg-[#28a745] rounded-full"></div>
+                      <div className="w-3 h-3 bg-[#dc3545] rounded-full"></div>
+                      <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                      <div className="w-3 h-3 bg-[#ffc107] rounded-full"></div>
+                    </div>
+                  </div>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                      <span className="text-gray-600">SIM No.</span>
+                      <span className="text-gray-800">-</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                      <span className="text-gray-600">MSDN No.</span>
+                      <span className="text-gray-800 font-mono">654135135</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                      <span className="text-gray-600">Profile Code</span>
+                      <span className="text-gray-800 font-mono">654135135</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                      <span className="text-gray-600">Data Usage</span>
+                      <span className="text-gray-800">{sim === 1 ? "38/50 MB" : "3/10 MB"}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                      <span className="text-gray-600">SMS</span>
+                      <span className="text-gray-800">{sim === 1 ? "5/100" : "3/100"}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                      <span className="text-gray-600">Signal Strength</span>
+                      <span className={cn(
+                        'font-semibold',
+                        sim === 1 ? "text-[#28a745]" : "text-[#dc3545]"
+                      )}>
+                        {sim === 1 ? "75%" : "23%"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                      <span className="text-gray-600">Roaming</span>
+                      <span className={cn(
+                        'font-semibold',
+                        sim === 1 ? "text-gray-600" : "text-[#ffc107]"
+                      )}>
+                        {sim === 1 ? "Disabled" : "Active"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-gray-600">Fallback History</span>
+                      <span className="text-gray-800 text-xs">
+                        {sim === 1 ? "SIM 2 → SIM 1" : "05-11-2022 12:35:11"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>

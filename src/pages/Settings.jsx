@@ -2,13 +2,6 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { logoutUser } from '../utils/auth'
 import { useUserContext } from '../contexts/UserContext'
-import { Card, Input, Select, Button } from '../design-system/components'
-import {
-  SectionDivider,
-  GradientHeader,
-  ContentSection,
-  HierarchySection
-} from "../design-system/components/LayoutComponents"
 import { cn } from "../design-system/utils/cn"
 
 export default function Settings() {
@@ -22,7 +15,6 @@ export default function Settings() {
       'ADMIN': 'Administrator',
       'PARENTS': 'Parent'
     }
-    // Use hasOwnProperty to avoid prototype pollution
     if (Object.prototype.hasOwnProperty.call(typeMap, userType)) {
       return typeMap[userType]
     }
@@ -48,229 +40,252 @@ export default function Settings() {
 
   const handleLogout = () => {
     console.log('Logging out...')
-    // Clear UserContext state
     clearUserContext()
-    // Clear persistent storage and tokens
     logoutUser()
     navigate('/login')
   }
 
   const tabs = [
-    { id: 'account', label: 'Account', icon: '👤' }
+    { id: 'account', label: 'Account Information', icon: 'fa-user' },
+    { id: 'security', label: 'Security', icon: 'fa-shield-alt' },
+    { id: 'preferences', label: 'Preferences', icon: 'fa-cog' }
   ]
 
   return (
-    <div className="space-y-8">
-      {/* Enhanced Header with Gradient Design */}
-      <GradientHeader
-        title="Application Settings"
-        subtitle="Manage your account, preferences, and system configuration"
-        colorScheme="indigo"
-        size="lg"
-        className="relative overflow-hidden"
-      >
-        {/* Subtle Background Effects */}
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Soft gradient overlay */}
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5" />
-          
-          {/* Subtle floating glow effects */}
-          <div className="absolute top-6 left-6 w-24 h-24 bg-indigo-400/10 rounded-full blur-2xl" />
-          <div className="absolute bottom-6 right-6 w-32 h-32 bg-purple-400/8 rounded-full blur-3xl" />
+    <div className="bg-gray-50 min-h-screen p-3 sm:p-4 md:p-6">
+      {/* AdminLTE Header */}
+      <div className="bg-white rounded-lg shadow-sm mb-4 md:mb-6">
+        <div className="p-4 sm:p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold text-gray-800 mb-2">
+                Settings
+              </h1>
+              <p className="text-gray-600">
+                Manage your account settings and preferences
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-6">
+              <div className="text-right">
+                <div className="text-gray-500 text-sm">Account Type</div>
+                <div className="text-blue-600 text-xl font-bold">{formatUserType(userType)}</div>
+                <div className="text-gray-500 text-xs">User Role</div>
+              </div>
+            </div>
+          </div>
         </div>
-      </GradientHeader>
+      </div>
 
-      {/* Enhanced Tab Navigation */}
-      <ContentSection variant="glass" colorScheme="indigo" padding="md" spacing="sm" bordered={true}>
-        <div className="flex flex-wrap gap-2 p-2 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                'flex items-center gap-3 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-300',
-                'hover:scale-105 hover:shadow-lg backdrop-blur-sm',
-                activeTab === tab.id
-                  ? 'bg-gradient-to-r from-indigo-500/80 to-purple-500/80 text-white shadow-xl shadow-indigo-500/30 border border-indigo-400/50'
-                  : 'bg-white/10 text-white/80 hover:bg-white/20 hover:text-white border border-white/20'
-              )}
-            >
-              <span className="text-lg">{tab.icon}</span>
-              <span>{tab.label}</span>
-            </button>
-          ))}
+      {/* Navigation Tabs */}
+      <div className="bg-white rounded-lg shadow-sm mb-4 md:mb-6">
+        <div className="p-3 sm:p-4">
+          <div className="flex flex-wrap gap-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'px-4 sm:px-6 py-3 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-2',
+                  activeTab === tab.id
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                )}
+              >
+                <i className={cn("fas", tab.icon)}></i>
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">
+                  {tab.id === 'account' ? 'Account' : tab.id === 'security' ? 'Security' : 'Preferences'}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
-      </ContentSection>
+      </div>
 
       {/* Tab Content */}
       {activeTab === 'account' && (
-        <Card 
-          variant="glass" 
-          padding="lg" 
-          colorScheme="blue" 
-          glowEffect={true}
-          className="relative overflow-hidden backdrop-blur-2xl bg-gradient-to-br from-blue-600/25 via-indigo-600/20 to-purple-600/25 border border-blue-400/40"
-        >
-              <Card.Header>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/30 to-indigo-500/30 flex items-center justify-center backdrop-blur-md border border-white/30">
-                    <span className="text-2xl">👤</span>
-                  </div>
-                  <div>
-                    <Card.Title className="text-white text-xl font-bold">Account Information</Card.Title>
-                    <Card.Description className="text-blue-100/80">
-                      profile details
-                    </Card.Description>
-                  </div>
+        <div className="space-y-4 md:space-y-6">
+          {/* Profile Information Card */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-4 rounded-t-lg">
+              <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                  <i className="fas fa-user text-white"></i>
                 </div>
-              </Card.Header>
-              
-              <Card.Content>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-white font-semibold text-sm">Full Name</label>
-                    <input
-                      type="text"
-                      value={formatFullName(firstName, middleName, lastName)}
-                      readOnly
-                      className={cn(
-                        "w-full px-4 py-3 rounded-xl backdrop-blur-xl border text-white",
-                        "bg-white/10 border-white/20 cursor-not-allowed opacity-80",
-                        "focus:outline-none"
-                      )}
-                    />
-                    <p className="text-blue-100/70 text-xs">Your complete name</p>
-                  </div>
+                Profile Information
+              </h3>
+              <p className="text-blue-100 text-xs sm:text-sm mt-1">Your personal details and account information</p>
+            </div>
 
-                  <div className="space-y-2">
-                    <label className="text-white font-semibold text-sm">Email Address</label>
-                    <input
-                      type="email"
-                      value={email || 'Not available'}
-                      readOnly
-                      className={cn(
-                        "w-full px-4 py-3 rounded-xl backdrop-blur-xl border text-white",
-                        "bg-white/10 border-white/20 cursor-not-allowed opacity-80",
-                        "focus:outline-none"
-                      )}
-                    />
-                    <p className="text-blue-100/70 text-xs">Your registered email address</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-white font-semibold text-sm">Mobile Number</label>
-                    <input
-                      type="text"
-                      value={mobile || 'Not available'}
-                      readOnly
-                      className={cn(
-                        "w-full px-4 py-3 rounded-xl backdrop-blur-xl border text-white",
-                        "bg-white/10 border-white/20 cursor-not-allowed opacity-80",
-                        "focus:outline-none"
-                      )}
-                    />
-                    <p className="text-blue-100/70 text-xs">Your contact number</p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-white font-semibold text-sm">User ID</label>
-                    <input
-                      type="text"
-                      value={uniqueId || 'Not available'}
-                      readOnly
-                      className={cn(
-                        "w-full px-4 py-3 rounded-xl backdrop-blur-xl border text-white",
-                        "bg-white/10 border-white/20 cursor-not-allowed opacity-80",
-                        "focus:outline-none"
-                      )}
-                    />
-                    <p className="text-blue-100/70 text-xs">Your unique account identifier</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-white font-semibold text-sm">First Name</label>
-                    <input
-                      type="text"
-                      value={firstName || 'Not available'}
-                      readOnly
-                      className={cn(
-                        "w-full px-4 py-3 rounded-xl backdrop-blur-xl border text-white",
-                        "bg-white/10 border-white/20 cursor-not-allowed opacity-80",
-                        "focus:outline-none"
-                      )}
-                    />
-                    <p className="text-blue-100/70 text-xs">Your first name</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-white font-semibold text-sm">Middle Name</label>
-                    <input
-                      type="text"
-                      value={middleName || 'Not available'}
-                      readOnly
-                      className={cn(
-                        "w-full px-4 py-3 rounded-xl backdrop-blur-xl border text-white",
-                        "bg-white/10 border-white/20 cursor-not-allowed opacity-80",
-                        "focus:outline-none"
-                      )}
-                    />
-                    <p className="text-blue-100/70 text-xs">Your middle name</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-white font-semibold text-sm">Last Name</label>
-                    <input
-                      type="text"
-                      value={lastName || 'Not available'}
-                      readOnly
-                      className={cn(
-                        "w-full px-4 py-3 rounded-xl backdrop-blur-xl border text-white",
-                        "bg-white/10 border-white/20 cursor-not-allowed opacity-80",
-                        "focus:outline-none"
-                      )}
-                    />
-                    <p className="text-blue-100/70 text-xs">Your last name</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-white font-semibold text-sm">Account Type</label>
-                    <input
-                      type="text"
-                      value={formatUserType(userType)}
-                      readOnly
-                      className={cn(
-                        "w-full px-4 py-3 rounded-xl backdrop-blur-xl border text-white",
-                        "bg-white/10 border-white/20 cursor-not-allowed opacity-80",
-                        "focus:outline-none"
-                      )}
-                    />
-                    <p className="text-blue-100/70 text-xs">Your account role in the system</p>
-                  </div>
-
-                  <div className="space-y-2 md:col-span-2">
-                    <label className="text-white font-semibold text-sm">Assigned Devices</label>
-                    <input
-                      type="text"
-                      value={formatImeiList(imeis)}
-                      readOnly
-                      className={cn(
-                        "w-full px-4 py-3 rounded-xl backdrop-blur-xl border text-white",
-                        "bg-white/10 border-white/20 cursor-not-allowed opacity-80",
-                        "focus:outline-none"
-                      )}
-                    />
-                    <p className="text-blue-100/70 text-xs">Devices linked to your account</p>
-                  </div>
+            <div className="p-4 sm:p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Full Name */}
+                <div className="space-y-2">
+                  <label className="text-gray-800 font-bold text-sm flex items-center gap-2">
+                    <i className="fas fa-id-card text-blue-600"></i>
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    value={formatFullName(firstName, middleName, lastName)}
+                    readOnly
+                    className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-gray-100 text-gray-800 font-medium cursor-not-allowed"
+                  />
+                  <p className="text-gray-500 text-xs flex items-center gap-1">
+                    <i className="fas fa-info-circle text-blue-500"></i>
+                    Your complete name
+                  </p>
                 </div>
-              </Card.Content>
-            </Card>
-        )}
-      <SectionDivider 
-        variant="gradient" 
-        colorScheme="indigo" 
-        spacing="lg" 
-        animated={true}
-      />
+
+                {/* Email Address */}
+                <div className="space-y-2">
+                  <label className="text-gray-800 font-bold text-sm flex items-center gap-2">
+                    <i className="fas fa-envelope text-blue-600"></i>
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={email || 'Not available'}
+                    readOnly
+                    className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-gray-100 text-gray-800 font-medium cursor-not-allowed"
+                  />
+                  <p className="text-gray-500 text-xs flex items-center gap-1">
+                    <i className="fas fa-info-circle text-blue-500"></i>
+                    Your registered email address
+                  </p>
+                </div>
+
+                {/* Mobile Number */}
+                <div className="space-y-2">
+                  <label className="text-gray-800 font-bold text-sm flex items-center gap-2">
+                    <i className="fas fa-phone text-blue-600"></i>
+                    Mobile Number
+                  </label>
+                  <input
+                    type="text"
+                    value={mobile || 'Not available'}
+                    readOnly
+                    className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-gray-100 text-gray-800 font-medium cursor-not-allowed"
+                  />
+                  <p className="text-gray-500 text-xs flex items-center gap-1">
+                    <i className="fas fa-info-circle text-blue-500"></i>
+                    Your contact number
+                  </p>
+                </div>
+                
+                {/* User ID */}
+                <div className="space-y-2">
+                  <label className="text-gray-800 font-bold text-sm flex items-center gap-2">
+                    <i className="fas fa-fingerprint text-blue-600"></i>
+                    User ID
+                  </label>
+                  <input
+                    type="text"
+                    value={uniqueId || 'Not available'}
+                    readOnly
+                    className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-gray-100 text-gray-800 font-medium cursor-not-allowed"
+                  />
+                  <p className="text-gray-500 text-xs flex items-center gap-1">
+                    <i className="fas fa-info-circle text-blue-500"></i>
+                    Your unique account identifier
+                  </p>
+                </div>
+
+                {/* Account Type */}
+                <div className="space-y-2">
+                  <label className="text-gray-800 font-bold text-sm flex items-center gap-2">
+                    <i className="fas fa-user-tag text-blue-600"></i>
+                    Account Type
+                  </label>
+                  <input
+                    type="text"
+                    value={formatUserType(userType)}
+                    readOnly
+                    className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-gray-100 text-gray-800 font-medium cursor-not-allowed"
+                  />
+                  <p className="text-gray-500 text-xs flex items-center gap-1">
+                    <i className="fas fa-info-circle text-blue-500"></i>
+                    Your account role in the system
+                  </p>
+                </div>
+
+                {/* Assigned Devices */}
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-gray-800 font-bold text-sm flex items-center gap-2">
+                    <i className="fas fa-mobile-alt text-blue-600"></i>
+                    Assigned Devices
+                  </label>
+                  <input
+                    type="text"
+                    value={formatImeiList(imeis)}
+                    readOnly
+                    className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-gray-100 text-gray-800 font-medium cursor-not-allowed"
+                  />
+                  <p className="text-gray-500 text-xs flex items-center gap-1">
+                    <i className="fas fa-info-circle text-blue-500"></i>
+                    Devices linked to your account
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'security' && (
+        <div className="space-y-4 md:space-y-6">
+          {/* Security Settings Card */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="bg-gradient-to-r from-green-600 to-green-700 px-4 sm:px-6 py-4 rounded-t-lg">
+              <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                  <i className="fas fa-shield-alt text-white"></i>
+                </div>
+                Security Settings
+              </h3>
+              <p className="text-green-100 text-xs sm:text-sm mt-1">Manage your account security and authentication</p>
+            </div>
+
+            <div className="p-4 sm:p-6">
+              <div className="text-center py-12">
+                <div className="w-20 h-20 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                  <i className="fas fa-lock text-4xl text-gray-400"></i>
+                </div>
+                <p className="text-gray-700 text-lg font-semibold mb-2">Security Settings</p>
+                <p className="text-gray-500 text-sm">Password change and security options coming soon</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'preferences' && (
+        <div className="space-y-4 md:space-y-6">
+          {/* Preferences Card */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-4 sm:px-6 py-4 rounded-t-lg">
+              <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                  <i className="fas fa-cog text-white"></i>
+                </div>
+                Preferences
+              </h3>
+              <p className="text-purple-100 text-xs sm:text-sm mt-1">Customize your application experience</p>
+            </div>
+
+            <div className="p-4 sm:p-6">
+              <div className="text-center py-12">
+                <div className="w-20 h-20 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                  <i className="fas fa-sliders-h text-4xl text-gray-400"></i>
+                </div>
+                <p className="text-gray-700 text-lg font-semibold mb-2">User Preferences</p>
+                <p className="text-gray-500 text-sm">Customization options coming soon</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

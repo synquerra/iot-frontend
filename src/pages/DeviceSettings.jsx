@@ -1,7 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Card } from "../design-system/components";
-import { Button } from "../design-system/components";
 import { Loading } from "../design-system/components";
 import { cn } from "../design-system/utils/cn";
 import { sendDeviceCommand } from "../utils/deviceCommandAPI";
@@ -10,13 +8,27 @@ import { fetchDeviceCommands, parseDeviceCommands } from "../utils/deviceCommand
 import { fetchDeviceConfig, getConfigAcknowledgments } from "../utils/deviceConfigAPI";
 import { ContactInput } from "../components/ContactInput";
 import { Notification } from "../components/Notification";
+import { useUserContext } from "../contexts/UserContext";
+import { useDeviceFilter } from "../hooks/useDeviceFilter";
+import { listDevicesFiltered } from "../utils/deviceFiltered";
 
 export default function DeviceSettings() {
   const { imei: routeImei } = useParams();
   const navigate = useNavigate();
   
-  // Use route IMEI or default for testing
-  const imei = routeImei || "862942074957887";
+  // User context for role-based logic
+  const { isAdmin, userType } = useUserContext();
+  
+  // Device filtering hook
+  const { filterDevices, shouldFilterDevices } = useDeviceFilter();
+  
+  // State for devices list
+  const [devices, setDevices] = useState([]);
+  const [devicesLoading, setDevicesLoading] = useState(true);
+  
+  // Use selected IMEI from state or route parameter
+  const [selectedImei, setSelectedImei] = useState(routeImei || "");
+  const imei = selectedImei;
 
   const [notification, setNotification] = useState({
     type: '', // 'success' | 'error' | ''
@@ -59,6 +71,49 @@ export default function DeviceSettings() {
   ];
 
   /**
+   * Effect: Fetch devices list on mount
+   */
+  useEffect(() => {
+    const fetchDevices = async () => {
+      setDevicesLoading(true);
+      try {
+        const result = await listDevicesFiltered();
+        const devicesList = result.full || result.devices || [];
+        setDevices(devicesList);
+        
+        // Auto-select device for parent with single device
+        if (!isAdmin() && devicesList.length === 1 && !routeImei) {
+          setSelectedImei(devicesList[0].imei);
+        } else if (routeImei) {
+          setSelectedImei(routeImei);
+        }
+      } catch (error) {
+        console.error('Failed to fetch devices:', error);
+        setDevices([]);
+      } finally {
+        setDevicesLoading(false);
+      }
+    };
+    
+    fetchDevices();
+  }, [isAdmin, routeImei]);
+
+  // Apply device filtering
+  const filteredDevices = useMemo(() => {
+    return filterDevices(devices);
+  }, [devices, filterDevices]);
+
+  // Determine if device filter should be shown
+  // Show filter if: ADMIN (always) OR Parent with 2+ devices
+  const shouldShowDeviceFilter = useMemo(() => {
+    if (isAdmin()) {
+      return true; // Always show for ADMIN
+    }
+    // For PARENTS, only show if they have 2 or more devices
+    return filteredDevices.length >= 2;
+  }, [isAdmin, filteredDevices.length]);
+
+  /**
    * Effect: Fetch command history on mount
    * Fetches command history when component mounts with valid IMEI
    */
@@ -71,8 +126,8 @@ export default function DeviceSettings() {
       
       try {
         const [commands, configs] = await Promise.all([
-          fetchDeviceCommands(imei, 10),
-          fetchDeviceConfig(imei, 10)
+          fetchDeviceCommands(imei, 5),
+          fetchDeviceConfig(imei, 5)
         ]);
         
         setCommandHistory(parseDeviceCommands(commands));
@@ -177,8 +232,8 @@ export default function DeviceSettings() {
     
     try {
       const [commands, configs] = await Promise.all([
-        fetchDeviceCommands(imei, 10),
-        fetchDeviceConfig(imei, 10)
+        fetchDeviceCommands(imei, 5),
+        fetchDeviceConfig(imei, 5)
       ]);
       
       setCommandHistory(parseDeviceCommands(commands));
@@ -321,61 +376,77 @@ export default function DeviceSettings() {
   };
 
   return (
-    <div className="space-y-8 p-6">
-      {/* Enhanced Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600/20 via-purple-600/20 to-teal-600/20 border border-blue-500/30 backdrop-blur-xl">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/10 via-transparent to-purple-500/10 animate-pulse" />
-          <div className="absolute top-6 left-6 w-32 h-32 bg-blue-400/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-6 right-6 w-40 h-40 bg-purple-400/15 rounded-full blur-3xl animate-pulse delay-1000" />
-        </div>
-
-        <div className="relative z-10 p-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+    <div className="bg-gray-50 min-h-screen p-3 sm:p-4 md:p-6">
+      {/* AdminLTE Header */}
+      <div className="bg-white rounded-lg shadow-sm mb-4 sm:mb-6">
+        <div className="p-4 sm:p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
                   onClick={() => navigate('/devices')}
-                  className="text-blue-200 hover:text-white"
+                  className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
                 >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Back to Devices
-                </Button>
-                <div className="w-1 h-6 bg-blue-400/50 rounded-full"></div>
-                <div className="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-xs font-medium">
+                  <i className="fas fa-arrow-left"></i>
+                  <span>Back to Devices</span>
+                </button>
+                <div className="w-px h-5 bg-gray-300"></div>
+                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
                   Device Management
-                </div>
-              </div>
-              
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent mb-2">
-                Device Commands
-              </h1>
-              <p className="text-blue-100/90 text-lg leading-relaxed mb-3">
-                Send commands and configure settings for your device
-              </p>
-              <div className="flex items-center gap-2">
-                <span className="text-blue-200/70 text-sm">IMEI:</span>
-                <span className="font-mono text-blue-100 text-lg font-semibold bg-blue-500/20 px-3 py-1 rounded-lg">
-                  {imei || "N/A"}
                 </span>
               </div>
+              
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
+                Device Commands
+              </h1>
+              <p className="text-sm sm:text-base text-gray-600 mb-3">
+                Send commands and configure settings for your device
+              </p>
+              
+              {/* Device Selection - Show based on role and device count */}
+              {shouldShowDeviceFilter ? (
+                <div className="flex items-center gap-3">
+                  <label className="text-gray-700 font-semibold text-sm">
+                    <i className="fas fa-mobile-alt mr-2 text-blue-600"></i>
+                    Select Device:
+                  </label>
+                  <select
+                    value={selectedImei}
+                    onChange={(e) => setSelectedImei(e.target.value)}
+                    className="px-4 py-2 border-2 border-gray-300 rounded-lg text-gray-800 font-medium bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
+                    style={{ minWidth: '250px', background: 'white', color: '#1f2937' }}
+                  >
+                    <option value="" style={{ background: 'white', color: '#1f2937' }}>Select a device...</option>
+                    {filteredDevices.map((device) => (
+                      <option key={device.imei} value={device.imei} style={{ background: 'white', color: '#1f2937' }}>
+                        {device.imei}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 text-sm">IMEI:</span>
+                  <span className="font-mono text-gray-800 font-semibold bg-gray-100 px-3 py-1 rounded">
+                    {imei || "N/A"}
+                  </span>
+                </div>
+              )}
             </div>
             
             <div className="flex items-center gap-6">
               <div className="text-right">
-                <div className="text-blue-200/80 text-sm">IMEI Number</div>
-                <div className="text-white text-lg font-mono font-bold">{imei || "N/A"}</div>
-                <div className="text-blue-200/70 text-xs">Device Identifier</div>
+                <div className="text-gray-500 text-sm">IMEI Number</div>
+                <div className="text-gray-800 text-lg font-mono font-bold">{imei || "N/A"}</div>
+                <div className="text-gray-500 text-xs">Device Identifier</div>
               </div>
-              <div className="w-px h-16 bg-blue-400/30"></div>
+              <div className="w-px h-16 bg-gray-300"></div>
               <div className="text-right">
-                <div className="text-blue-200/80 text-sm">Device Status</div>
-                <div className="text-green-300 text-xl font-bold">Online</div>
-                <div className="text-blue-200/70 text-xs">Connected</div>
+                <div className="text-gray-500 text-sm">Device Status</div>
+                <div className="text-green-600 text-xl font-bold">
+                  {imei ? "Online" : "Not Selected"}
+                </div>
+                <div className="text-gray-500 text-xs">{imei ? "Connected" : "Select Device"}</div>
               </div>
             </div>
           </div>
@@ -383,15 +454,18 @@ export default function DeviceSettings() {
       </div>
 
       {/* Device Command Section */}
-      <Card variant="glass" colorScheme="orange" padding="lg">
-        <Card.Content>
-          <h3 className="text-orange-300 text-lg font-semibold mb-6 flex items-center gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-4 rounded-t-lg">
+          <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <i className="fas fa-terminal text-white"></i>
+            </div>
             Device Commands
           </h3>
+          <p className="text-blue-100 text-xs sm:text-sm mt-1">Configure and send commands to your device</p>
+        </div>
 
+        <div className="p-4 sm:p-6">
           {/* Notification Display */}
           {notification.message && (
             <div className="mb-6">
@@ -405,54 +479,58 @@ export default function DeviceSettings() {
 
           <div className="space-y-6">
             {/* Command Type Selector */}
-            <div className="space-y-2">
-              <label className="text-white font-semibold text-sm flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
+            <div className="space-y-2 bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-lg border border-blue-100">
+              <label className="text-gray-800 font-bold text-sm flex items-center gap-2">
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <i className="fas fa-list text-white text-xs"></i>
+                </div>
                 Command Type
+                <span className="ml-auto text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">Required</span>
               </label>
               <select
                 value={deviceCommand.command}
                 onChange={handleCommandChange}
                 disabled={commandLoading}
                 className={cn(
-                  "w-full px-4 py-3 rounded-xl",
-                  "bg-white/10 backdrop-blur-xl",
-                  "border border-white/30",
-                  "text-white placeholder-white/50",
-                  "focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400/50",
-                  "transition-all duration-200",
-                  "disabled:opacity-50 disabled:cursor-not-allowed",
-                  "hover:bg-white/15"
+                  "w-full px-4 py-3 rounded-lg border-2 border-blue-200",
+                  "bg-white text-gray-800 font-medium",
+                  "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                  "transition-all duration-200 shadow-sm",
+                  "disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
                 )}
+                style={{ background: 'white' }}
               >
                 {commandOptions.map((option) => (
                   <option 
                     key={option.value} 
                     value={option.value}
-                    className="bg-gray-800 text-white"
+                    style={{ background: 'white', color: '#1f2937' }}
                   >
                     {option.label}
                   </option>
                 ))}
               </select>
-              <p className="text-orange-100/70 text-xs">
+              <p className="text-gray-600 text-xs flex items-center gap-1">
+                <i className="fas fa-info-circle text-blue-500"></i>
                 Select a command to send to the device
               </p>
             </div>
 
             {/* Contact Fields - Visible ONLY for SET_CONTACTS command */}
             {deviceCommand.command === 'SET_CONTACTS' && (
-              <div className="space-y-4 pt-4 border-t border-white/20">
-                <h4 className="text-white font-semibold text-sm flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                  Emergency Contacts (Optional)
-                </h4>
+              <div className="space-y-4 pt-4 border-t-2 border-blue-100">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
+                  <h4 className="text-gray-800 font-bold text-base flex items-center gap-2 mb-1">
+                    <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
+                      <i className="fas fa-phone text-white text-xs"></i>
+                    </div>
+                    Emergency Contacts
+                    <span className="ml-auto text-xs text-red-700 bg-red-100 px-2 py-1 rounded font-semibold">All Required</span>
+                  </h4>
+                  <p className="text-gray-600 text-xs ml-10">Configure emergency contact numbers for the device (all 3 contacts are mandatory)</p>
+                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                   <ContactInput
                     label="Primary Contact"
                     value={deviceCommand.params.phonenum1 || ''}
@@ -488,18 +566,23 @@ export default function DeviceSettings() {
 
             {/* Parameter Inputs - Conditional rendering for DEVICE_SETTINGS */}
             {deviceCommand.command === 'DEVICE_SETTINGS' && (
-              <div className="space-y-4 pt-4 border-t border-white/20">
-                <h4 className="text-white font-semibold text-sm flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                  </svg>
-                  Device Settings Parameters (Optional)
-                </h4>
+              <div className="space-y-4 pt-4 border-t-2 border-blue-100">
+                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-lg border border-purple-200">
+                  <h4 className="text-gray-800 font-bold text-base flex items-center gap-2 mb-1">
+                    <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+                      <i className="fas fa-cog text-white text-xs"></i>
+                    </div>
+                    Device Settings Parameters
+                    <span className="ml-auto text-xs text-purple-700 bg-purple-100 px-2 py-1 rounded">Optional</span>
+                  </h4>
+                  <p className="text-gray-600 text-xs ml-10">Configure device operational parameters</p>
+                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                   {/* NormalSendingInterval */}
                   <div className="space-y-2">
-                    <label htmlFor="normalSendingInterval" className="text-white font-semibold text-sm">
+                    <label htmlFor="normalSendingInterval" className="text-gray-800 font-bold text-sm flex items-center gap-2">
+                      <i className="fas fa-clock text-blue-600"></i>
                       Normal Sending Interval
                     </label>
                     <input
@@ -510,27 +593,33 @@ export default function DeviceSettings() {
                       onBlur={() => handleParameterBlur('NormalSendingInterval')}
                       disabled={commandLoading}
                       className={cn(
-                        "w-full px-4 py-3 rounded-xl",
-                        "bg-white/10 backdrop-blur-xl",
-                        "border",
-                        paramErrors.NormalSendingInterval ? "border-red-400/60" : "border-white/30",
-                        "text-white placeholder-white/50",
-                        "focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400/50",
-                        "transition-all duration-200",
-                        "disabled:opacity-50 disabled:cursor-not-allowed"
+                        "w-full px-4 py-3 rounded-lg border-2",
+                        paramErrors.NormalSendingInterval ? "border-red-400 bg-red-50" : "border-gray-200 bg-white",
+                        "placeholder-gray-400 font-medium",
+                        "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                        "transition-all duration-200 shadow-sm",
+                        "disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
                       )}
+                      style={{ color: '#1f2937 !important', backgroundColor: 'white !important' }}
                       placeholder="e.g., 60"
                     />
                     {paramErrors.NormalSendingInterval ? (
-                      <p className="text-red-300 text-sm">{paramErrors.NormalSendingInterval}</p>
+                      <p className="text-red-600 text-sm flex items-center gap-1">
+                        <i className="fas fa-exclamation-circle"></i>
+                        {paramErrors.NormalSendingInterval}
+                      </p>
                     ) : (
-                      <p className="text-orange-100/70 text-xs">Interval in seconds for normal data transmission</p>
+                      <p className="text-gray-500 text-xs flex items-center gap-1">
+                        <i className="fas fa-info-circle text-blue-500"></i>
+                        Interval in seconds for normal data transmission
+                      </p>
                     )}
                   </div>
 
                   {/* SOSSendingInterval */}
                   <div className="space-y-2">
-                    <label htmlFor="sosSendingInterval" className="text-white font-semibold text-sm">
+                    <label htmlFor="sosSendingInterval" className="text-gray-800 font-bold text-sm flex items-center gap-2">
+                      <i className="fas fa-exclamation-triangle text-red-600"></i>
                       SOS Sending Interval
                     </label>
                     <input
@@ -540,28 +629,34 @@ export default function DeviceSettings() {
                       onChange={(e) => handleParameterChange('SOSSendingInterval', e.target.value)}
                       onBlur={() => handleParameterBlur('SOSSendingInterval')}
                       disabled={commandLoading}
+                      style={{ color: '#1f2937', backgroundColor: 'white' }}
                       className={cn(
-                        "w-full px-4 py-3 rounded-xl",
-                        "bg-white/10 backdrop-blur-xl",
-                        "border",
-                        paramErrors.SOSSendingInterval ? "border-red-400/60" : "border-white/30",
-                        "text-white placeholder-white/50",
-                        "focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400/50",
-                        "transition-all duration-200",
-                        "disabled:opacity-50 disabled:cursor-not-allowed"
+                        "w-full px-4 py-3 rounded-lg border-2",
+                        paramErrors.SOSSendingInterval ? "border-red-400 bg-red-50" : "border-gray-200 bg-white",
+                        "text-gray-800 placeholder-gray-400 font-medium",
+                        "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                        "transition-all duration-200 shadow-sm",
+                        "disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
                       )}
                       placeholder="e.g., 10"
                     />
                     {paramErrors.SOSSendingInterval ? (
-                      <p className="text-red-300 text-sm">{paramErrors.SOSSendingInterval}</p>
+                      <p className="text-red-600 text-sm flex items-center gap-1">
+                        <i className="fas fa-exclamation-circle"></i>
+                        {paramErrors.SOSSendingInterval}
+                      </p>
                     ) : (
-                      <p className="text-orange-100/70 text-xs">Interval in seconds for SOS mode data transmission</p>
+                      <p className="text-gray-500 text-xs flex items-center gap-1">
+                        <i className="fas fa-info-circle text-blue-500"></i>
+                        Interval in seconds for SOS mode data transmission
+                      </p>
                     )}
                   </div>
 
                   {/* NormalScanningInterval */}
                   <div className="space-y-2">
-                    <label htmlFor="normalScanningInterval" className="text-white font-semibold text-sm">
+                    <label htmlFor="normalScanningInterval" className="text-gray-800 font-bold text-sm flex items-center gap-2">
+                      <i className="fas fa-satellite-dish text-green-600"></i>
                       Normal Scanning Interval
                     </label>
                     <input
@@ -571,28 +666,34 @@ export default function DeviceSettings() {
                       onChange={(e) => handleParameterChange('NormalScanningInterval', e.target.value)}
                       onBlur={() => handleParameterBlur('NormalScanningInterval')}
                       disabled={commandLoading}
+                      style={{ color: '#1f2937', backgroundColor: 'white' }}
                       className={cn(
-                        "w-full px-4 py-3 rounded-xl",
-                        "bg-white/10 backdrop-blur-xl",
-                        "border",
-                        paramErrors.NormalScanningInterval ? "border-red-400/60" : "border-white/30",
-                        "text-white placeholder-white/50",
-                        "focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400/50",
-                        "transition-all duration-200",
-                        "disabled:opacity-50 disabled:cursor-not-allowed"
+                        "w-full px-4 py-3 rounded-lg border-2",
+                        paramErrors.NormalScanningInterval ? "border-red-400 bg-red-50" : "border-gray-200 bg-white",
+                        "text-gray-800 placeholder-gray-400 font-medium",
+                        "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                        "transition-all duration-200 shadow-sm",
+                        "disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
                       )}
                       placeholder="e.g., 30"
                     />
                     {paramErrors.NormalScanningInterval ? (
-                      <p className="text-red-300 text-sm">{paramErrors.NormalScanningInterval}</p>
+                      <p className="text-red-600 text-sm flex items-center gap-1">
+                        <i className="fas fa-exclamation-circle"></i>
+                        {paramErrors.NormalScanningInterval}
+                      </p>
                     ) : (
-                      <p className="text-orange-100/70 text-xs">Interval in seconds for GPS scanning in normal mode</p>
+                      <p className="text-gray-500 text-xs flex items-center gap-1">
+                        <i className="fas fa-info-circle text-blue-500"></i>
+                        Interval in seconds for GPS scanning in normal mode
+                      </p>
                     )}
                   </div>
 
                   {/* AirplaneInterval */}
                   <div className="space-y-2">
-                    <label htmlFor="airplaneInterval" className="text-white font-semibold text-sm">
+                    <label htmlFor="airplaneInterval" className="text-gray-800 font-bold text-sm flex items-center gap-2">
+                      <i className="fas fa-plane text-indigo-600"></i>
                       Airplane Interval
                     </label>
                     <input
@@ -602,28 +703,34 @@ export default function DeviceSettings() {
                       onChange={(e) => handleParameterChange('AirplaneInterval', e.target.value)}
                       onBlur={() => handleParameterBlur('AirplaneInterval')}
                       disabled={commandLoading}
+                      style={{ color: '#1f2937', backgroundColor: 'white' }}
                       className={cn(
-                        "w-full px-4 py-3 rounded-xl",
-                        "bg-white/10 backdrop-blur-xl",
-                        "border",
-                        paramErrors.AirplaneInterval ? "border-red-400/60" : "border-white/30",
-                        "text-white placeholder-white/50",
-                        "focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400/50",
-                        "transition-all duration-200",
-                        "disabled:opacity-50 disabled:cursor-not-allowed"
+                        "w-full px-4 py-3 rounded-lg border-2",
+                        paramErrors.AirplaneInterval ? "border-red-400 bg-red-50" : "border-gray-200 bg-white",
+                        "text-gray-800 placeholder-gray-400 font-medium",
+                        "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                        "transition-all duration-200 shadow-sm",
+                        "disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
                       )}
                       placeholder="e.g., 120"
                     />
                     {paramErrors.AirplaneInterval ? (
-                      <p className="text-red-300 text-sm">{paramErrors.AirplaneInterval}</p>
+                      <p className="text-red-600 text-sm flex items-center gap-1">
+                        <i className="fas fa-exclamation-circle"></i>
+                        {paramErrors.AirplaneInterval}
+                      </p>
                     ) : (
-                      <p className="text-orange-100/70 text-xs">Interval in seconds for airplane mode operations</p>
+                      <p className="text-gray-500 text-xs flex items-center gap-1">
+                        <i className="fas fa-info-circle text-blue-500"></i>
+                        Interval in seconds for airplane mode operations
+                      </p>
                     )}
                   </div>
 
                   {/* TemperatureLimit */}
                   <div className="space-y-2">
-                    <label htmlFor="temperatureLimit" className="text-white font-semibold text-sm">
+                    <label htmlFor="temperatureLimit" className="text-gray-800 font-bold text-sm flex items-center gap-2">
+                      <i className="fas fa-thermometer-half text-orange-600"></i>
                       Temperature Limit
                     </label>
                     <input
@@ -633,28 +740,34 @@ export default function DeviceSettings() {
                       onChange={(e) => handleParameterChange('TemperatureLimit', e.target.value)}
                       onBlur={() => handleParameterBlur('TemperatureLimit')}
                       disabled={commandLoading}
+                      style={{ color: '#1f2937', backgroundColor: 'white' }}
                       className={cn(
-                        "w-full px-4 py-3 rounded-xl",
-                        "bg-white/10 backdrop-blur-xl",
-                        "border",
-                        paramErrors.TemperatureLimit ? "border-red-400/60" : "border-white/30",
-                        "text-white placeholder-white/50",
-                        "focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400/50",
-                        "transition-all duration-200",
-                        "disabled:opacity-50 disabled:cursor-not-allowed"
+                        "w-full px-4 py-3 rounded-lg border-2",
+                        paramErrors.TemperatureLimit ? "border-red-400 bg-red-50" : "border-gray-200 bg-white",
+                        "text-gray-800 placeholder-gray-400 font-medium",
+                        "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                        "transition-all duration-200 shadow-sm",
+                        "disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
                       )}
                       placeholder="e.g., 50"
                     />
                     {paramErrors.TemperatureLimit ? (
-                      <p className="text-red-300 text-sm">{paramErrors.TemperatureLimit}</p>
+                      <p className="text-red-600 text-sm flex items-center gap-1">
+                        <i className="fas fa-exclamation-circle"></i>
+                        {paramErrors.TemperatureLimit}
+                      </p>
                     ) : (
-                      <p className="text-orange-100/70 text-xs">Temperature threshold in degrees Celsius</p>
+                      <p className="text-gray-500 text-xs flex items-center gap-1">
+                        <i className="fas fa-info-circle text-blue-500"></i>
+                        Temperature threshold in degrees Celsius
+                      </p>
                     )}
                   </div>
 
                   {/* SpeedLimit */}
                   <div className="space-y-2">
-                    <label htmlFor="speedLimit" className="text-white font-semibold text-sm">
+                    <label htmlFor="speedLimit" className="text-gray-800 font-bold text-sm flex items-center gap-2">
+                      <i className="fas fa-tachometer-alt text-purple-600"></i>
                       Speed Limit
                     </label>
                     <input
@@ -664,28 +777,34 @@ export default function DeviceSettings() {
                       onChange={(e) => handleParameterChange('SpeedLimit', e.target.value)}
                       onBlur={() => handleParameterBlur('SpeedLimit')}
                       disabled={commandLoading}
+                      style={{ color: '#1f2937', backgroundColor: 'white' }}
                       className={cn(
-                        "w-full px-4 py-3 rounded-xl",
-                        "bg-white/10 backdrop-blur-xl",
-                        "border",
-                        paramErrors.SpeedLimit ? "border-red-400/60" : "border-white/30",
-                        "text-white placeholder-white/50",
-                        "focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400/50",
-                        "transition-all duration-200",
-                        "disabled:opacity-50 disabled:cursor-not-allowed"
+                        "w-full px-4 py-3 rounded-lg border-2",
+                        paramErrors.SpeedLimit ? "border-red-400 bg-red-50" : "border-gray-200 bg-white",
+                        "text-gray-800 placeholder-gray-400 font-medium",
+                        "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                        "transition-all duration-200 shadow-sm",
+                        "disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
                       )}
                       placeholder="e.g., 80"
                     />
                     {paramErrors.SpeedLimit ? (
-                      <p className="text-red-300 text-sm">{paramErrors.SpeedLimit}</p>
+                      <p className="text-red-600 text-sm flex items-center gap-1">
+                        <i className="fas fa-exclamation-circle"></i>
+                        {paramErrors.SpeedLimit}
+                      </p>
                     ) : (
-                      <p className="text-orange-100/70 text-xs">Speed threshold in km/h</p>
+                      <p className="text-gray-500 text-xs flex items-center gap-1">
+                        <i className="fas fa-info-circle text-blue-500"></i>
+                        Speed threshold in km/h
+                      </p>
                     )}
                   </div>
 
                   {/* LowbatLimit */}
                   <div className="space-y-2">
-                    <label htmlFor="lowbatLimit" className="text-white font-semibold text-sm">
+                    <label htmlFor="lowbatLimit" className="text-gray-800 font-bold text-sm flex items-center gap-2">
+                      <i className="fas fa-battery-quarter text-yellow-600"></i>
                       Low Battery Limit
                     </label>
                     <input
@@ -695,22 +814,27 @@ export default function DeviceSettings() {
                       onChange={(e) => handleParameterChange('LowbatLimit', e.target.value)}
                       onBlur={() => handleParameterBlur('LowbatLimit')}
                       disabled={commandLoading}
+                      style={{ color: '#1f2937', backgroundColor: 'white' }}
                       className={cn(
-                        "w-full px-4 py-3 rounded-xl",
-                        "bg-white/10 backdrop-blur-xl",
-                        "border",
-                        paramErrors.LowbatLimit ? "border-red-400/60" : "border-white/30",
-                        "text-white placeholder-white/50",
-                        "focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400/50",
-                        "transition-all duration-200",
-                        "disabled:opacity-50 disabled:cursor-not-allowed"
+                        "w-full px-4 py-3 rounded-lg border-2",
+                        paramErrors.LowbatLimit ? "border-red-400 bg-red-50" : "border-gray-200 bg-white",
+                        "text-gray-800 placeholder-gray-400 font-medium",
+                        "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                        "transition-all duration-200 shadow-sm",
+                        "disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
                       )}
                       placeholder="e.g., 20"
                     />
                     {paramErrors.LowbatLimit ? (
-                      <p className="text-red-300 text-sm">{paramErrors.LowbatLimit}</p>
+                      <p className="text-red-600 text-sm flex items-center gap-1">
+                        <i className="fas fa-exclamation-circle"></i>
+                        {paramErrors.LowbatLimit}
+                      </p>
                     ) : (
-                      <p className="text-orange-100/70 text-xs">Battery percentage threshold (0-100)</p>
+                      <p className="text-gray-500 text-xs flex items-center gap-1">
+                        <i className="fas fa-info-circle text-blue-500"></i>
+                        Battery percentage threshold (0-100)
+                      </p>
                     )}
                   </div>
                 </div>
@@ -719,81 +843,94 @@ export default function DeviceSettings() {
           </div>
 
           {/* Submit Button */}
-          <div className="flex justify-end pt-4">
-            <Button
-              variant="glass"
-              colorScheme="orange"
-              size="md"
+          <div className="flex justify-end pt-6 border-t-2 border-gray-100 mt-6">
+            <button
               onClick={handleSubmit}
               disabled={commandLoading || Object.values(paramErrors).some(error => error !== '')}
-              className="min-w-[180px]"
+              className={cn(
+                "px-8 py-3 rounded-lg font-bold transition-all duration-200 min-w-[200px]",
+                "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg",
+                "hover:from-blue-700 hover:to-blue-800 hover:shadow-xl transform hover:-translate-y-0.5",
+                "disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:transform-none disabled:shadow-none",
+                "flex items-center justify-center gap-2 text-base"
+              )}
             >
               {commandLoading ? (
-                <Loading type="spinner" size="sm" color="white" />
+                <>
+                  <Loading type="spinner" size="sm" color="white" />
+                  <span>Sending...</span>
+                </>
               ) : (
                 <>
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
+                  <i className="fas fa-bolt"></i>
                   Send Command
                 </>
               )}
-            </Button>
+            </button>
           </div>
 
-          {/* Command History Section */}
-          <div className="mt-8 pt-8 border-t border-white/20">
-            <div className="flex items-center justify-between mb-6">
-              <h4 className="text-orange-300 text-lg font-semibold flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Command History
-              </h4>
+          {/* Command History Section - Only show if device is selected */}
+          {imei && (
+            <div className="mt-8 pt-8 border-t-2 border-gray-200">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h4 className="text-xl font-bold text-gray-800 flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
+                      <i className="fas fa-history text-white"></i>
+                    </div>
+                    Command History
+                  </h4>
+                  <p className="text-gray-600 text-sm mt-1 ml-13">View recent commands and device responses</p>
+                  <div className="flex items-center gap-2 mt-2 ml-13">
+                    <i className="fas fa-mobile-alt text-blue-600"></i>
+                    <span className="text-sm text-gray-700">
+                      Showing history for device: 
+                      <span className="font-mono font-bold text-blue-600 ml-2 bg-blue-50 px-2 py-1 rounded">{imei}</span>
+                    </span>
+                  </div>
+                </div>
               
               {/* Refresh Button */}
-              <Button
-                variant="outline"
-                colorScheme="orange"
-                size="sm"
+              <button
                 onClick={refreshCommandHistory}
                 disabled={isRefreshing || historyLoading}
-                className="min-w-[120px]"
+                className={cn(
+                  "px-5 py-2.5 rounded-lg border-2 border-blue-600 text-blue-600 font-semibold",
+                  "hover:bg-blue-50 transition-all duration-200 shadow-sm hover:shadow-md",
+                  "min-w-[140px] flex items-center justify-center gap-2",
+                  "disabled:opacity-50 disabled:cursor-not-allowed disabled:border-gray-400 disabled:text-gray-400 disabled:hover:bg-transparent"
+                )}
               >
                 {isRefreshing ? (
                   <>
-                    <Loading type="spinner" size="sm" color="orange" />
-                    <span className="ml-2">Refreshing...</span>
+                    <Loading type="spinner" size="sm" color="blue" />
+                    <span>Refreshing...</span>
                   </>
                 ) : (
                   <>
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
+                    <i className="fas fa-redo"></i>
                     Refresh
                   </>
                 )}
-              </Button>
+              </button>
             </div>
 
             {/* Loading State */}
             {historyLoading && (
               <div className="flex items-center justify-center py-12">
-                <Loading type="spinner" size="lg" color="orange" />
-                <span className="ml-3 text-orange-100/70">Loading command history...</span>
+                <Loading type="spinner" size="lg" color="blue" />
+                <span className="ml-3 text-gray-600">Loading command history...</span>
               </div>
             )}
 
             {/* Error State */}
             {historyError && !historyLoading && (
-              <div className="bg-red-500/10 border border-red-400/30 rounded-xl p-6 mb-6">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
                 <div className="flex items-start gap-3">
-                  <svg className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  <i className="fas fa-exclamation-circle text-red-600 text-xl mt-0.5"></i>
                   <div>
-                    <h5 className="text-red-300 font-semibold mb-1">Error Loading History</h5>
-                    <p className="text-red-200/80 text-sm">{historyError}</p>
+                    <h5 className="text-red-800 font-semibold mb-1">Error Loading History</h5>
+                    <p className="text-red-700 text-sm">{historyError}</p>
                   </div>
                 </div>
               </div>
@@ -801,56 +938,65 @@ export default function DeviceSettings() {
 
             {/* History Content - Only show when not loading and no error */}
             {!historyLoading && !historyError && (
-              <>
-                {/* Sent Commands Section */}
-                <div className="bg-white/10 backdrop-blur-xl rounded-xl p-6 mb-6">
-                  <h5 className="text-white font-semibold text-base mb-4 flex items-center gap-2">
-                    📤 Sent Commands (Last 10)
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Sent Commands Section - LEFT SIDE */}
+                <div className="bg-gradient-to-br from-white to-blue-50 rounded-lg shadow-md border border-blue-100 p-6">
+                  <h5 className="text-gray-800 font-bold text-lg mb-4 flex items-center gap-3">
+                    <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow">
+                      <i className="fas fa-paper-plane text-white text-sm"></i>
+                    </div>
+                    Sent Commands
+                    <span className="ml-auto text-xs text-blue-700 bg-blue-100 px-3 py-1 rounded-full font-semibold">Last 5</span>
                   </h5>
                   
                   {commandHistory.length === 0 ? (
-                    <div className="text-center py-8 text-orange-100/70">
-                      <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                      </svg>
-                      <p className="text-sm">No commands sent yet</p>
+                    <div className="text-center py-12 text-gray-500 bg-white rounded-lg border-2 border-dashed border-gray-300">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i className="fas fa-inbox text-3xl text-gray-400"></i>
+                      </div>
+                      <p className="text-sm font-medium">No commands sent yet</p>
+                      <p className="text-xs text-gray-400 mt-1">Commands will appear here once sent</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
                       {commandHistory.map((cmd) => {
                         // Determine status badge color
                         const statusColors = {
-                          PUBLISHED: 'bg-green-500/20 text-green-300 border-green-400/30',
-                          PENDING: 'bg-yellow-500/20 text-yellow-300 border-yellow-400/30',
-                          FAILED: 'bg-red-500/20 text-red-300 border-red-400/30',
-                          default: 'bg-blue-500/20 text-blue-300 border-blue-400/30'
+                          PUBLISHED: 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-sm',
+                          PENDING: 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-sm',
+                          FAILED: 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-sm',
+                          default: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm'
                         };
                         const statusClass = statusColors[cmd.status] || statusColors.default;
 
                         return (
                           <div 
                             key={cmd.id} 
-                            className="bg-white/5 rounded-lg p-4 border border-white/10 hover:bg-white/10 transition-colors"
+                            className="bg-white rounded-lg p-5 border-2 border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200"
                           >
-                            <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-start justify-between mb-3">
                               <div className="flex items-center gap-3">
-                                <span className="text-white font-semibold">{cmd.command}</span>
+                                <span className="text-gray-800 font-bold text-base">{cmd.command}</span>
                                 <span className={cn(
-                                  "px-2 py-1 rounded-full text-xs font-medium border",
+                                  "px-3 py-1 rounded-full text-xs font-bold",
                                   statusClass
                                 )}>
                                   {cmd.status}
                                 </span>
                               </div>
-                              <span className="text-orange-100/60 text-xs">
-                                {new Date(cmd.createdAt).toLocaleString()}
-                              </span>
                             </div>
+                            <span className="text-gray-500 text-xs font-medium bg-gray-100 px-3 py-1 rounded-full inline-block">
+                              <i className="fas fa-clock mr-1"></i>
+                              {new Date(cmd.createdAt).toLocaleString()}
+                            </span>
                             
                             {cmd.payload && Object.keys(cmd.payload).length > 0 && (
-                              <div className="mt-2 pt-2 border-t border-white/10">
-                                <p className="text-orange-100/70 text-xs mb-1">Parameters:</p>
-                                <div className="bg-black/20 rounded p-2 font-mono text-xs text-orange-100/80">
+                              <div className="mt-3 pt-3 border-t-2 border-gray-100">
+                                <p className="text-gray-700 text-xs font-bold mb-2 flex items-center gap-1">
+                                  <i className="fas fa-code text-blue-600"></i>
+                                  Parameters:
+                                </p>
+                                <div className="bg-gray-900 rounded-lg p-3 font-mono text-xs text-green-400 shadow-inner">
                                   {JSON.stringify(cmd.payload, null, 2)}
                                 </div>
                               </div>
@@ -862,39 +1008,49 @@ export default function DeviceSettings() {
                   )}
                 </div>
 
-                {/* Device Acknowledgments Section */}
-                <div className="bg-white/10 backdrop-blur-xl rounded-xl p-6">
-                  <h5 className="text-white font-semibold text-base mb-4 flex items-center gap-2">
-                    ✅ Device Acknowledgments (Last 10)
+                {/* Device Acknowledgments Section - RIGHT SIDE */}
+                <div className="bg-gradient-to-br from-white to-green-50 rounded-lg shadow-md border border-green-100 p-6">
+                  <h5 className="text-gray-800 font-bold text-lg mb-4 flex items-center gap-3">
+                    <div className="w-9 h-9 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center shadow">
+                      <i className="fas fa-check-circle text-white text-sm"></i>
+                    </div>
+                    Device Acknowledgments
+                    <span className="ml-auto text-xs text-green-700 bg-green-100 px-3 py-1 rounded-full font-semibold">Last 5</span>
                   </h5>
                   
                   {configAcknowledgments.length === 0 ? (
-                    <div className="text-center py-8 text-orange-100/70">
-                      <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <p className="text-sm">No acknowledgments received yet</p>
+                    <div className="text-center py-12 text-gray-500 bg-white rounded-lg border-2 border-dashed border-gray-300">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i className="fas fa-check-circle text-3xl text-gray-400"></i>
+                      </div>
+                      <p className="text-sm font-medium">No acknowledgments received yet</p>
+                      <p className="text-xs text-gray-400 mt-1">Device responses will appear here</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
                       {configAcknowledgments.map((ack) => (
                         <div 
                           key={ack.id} 
-                          className="bg-white/5 rounded-lg p-4 border border-white/10 hover:bg-white/10 transition-colors"
+                          className="bg-white rounded-lg p-5 border-2 border-gray-200 hover:border-green-300 hover:shadow-md transition-all duration-200"
                         >
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-green-400">✓</span>
-                              <span className="text-white font-medium">{ack.rawBody}</span>
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i className="fas fa-check text-green-600 font-bold"></i>
+                              </div>
+                              <span className="text-gray-800 font-bold">{ack.rawBody}</span>
                             </div>
-                            <span className="text-orange-100/60 text-xs">
-                              {new Date(ack.deviceTimestamp).toLocaleString()}
-                            </span>
                           </div>
+                          <span className="text-gray-500 text-xs font-medium bg-gray-100 px-3 py-1 rounded-full inline-block">
+                            <i className="fas fa-clock mr-1"></i>
+                            {new Date(ack.deviceTimestamp).toLocaleString()}
+                          </span>
                           
-                          <div className="mt-2 pt-2 border-t border-white/10">
-                            <p className="text-orange-100/70 text-xs">
-                              <span className="font-semibold">Topic:</span> {ack.topic}
+                          <div className="mt-3 pt-3 border-t-2 border-gray-100">
+                            <p className="text-gray-600 text-xs flex items-center gap-2">
+                              <i className="fas fa-tag text-green-600"></i>
+                              <span className="font-bold">Topic:</span> 
+                              <span className="font-mono bg-gray-100 px-2 py-1 rounded">{ack.topic}</span>
                             </p>
                           </div>
                         </div>
@@ -902,11 +1058,12 @@ export default function DeviceSettings() {
                     </div>
                   )}
                 </div>
-              </>
+              </div>
             )}
           </div>
-        </Card.Content>
-      </Card>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

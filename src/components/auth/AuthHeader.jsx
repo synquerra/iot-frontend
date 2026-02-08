@@ -26,13 +26,13 @@ const AuthHeader = ({
       {title && (
         <h1 
           id={titleId || "auth-title"}
-          className="text-3xl font-bold text-text-primary mb-2"
+          className="text-3xl font-bold text-gray-800 mb-2"
         >
           {title}
         </h1>
       )}
       {subtitle && (
-        <p className="text-text-secondary">
+        <p className="text-gray-600 text-base">
           {subtitle}
         </p>
       )}

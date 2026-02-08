@@ -19,7 +19,7 @@ const AuthCard = ({
   return (
     <div 
       className={cn(
-        "bg-surface-primary border border-border-primary rounded-2xl p-8 shadow-xl",
+        "bg-white rounded-lg",
         className
       )}
       {...props}

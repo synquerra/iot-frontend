@@ -24,6 +24,7 @@ export function ContactInput({
   label, 
   value, 
   onChange, 
+  onBlur,
   error, 
   disabled,
   placeholder 
@@ -36,43 +37,46 @@ export function ContactInput({
     <div>
       <label 
         htmlFor={inputId}
-        className="text-blue-200/80 text-sm font-medium block mb-3"
+        className="text-gray-800 text-sm font-bold block mb-2 flex items-center gap-2"
       >
+        <i className="fas fa-phone text-green-600"></i>
         {label}
-        <span className="text-red-400 ml-1">*</span>
+        <span className="text-xs text-red-700 bg-red-100 px-2 py-0.5 rounded ml-auto font-semibold">Required</span>
       </label>
       <input
         id={inputId}
         type="tel"
         value={value}
         onChange={onChange}
+        onBlur={onBlur}
         disabled={disabled}
         placeholder={placeholder}
+        style={{ color: '#1f2937', backgroundColor: 'white' }}
         className={cn(
-          "w-full bg-white/10 border rounded-lg px-4 py-3 text-white",
-          "focus:bg-white/15 focus:outline-none transition-colors",
+          "w-full bg-white border-2 rounded-lg px-4 py-3 text-gray-800 placeholder-gray-400 font-medium shadow-sm",
+          "focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all",
           error 
-            ? "border-red-400/60 focus:border-red-400" 
-            : "border-white/20 focus:border-blue-400/60",
-          disabled && "opacity-50 cursor-not-allowed"
+            ? "border-red-400 bg-red-50" 
+            : "border-gray-200",
+          disabled && "opacity-50 cursor-not-allowed bg-gray-100"
         )}
         aria-invalid={!!error}
         aria-describedby={error ? errorId : undefined}
+        required
       />
-      {error && (
+      {error ? (
         <p 
           id={errorId}
-          className="text-red-400 text-sm mt-2 flex items-center gap-1"
+          className="text-red-600 text-sm mt-2 flex items-center gap-1"
           role="alert"
         >
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path 
-              fillRule="evenodd" 
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" 
-              clipRule="evenodd" 
-            />
-          </svg>
+          <i className="fas fa-exclamation-circle"></i>
           {error}
+        </p>
+      ) : (
+        <p className="text-gray-500 text-xs mt-1 flex items-center gap-1">
+          <i className="fas fa-info-circle text-blue-500"></i>
+          Enter phone number with country code (e.g., +1234567890)
         </p>
       )}
     </div>

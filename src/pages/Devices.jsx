@@ -1,15 +1,13 @@
 // src/pages/Devices.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card } from "../design-system/components";
-import { Button } from "../design-system/components";
 import { Loading } from "../design-system/components";
-import { EnhancedTable, EnhancedTableContainer, StatusBadge } from "../design-system/components/EnhancedTable";
 import { listDevicesFiltered } from "../utils/deviceFiltered";
 import { getAnalyticsByImei } from "../utils/analytics";
 import { parseTemperature } from "../utils/telemetryTransformers";
 import { cn } from "../design-system/utils/cn";
 import { useDeviceFilter } from "../hooks/useDeviceFilter";
+import { useUserContext } from "../contexts/UserContext";
 
 export default function Devices() {
   const [devices, setDevices] = useState([]);
@@ -18,6 +16,9 @@ export default function Devices() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const navigate = useNavigate();
+  
+  // User context for role-based logic
+  const { isAdmin } = useUserContext();
   
   // Use device filter hook for user-based filtering
   const { filterDevices, shouldFilterDevices } = useDeviceFilter();
@@ -185,6 +186,16 @@ export default function Devices() {
     return matchesSearch && matchesStatus;
   });
 
+  // Determine if search & filters should be shown
+  // Show if: ADMIN (always) OR Parent with 2+ devices
+  const shouldShowSearchFilters = useMemo(() => {
+    if (isAdmin()) {
+      return true; // Always show for ADMIN
+    }
+    // For PARENTS, only show if they have 2 or more devices
+    return devices.length >= 2;
+  }, [isAdmin, devices.length]);
+
   const stats = {
     // Row 1
     total: devices.length,
@@ -224,690 +235,588 @@ export default function Devices() {
 
   if (error && devices.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Card variant="glass" colorScheme="red" padding="xl" className="max-w-md">
-          <Card.Content className="text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/20 flex items-center justify-center">
-              <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div className="text-red-400 text-lg font-semibold mb-2">
-              Failed to Load Devices
-            </div>
-            <div className="text-red-300 text-sm mb-4">
-              {error}
-            </div>
-            <Button
-              variant="outline"
-              colorScheme="red"
-              onClick={() => window.location.reload()}
-            >
-              Try Again
-            </Button>
-          </Card.Content>
-        </Card>
+      <div className="flex items-center justify-center min-h-[60vh] p-4">
+        <div className="bg-white rounded-lg shadow-md p-8 max-w-md text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+            <i className="fas fa-exclamation-circle text-3xl text-[#dc3545]"></i>
+          </div>
+          <div className="text-[#dc3545] text-lg font-semibold mb-2">
+            Failed to Load Devices
+          </div>
+          <div className="text-gray-600 text-sm mb-4">
+            {error}
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-[#dc3545] hover:bg-[#c82333] text-white rounded-lg font-medium transition-colors"
+          >
+            <i className="fas fa-sync-alt mr-2"></i>
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 p-6">
-      {/* Enhanced Header with Modern Design */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600/20 via-purple-600/20 to-teal-600/20 border border-blue-500/30 backdrop-blur-xl">
-        {/* Background Effects */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/10 via-transparent to-purple-500/10 animate-pulse" />
-          <div className="absolute top-6 left-6 w-32 h-32 bg-blue-400/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-6 right-6 w-40 h-40 bg-purple-400/15 rounded-full blur-3xl animate-pulse delay-1000" />
-        </div>
-
-        <div className="relative z-10 p-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-3">
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent">
-                  Device Management
-                </h1>
-                {shouldFilterDevices() && (
-                  <span 
-                    className="px-3 py-1 bg-blue-500/30 border border-blue-400/50 rounded-full text-blue-200 text-xs font-medium cursor-help"
-                    title="You are viewing only devices assigned to your account"
-                  >
-                    Filtered View
-                  </span>
-                )}
-              </div>
-              <p className="text-blue-100/90 text-lg leading-relaxed max-w-2xl">
-                Monitor, manage, and analyze your connected IoT devices with real-time insights and comprehensive analytics
-              </p>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <Button
-                variant="glass"
-                colorScheme="teal"
-                size="lg"
-                onClick={() => navigate('/devices/add')}
-                className="backdrop-blur-xl"
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6 bg-gray-50 min-h-screen">
+      {/* AdminLTE v3 Header */}
+      <div className="bg-white rounded-lg shadow-md p-3 sm:p-4">
+        <div className="flex items-center justify-between flex-wrap gap-3 sm:gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
+              <i className="fas fa-microchip mr-2 text-[#007bff]"></i>
+              Device Management
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-600 mt-1">Monitor and manage your connected IoT devices</p>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            {shouldFilterDevices() && (
+              <span 
+                className="px-3 py-1.5 bg-blue-100 border border-blue-300 rounded text-blue-700 text-xs font-medium"
+                title="You are viewing only devices assigned to your account"
               >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Add Device
-              </Button>
-              <Button
-                variant="outline"
-                colorScheme="blue"
-                size="lg"
-                onClick={() => window.location.reload()}
-                className="backdrop-blur-xl"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Refresh
-              </Button>
-            </div>
+                <i className="fas fa-filter mr-1"></i>
+                Filtered View
+              </span>
+            )}
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-[#17a2b8] hover:bg-[#138496] text-white rounded transition-colors text-sm font-medium"
+            >
+              <i className="fas fa-redo mr-2"></i>
+              Refresh
+            </button>
+            <button
+              onClick={() => navigate('/devices/add')}
+              className="px-4 py-2 bg-[#007bff] hover:bg-[#0056b3] text-white rounded transition-colors text-sm font-medium"
+            >
+              <i className="fas fa-plus mr-2"></i>
+              Add Device
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Enhanced Statistics Cards - Row 1 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-        <Card variant="glass" colorScheme="blue" padding="lg" hover={true} className="group">
-          <Card.Content>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-blue-200/80 text-sm font-medium mb-1">Total Devices</div>
-                <div className="text-white text-3xl font-bold mb-2">{stats.total}</div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-                  <span className="text-blue-200/70 text-xs">All registered</span>
-                </div>
-              </div>
-              <div className="w-14 h-14 bg-blue-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                </svg>
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
+      {/* AdminLTE v3 Small Boxes - Row 1: Main Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        {/* Total Devices */}
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#17a2b8] to-[#138496] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.total}</div>
+            <div className="text-sm font-medium mt-1">Total Devices</div>
+          </div>
+          <div className="absolute top-2 right-3 text-white/30">
+            <i className="fas fa-microchip text-6xl"></i>
+          </div>
+          <div className="bg-black/20 px-4 py-2 text-center text-xs">
+            All registered
+          </div>
+        </div>
 
-        <Card variant="glass" colorScheme="green" padding="lg" hover={true} className="group">
-          <Card.Content>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-green-200/80 text-sm font-medium mb-1">Active</div>
-                <div className="text-white text-3xl font-bold mb-2">{stats.active}</div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-green-200/70 text-xs">Online</span>
-                </div>
-              </div>
-              <div className="w-14 h-14 bg-green-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
+        {/* Active */}
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#28a745] to-[#218838] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.active}</div>
+            <div className="text-sm font-medium mt-1">Active</div>
+          </div>
+          <div className="absolute top-2 right-3 text-white/30">
+            <i className="fas fa-check-circle text-6xl"></i>
+          </div>
+          <div className="bg-black/20 px-4 py-2 text-center text-xs">
+            Online now
+          </div>
+        </div>
 
-        <Card variant="glass" colorScheme="amber" padding="lg" hover={true} className="group">
-          <Card.Content>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-amber-200/80 text-sm font-medium mb-1">Inactive</div>
-                <div className="text-white text-3xl font-bold mb-2">{stats.inactive}</div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
-                  <span className="text-amber-200/70 text-xs">Offline</span>
-                </div>
-              </div>
-              <div className="w-14 h-14 bg-amber-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
+        {/* Inactive */}
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#ffc107] to-[#e0a800] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.inactive}</div>
+            <div className="text-sm font-medium mt-1">Inactive</div>
+          </div>
+          <div className="absolute top-2 right-3 text-white/30">
+            <i className="fas fa-exclamation-triangle text-6xl"></i>
+          </div>
+          <div className="bg-black/20 px-4 py-2 text-center text-xs">
+            Offline
+          </div>
+        </div>
 
-        <Card variant="glass" colorScheme="red" padding="lg" hover={true} className="group">
-          <Card.Content>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-red-200/80 text-sm font-medium mb-1">Hanged</div>
-                <div className="text-white text-3xl font-bold mb-2">{stats.hanged}</div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
-                  <span className="text-red-200/70 text-xs">Not responding</span>
-                </div>
-              </div>
-              <div className="w-14 h-14 bg-red-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
+        {/* Hanged */}
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#dc3545] to-[#c82333] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.hanged}</div>
+            <div className="text-sm font-medium mt-1">Hanged</div>
+          </div>
+          <div className="absolute top-2 right-3 text-white/30">
+            <i className="fas fa-times-circle text-6xl"></i>
+          </div>
+          <div className="bg-black/20 px-4 py-2 text-center text-xs">
+            Not responding
+          </div>
+        </div>
 
-        <Card variant="glass" colorScheme="purple" padding="lg" hover={true} className="group">
-          <Card.Content>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-purple-200/80 text-sm font-medium mb-1">Tampered</div>
-                <div className="text-white text-3xl font-bold mb-2">{stats.tampered}</div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
-                  <span className="text-purple-200/70 text-xs">Security alert</span>
-                </div>
-              </div>
-              <div className="w-14 h-14 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
+        {/* Tampered */}
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#6f42c1] to-[#5a32a3] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.tampered}</div>
+            <div className="text-sm font-medium mt-1">Tampered</div>
+          </div>
+          <div className="absolute top-2 right-3 text-white/30">
+            <i className="fas fa-shield-alt text-6xl"></i>
+          </div>
+          <div className="bg-black/20 px-4 py-2 text-center text-xs">
+            Security alert
+          </div>
+        </div>
       </div>
 
       {/* Row 2 - Alerts & Issues */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-        <Card variant="glass" colorScheme="red" padding="lg" hover={true} className="group">
-          <Card.Content>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-red-200/80 text-sm font-medium mb-1">High Temp</div>
-                <div className="text-white text-3xl font-bold mb-2">{stats.highTemp}</div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
-                  <span className="text-red-200/70 text-xs">&gt;50°C</span>
-                </div>
-              </div>
-              <div className="w-14 h-14 bg-red-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        {/* High Temp */}
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#dc3545] to-[#c82333] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.highTemp}</div>
+            <div className="text-sm font-medium mt-1">High Temp</div>
+          </div>
+          <div className="absolute top-2 right-3 text-white/30">
+            <i className="fas fa-thermometer-full text-6xl"></i>
+          </div>
+          <div className="bg-black/20 px-4 py-2 text-center text-xs">
+            &gt;50°C
+          </div>
+        </div>
 
-        <Card variant="glass" colorScheme="amber" padding="lg" hover={true} className="group">
-          <Card.Content>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-amber-200/80 text-sm font-medium mb-1">SOS</div>
-                <div className="text-white text-3xl font-bold mb-2">{stats.sos}</div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
-                  <span className="text-amber-200/70 text-xs">Emergency</span>
-                </div>
-              </div>
-              <div className="w-14 h-14 bg-amber-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
+        {/* SOS */}
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#fd7e14] to-[#e8590c] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.sos}</div>
+            <div className="text-sm font-medium mt-1">SOS</div>
+          </div>
+          <div className="absolute top-2 right-3 text-white/30">
+            <i className="fas fa-exclamation-circle text-6xl"></i>
+          </div>
+          <div className="bg-black/20 px-4 py-2 text-center text-xs">
+            Emergency
+          </div>
+        </div>
 
-        <Card variant="glass" colorScheme="orange" padding="lg" hover={true} className="group">
-          <Card.Content>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-orange-200/80 text-sm font-medium mb-1">Overspeed</div>
-                <div className="text-white text-3xl font-bold mb-2">{stats.overspeed}</div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
-                  <span className="text-orange-200/70 text-xs">&gt;70 km/h</span>
-                </div>
-              </div>
-              <div className="w-14 h-14 bg-orange-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
+        {/* Overspeed */}
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#ffc107] to-[#e0a800] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.overspeed}</div>
+            <div className="text-sm font-medium mt-1">Overspeed</div>
+          </div>
+          <div className="absolute top-2 right-3 text-white/30">
+            <i className="fas fa-tachometer-alt text-6xl"></i>
+          </div>
+          <div className="bg-black/20 px-4 py-2 text-center text-xs">
+            &gt;70 km/h
+          </div>
+        </div>
 
-        <Card variant="glass" colorScheme="pink" padding="lg" hover={true} className="group">
-          <Card.Content>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-pink-200/80 text-sm font-medium mb-1">Anomaly</div>
-                <div className="text-white text-3xl font-bold mb-2">{stats.anomaly}</div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-pink-400 rounded-full animate-pulse"></div>
-                  <span className="text-pink-200/70 text-xs">Unusual behavior</span>
-                </div>
-              </div>
-              <div className="w-14 h-14 bg-pink-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
+        {/* Anomaly */}
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#e83e8c] to-[#d63384] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.anomaly}</div>
+            <div className="text-sm font-medium mt-1">Anomaly</div>
+          </div>
+          <div className="absolute top-2 right-3 text-white/30">
+            <i className="fas fa-exclamation text-6xl"></i>
+          </div>
+          <div className="bg-black/20 px-4 py-2 text-center text-xs">
+            Unusual behavior
+          </div>
+        </div>
 
-        <Card variant="glass" colorScheme="indigo" padding="lg" hover={true} className="group">
-          <Card.Content>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-indigo-200/80 text-sm font-medium mb-1">Restricted Entry</div>
-                <div className="text-white text-3xl font-bold mb-2">{stats.restrictedEntry}</div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></div>
-                  <span className="text-indigo-200/70 text-xs">Geofence breach</span>
-                </div>
-              </div>
-              <div className="w-14 h-14 bg-indigo-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                </svg>
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
+        {/* Restricted Entry */}
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#6610f2] to-[#520dc2] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.restrictedEntry}</div>
+            <div className="text-sm font-medium mt-1">Restricted Entry</div>
+          </div>
+          <div className="absolute top-2 right-3 text-white/30">
+            <i className="fas fa-ban text-6xl"></i>
+          </div>
+          <div className="bg-black/20 px-4 py-2 text-center text-xs">
+            Geofence breach
+          </div>
+        </div>
       </div>
 
       {/* Row 3 - Technical Issues */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-        <Card variant="glass" colorScheme="red" padding="lg" hover={true} className="group">
-          <Card.Content>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-red-200/80 text-sm font-medium mb-1">SIM Not Working</div>
-                <div className="text-white text-3xl font-bold mb-2">{stats.simNotWorking}</div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
-                  <span className="text-red-200/70 text-xs">No SIM</span>
-                </div>
-              </div>
-              <div className="w-14 h-14 bg-red-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        {/* SIM Not Working */}
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#dc3545] to-[#c82333] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.simNotWorking}</div>
+            <div className="text-sm font-medium mt-1">SIM Not Working</div>
+          </div>
+          <div className="absolute top-2 right-3 text-white/30">
+            <i className="fas fa-sim-card text-6xl"></i>
+          </div>
+          <div className="bg-black/20 px-4 py-2 text-center text-xs">
+            No SIM
+          </div>
+        </div>
 
-        <Card variant="glass" colorScheme="amber" padding="lg" hover={true} className="group">
-          <Card.Content>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-amber-200/80 text-sm font-medium mb-1">Low Data</div>
-                <div className="text-white text-3xl font-bold mb-2">{stats.lowData}</div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
-                  <span className="text-amber-200/70 text-xs">Data issue</span>
-                </div>
-              </div>
-              <div className="w-14 h-14 bg-amber-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                </svg>
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
+        {/* Low Data */}
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#ffc107] to-[#e0a800] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.lowData}</div>
+            <div className="text-sm font-medium mt-1">Low Data</div>
+          </div>
+          <div className="absolute top-2 right-3 text-white/30">
+            <i className="fas fa-database text-6xl"></i>
+          </div>
+          <div className="bg-black/20 px-4 py-2 text-center text-xs">
+            Data issue
+          </div>
+        </div>
 
-        <Card variant="glass" colorScheme="orange" padding="lg" hover={true} className="group">
-          <Card.Content>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-orange-200/80 text-sm font-medium mb-1">GPS Uplink Issues</div>
-                <div className="text-white text-3xl font-bold mb-2">{stats.gpsUplinkIssues}</div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
-                  <span className="text-orange-200/70 text-xs">GNSS error</span>
-                </div>
-              </div>
-              <div className="w-14 h-14 bg-orange-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                </svg>
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
+        {/* GPS Uplink Issues */}
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#fd7e14] to-[#e8590c] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.gpsUplinkIssues}</div>
+            <div className="text-sm font-medium mt-1">GPS Issues</div>
+          </div>
+          <div className="absolute top-2 right-3 text-white/30">
+            <i className="fas fa-satellite-dish text-6xl"></i>
+          </div>
+          <div className="bg-black/20 px-4 py-2 text-center text-xs">
+            GNSS error
+          </div>
+        </div>
 
-        <Card variant="glass" colorScheme="purple" padding="lg" hover={true} className="group">
-          <Card.Content>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-purple-200/80 text-sm font-medium mb-1">Battery Health</div>
-                <div className="text-white text-3xl font-bold mb-2">{stats.batteryHealth}</div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
-                  <span className="text-purple-200/70 text-xs">Low battery</span>
-                </div>
-              </div>
-              <div className="w-14 h-14 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <rect x="2" y="7" width="18" height="11" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M22 10v4" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
+        {/* Battery Health */}
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#6f42c1] to-[#5a32a3] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.batteryHealth}</div>
+            <div className="text-sm font-medium mt-1">Battery Health</div>
+          </div>
+          <div className="absolute top-2 right-3 text-white/30">
+            <i className="fas fa-battery-quarter text-6xl"></i>
+          </div>
+          <div className="bg-black/20 px-4 py-2 text-center text-xs">
+            Low battery
+          </div>
+        </div>
 
-        <Card variant="glass" colorScheme="cyan" padding="lg" hover={true} className="group">
-          <Card.Content>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-cyan-200/80 text-sm font-medium mb-1">BLE</div>
-                <div className="text-white text-3xl font-bold mb-2">{stats.ble}</div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
-                  <span className="text-cyan-200/70 text-xs">Bluetooth</span>
-                </div>
-              </div>
-              <div className="w-14 h-14 bg-cyan-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-                </svg>
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
+        {/* BLE */}
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#17a2b8] to-[#138496] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.ble}</div>
+            <div className="text-sm font-medium mt-1">BLE</div>
+          </div>
+          <div className="absolute top-2 right-3 text-white/30">
+            <i className="fas fa-bluetooth text-6xl"></i>
+          </div>
+          <div className="bg-black/20 px-4 py-2 text-center text-xs">
+            Bluetooth
+          </div>
+        </div>
       </div>
 
-      {/* Enhanced Controls and Filters */}
-      <Card variant="glass" colorScheme="slate" padding="lg" className="backdrop-blur-xl">
-        <Card.Content>
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            {/* Search and Filters */}
-            <div className="flex flex-col sm:flex-row gap-4 flex-1">
+      {/* Search and Filters - AdminLTE Style - Only show for ADMIN or Parent with 2+ devices */}
+      {shouldShowSearchFilters && (
+        <div className="bg-white rounded-lg shadow-md">
+          <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <h3 className="text-lg font-semibold text-gray-700">
+                <i className="fas fa-search mr-2 text-[#007bff]"></i>
+                Search & Filters
+              </h3>
+              <span className="px-2.5 py-0.5 bg-[#17a2b8] text-white text-xs font-semibold rounded">
+                {filteredDevices.length} devices
+              </span>
+            </div>
+            
+            {shouldFilterDevices() && (
+              <span 
+                className="px-3 py-1.5 bg-blue-100 border border-blue-300 rounded text-blue-700 text-xs font-medium"
+                title="You are viewing only devices assigned to your account"
+              >
+                <i className="fas fa-filter mr-1"></i>
+                Filtered View
+              </span>
+            )}
+          </div>
+          
+          <div className="p-4">
+            {/* Search and Filter Controls */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
               {/* Search Input */}
-              <div className="relative flex-1 max-w-md">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
+              <div className="relative flex-1">
                 <input
                   type="text"
                   placeholder="Search devices by IMEI or topic..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className={cn(
-                    'w-full pl-10 pr-4 py-3 rounded-xl',
-                    'bg-white/10 backdrop-blur-xl border border-white/20',
-                    'text-white placeholder-white/60',
-                    'focus:bg-white/15 focus:border-blue-400/60 focus:outline-none focus:ring-4 focus:ring-blue-400/20',
-                    'transition-all duration-300'
-                  )}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#007bff] focus:border-[#007bff]"
                 />
+                <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
               </div>
 
               {/* Status Filter */}
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className={cn(
-                  'px-4 py-3 rounded-xl min-w-[160px]',
-                  'bg-white/10 backdrop-blur-xl border border-white/20',
-                  'text-white',
-                  'focus:bg-white/15 focus:border-blue-400/60 focus:outline-none',
-                  'transition-all duration-300'
-                )}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#007bff] focus:border-[#007bff] min-w-[160px] bg-white"
+                style={{ backgroundColor: 'white', color: '#111827' }}
               >
-                <option value="all" className="bg-slate-900 text-white">All Devices</option>
-                <option value="active" className="bg-slate-900 text-white">Active Only</option>
-                <option value="inactive" className="bg-slate-900 text-white">Inactive Only</option>
+                <option value="all" style={{ backgroundColor: 'white', color: '#111827' }}>All Devices</option>
+                <option value="active" style={{ backgroundColor: 'white', color: '#111827' }}>Active Only</option>
+                <option value="inactive" style={{ backgroundColor: 'white', color: '#111827' }}>Inactive Only</option>
               </select>
+              
+              {/* Clear Filters */}
+              {(searchTerm || filterStatus !== "all") && (
+                <button
+                  onClick={() => {
+                    setSearchTerm("");
+                    setFilterStatus("all");
+                  }}
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                >
+                  <i className="fas fa-times mr-1"></i>
+                  Clear
+                </button>
+              )}
             </div>
-          </div>
 
-          {/* Results Summary */}
-          <div className="mt-4 pt-4 border-t border-white/10">
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-4">
-                  <span className="text-white/70">
-                    Showing {filteredDevices.length} of {devices.length} devices
-                  </span>
-                  {shouldFilterDevices() && (
-                    <div 
-                      className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/20 border border-blue-400/30 rounded-lg cursor-help"
-                      title="Device filtering is active based on your account permissions"
-                    >
-                      <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                      </svg>
-                      <span className="text-blue-300 text-xs font-medium">Filtered View Active</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-white/70">Auto-refresh enabled</span>
+            {/* Results Summary */}
+            <div className="flex items-center justify-between text-sm border-t border-gray-200 pt-3">
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600">
+                  Showing {filteredDevices.length} of {devices.length} devices
+                </span>
+                <div className="flex items-center gap-1.5 text-green-600">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs">Auto-refresh enabled</span>
                 </div>
               </div>
-              
-              {/* Filtering Info Box for PARENTS users */}
-              {shouldFilterDevices() && (
-                <div className="p-3 bg-blue-500/10 border border-blue-400/30 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <svg className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div className="flex-1">
-                      <div className="text-blue-200 font-medium text-sm mb-1">
-                        Viewing Assigned Devices Only
-                      </div>
-                      <div className="text-blue-200/70 text-xs leading-relaxed">
-                        You are viewing {devices.length} device{devices.length !== 1 ? 's' : ''} assigned to your account. 
-                        Contact your administrator to modify device assignments or view additional devices.
-                      </div>
+            </div>
+            
+            {/* Filtering Info Box for PARENTS users */}
+            {shouldFilterDevices() && (
+              <div className="mt-3 p-3 bg-blue-50 border-l-4 border-[#007bff] rounded">
+                <div className="flex items-start gap-3">
+                  <i className="fas fa-info-circle text-[#007bff] mt-0.5"></i>
+                  <div className="flex-1">
+                    <div className="text-gray-800 font-medium text-sm mb-1">
+                      Viewing Assigned Devices Only
+                    </div>
+                    <div className="text-gray-600 text-xs leading-relaxed">
+                      You are viewing {devices.length} device{devices.length !== 1 ? 's' : ''} assigned to your account. 
+                      Contact your administrator to modify device assignments or view additional devices.
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-        </Card.Content>
-      </Card>
+        </div>
+      )}
 
-      {/* Device Display - Table View */}
-      <EnhancedTableContainer variant="enhanced" colorScheme="blue" padding="lg">
-        <EnhancedTable
-          variant="enhanced"
-          size="md"
-          colorScheme="blue"
-          hoverable={true}
-          striped={true}
-          loading={loading}
-          loadingRows={5}
-          loadingColumns={7}
-          data={filteredDevices}
-          colorCoded={true}
-          showBadges={true}
-          responsive={true}
-          columns={[
-            {
-              key: 'status',
-              header: 'Status',
-              sortable: true,
-              render: (value) => (
-                <StatusBadge 
-                  type={value === 'active' ? 'success' : 'warning'} 
-                  value={value === 'active' ? 'Active' : 'Inactive'}
-                  size="sm"
-                />
-              )
-            },
-            {
-              key: 'topic',
-              header: 'Topic',
-              sortable: true,
-              render: (value) => (
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-2 h-2 bg-teal-400 rounded-full flex-shrink-0"></div>
-                  <span className="font-semibold text-white break-all text-sm leading-tight max-w-[200px]">{value}</span>
-                </div>
-              )
-            },
-            {
-              key: 'imei',
-              header: 'IMEI',
-              sortable: true,
-              render: (value) => (
-                <span className="font-mono text-xs text-slate-300 bg-slate-800/50 px-2 py-1.5 rounded break-all leading-relaxed max-w-[180px] block">
-                  {value}
-                </span>
-              )
-            },
-            {
-              key: 'batteryLevel',
-              header: 'Battery',
-              sortable: true,
-              render: (value) => (
-                <div className="flex items-center gap-2">
-                  {value !== null ? (
-                    <>
-                      <div className="w-16 bg-white/20 rounded-full h-2">
-                        <div 
-                          className={cn(
-                            'h-2 rounded-full',
-                            value > 60 ? 'bg-green-400' :
-                            value > 30 ? 'bg-amber-400' : 'bg-red-400'
-                          )}
-                          style={{ width: `${value}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-xs font-medium">{value}%</span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-16 bg-white/20 rounded-full h-2">
-                        <div className="h-2 rounded-full bg-gray-500 w-full opacity-50"></div>
-                      </div>
-                      <span className="text-xs font-medium text-slate-400">N/A</span>
-                    </>
-                  )}
-                </div>
-              )
-            },
-            {
-              key: 'signalStrength',
-              header: 'Signal',
-              sortable: true,
-              render: (value) => (
-                <div className="flex items-center gap-2">
-                  {value !== null ? (
-                    <>
-                      <div className="w-16 bg-white/20 rounded-full h-2">
-                        <div 
-                          className={cn(
-                            'h-2 rounded-full',
-                            value > 70 ? 'bg-green-400' :
-                            value > 40 ? 'bg-amber-400' : 'bg-red-400'
-                          )}
-                          style={{ width: `${value}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-xs font-medium">{value}%</span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-16 bg-white/20 rounded-full h-2">
-                        <div className="h-2 rounded-full bg-gray-500 w-full opacity-50"></div>
-                      </div>
-                      <span className="text-xs font-medium text-slate-400">N/A</span>
-                    </>
-                  )}
-                </div>
-              )
-            },
-            {
-              key: 'temperature',
-              header: 'Temperature',
-              sortable: true,
-              render: (value) => (
-                <span className={cn(
-                  'text-sm font-medium',
-                  value !== null ? (
-                    value > 50 ? 'text-red-400' :
-                    value > 30 ? 'text-amber-400' : 'text-green-400'
-                  ) : 'text-slate-400'
-                )}>
-                  {value !== null ? `${value}°C` : 'N/A'}
-                </span>
-              )
-            },
-            {
-              key: 'actions',
-              header: 'Actions',
-              sortable: false,
-              render: (value, device) => (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="glass"
-                    colorScheme="teal"
-                    size="sm"
+      {/* Device Display - Table View - AdminLTE Style */}
+      <div className="bg-white rounded-lg shadow-md">
+        <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-700">
+            <i className="fas fa-table mr-2 text-[#007bff]"></i>
+            Device List
+          </h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Topic</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">IMEI</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Battery</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Signal</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Temperature</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white">
+              {loading ? (
+                <tr>
+                  <td colSpan="7" className="px-4 py-12 text-center">
+                    <Loading type="spinner" size="md" />
+                  </td>
+                </tr>
+              ) : filteredDevices.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="px-4 py-12 text-center text-gray-500 text-sm">
+                    {searchTerm || filterStatus !== 'all' 
+                      ? "No devices match your filters" 
+                      : "No devices found"}
+                  </td>
+                </tr>
+              ) : (
+                filteredDevices.map((device, idx) => (
+                  <tr 
+                    key={device.imei || idx} 
+                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
                     onClick={() => navigate(`/devices/${device.imei}`)}
                   >
-                    View
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/devices/${device.imei}/settings`)}
-                    className="text-slate-400 hover:text-white"
-                  >
-                    Settings
-                  </Button>
-                </div>
-              )
-            }
-          ]}
-          emptyMessage="No devices found matching your criteria"
-          onRowClick={(device) => navigate(`/devices/${device.imei}`)}
-        />
-      </EnhancedTableContainer>
+                    {/* Status */}
+                    <td className="px-4 py-3">
+                      <span className={cn(
+                        'px-2 py-1 inline-flex items-center gap-1 text-xs font-semibold rounded text-white',
+                        device.status === 'active' ? 'bg-[#28a745]' : 'bg-[#ffc107]'
+                      )}>
+                        <i className={cn(
+                          'fas',
+                          device.status === 'active' ? 'fa-check-circle' : 'fa-exclamation-triangle'
+                        )}></i>
+                        {device.status === 'active' ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    
+                    {/* Topic */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-[#17a2b8] rounded-full"></div>
+                        <span className="font-semibold text-gray-900 text-sm">{device.topic}</span>
+                      </div>
+                    </td>
+                    
+                    {/* IMEI */}
+                    <td className="px-4 py-3">
+                      <span className="font-mono text-xs text-gray-700 bg-gray-100 px-2 py-1 rounded">
+                        {device.imei}
+                      </span>
+                    </td>
+                    
+                    {/* Battery */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        {device.batteryLevel !== null ? (
+                          <>
+                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                              <div 
+                                className={cn(
+                                  'h-2 rounded-full',
+                                  device.batteryLevel > 60 ? 'bg-[#28a745]' :
+                                  device.batteryLevel > 30 ? 'bg-[#ffc107]' : 'bg-[#dc3545]'
+                                )}
+                                style={{ width: `${device.batteryLevel}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-xs font-medium text-gray-700">{device.batteryLevel}%</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                              <div className="h-2 rounded-full bg-gray-400 w-full opacity-50"></div>
+                            </div>
+                            <span className="text-xs font-medium text-gray-400">N/A</span>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                    
+                    {/* Signal */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        {device.signalStrength !== null ? (
+                          <>
+                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                              <div 
+                                className={cn(
+                                  'h-2 rounded-full',
+                                  device.signalStrength > 70 ? 'bg-[#28a745]' :
+                                  device.signalStrength > 40 ? 'bg-[#ffc107]' : 'bg-[#dc3545]'
+                                )}
+                                style={{ width: `${device.signalStrength}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-xs font-medium text-gray-700">{device.signalStrength}%</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                              <div className="h-2 rounded-full bg-gray-400 w-full opacity-50"></div>
+                            </div>
+                            <span className="text-xs font-medium text-gray-400">N/A</span>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                    
+                    {/* Temperature */}
+                    <td className="px-4 py-3">
+                      <span className={cn(
+                        'text-sm font-medium',
+                        device.temperature !== null ? (
+                          device.temperature > 50 ? 'text-[#dc3545]' :
+                          device.temperature > 30 ? 'text-[#ffc107]' : 'text-[#28a745]'
+                        ) : 'text-gray-400'
+                      )}>
+                        {device.temperature !== null ? `${device.temperature}°C` : 'N/A'}
+                      </span>
+                    </td>
+                    
+                    {/* Actions */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/devices/${device.imei}`);
+                          }}
+                          className="px-3 py-1 bg-[#17a2b8] hover:bg-[#138496] text-white rounded text-xs font-medium transition-colors"
+                        >
+                          <i className="fas fa-eye mr-1"></i>
+                          View
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/devices/${device.imei}/settings`);
+                          }}
+                          className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs font-medium transition-colors"
+                        >
+                          <i className="fas fa-cog mr-1"></i>
+                          Settings
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-      {/* Empty State */}
+      {/* Empty State - AdminLTE Style */}
       {filteredDevices.length === 0 && !loading && (
-        <Card variant="glass" colorScheme="slate" padding="xl" className="text-center">
-          <Card.Content>
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-slate-500/20 flex items-center justify-center">
-              <svg className="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-white mb-2">
-              {searchTerm || filterStatus !== 'all' ? 'No devices found' : 'No devices registered'}
-            </h3>
-            <p className="text-slate-400 mb-6 max-w-md mx-auto">
-              {searchTerm || filterStatus !== 'all' 
-                ? 'Try adjusting your search criteria or filters to find devices.'
-                : 'Get started by adding your first IoT device to the system.'
-              }
-            </p>
-            {(!searchTerm && filterStatus === 'all') && (
-              <Button
-                variant="glass"
-                colorScheme="blue"
-                size="lg"
-                onClick={() => navigate('/devices/add')}
-              >
-                Add Your First Device
-              </Button>
-            )}
-          </Card.Content>
-        </Card>
+        <div className="bg-white rounded-lg shadow-md p-8 text-center">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gray-100 flex items-center justify-center">
+            <i className="fas fa-microchip text-4xl text-gray-400"></i>
+          </div>
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">
+            {searchTerm || filterStatus !== 'all' ? 'No devices found' : 'No devices registered'}
+          </h3>
+          <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            {searchTerm || filterStatus !== 'all' 
+              ? 'Try adjusting your search criteria or filters to find devices.'
+              : 'Get started by adding your first IoT device to the system.'
+            }
+          </p>
+          {(!searchTerm && filterStatus === 'all') && (
+            <button
+              onClick={() => navigate('/devices/add')}
+              className="px-6 py-3 bg-[#007bff] hover:bg-[#0056b3] text-white rounded-lg font-medium transition-colors"
+            >
+              <i className="fas fa-plus mr-2"></i>
+              Add Your First Device
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
