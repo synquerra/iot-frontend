@@ -1,47 +1,3 @@
-/**
- * ============================================================================
- * DASHBOARD (OVERVIEW PAGE)
- * ============================================================================
- * 
- * Main dashboard/overview page showing real-time analytics and device monitoring.
- * 
- * KEY FEATURES:
- * - Real-time device tracking and analytics
- * - KPI cards showing total analytics, devices, and recent activity
- * - Interactive maps with journey visualization
- * - Speed distribution charts
- * - Geographic distribution analysis
- * - Device management table with filtering
- * - Role-based access control (ADMIN vs PARENTS)
- * 
- * PERFORMANCE OPTIMIZATIONS:
- * - Two-phase loading: Essential data loads first (2-3s), full data loads in background
- * - Progressive data loading with chunked fetching
- * - Lazy loading for heavy components (maps, charts)
- * - Virtual scrolling for large datasets
- * - Optimized filtering and memoization
- * 
- * USER ROLES:
- * - ADMIN: Can see all devices and analytics
- * - PARENTS: Can only see their assigned devices (filtered by IMEI)
- * 
- * DATA FLOW:
- * 1. Login → Load essential data (count, recent records, devices)
- * 2. Dashboard renders immediately with basic data
- * 3. Background loading fetches full analytics data
- * 4. Charts and tables update as data arrives
- * 5. User can interact immediately without waiting
- * 
- * PACKET TYPES DISPLAYED:
- * - packet_N: Normal tracking packets
- * - packet_A: Alert packets
- * - packet_E: Error packets
- * (packet_H and other types are filtered out)
- * 
- * @component Dashboard
- * @returns {JSX.Element} Dashboard page with analytics and device monitoring
- */
-
 // src/pages/Dashboard.jsx
 import React, { useEffect, useState, useMemo } from "react";
 import { Card } from "../design-system/components/Card";
@@ -124,56 +80,24 @@ import DeviceHealthSection from "../components/analytics/DeviceHealthSection";
 // Device Activity Timeline Section
 import DeviceActivityTimeline from "../components/analytics/DeviceActivityTimeline";
 
-// Tooltip component for help text
-import Tooltip, { InfoTooltip } from "../components/Tooltip";
 
-
-/* ============================================================================
-   MAIN DASHBOARD COMPONENT
-   ============================================================================
-   
-   This is the main dashboard component that serves as the overview page.
-   It displays real-time analytics, device status, and interactive maps.
-   
-   COMPONENT STRUCTURE:
-   1. State Management - All dashboard state variables
-   2. Data Filtering - Role-based and packet-type filtering
-   3. Data Loading - Two-phase loading strategy
-   4. Event Handlers - User interactions
-   5. Effects - Component lifecycle hooks
-   6. Render - UI components and layout
-   
-   ============================================================================ */
+/* ------------------------------------------------
+   MAIN DASHBOARD
+---------------------------------------------------*/
 export default function Dashboard() {
-  
-  /* --------------------------------------------------------------------------
-     USER CONTEXT & PERMISSIONS
-     --------------------------------------------------------------------------
-     Determines what data the user can see based on their role (ADMIN/PARENTS)
-  */
   // User context for role-based logic
   const { isAdmin, userType } = useUserContext();
   
   // Device filtering hook (Requirement 4.2)
-  // PARENTS users only see devices assigned to them
   const { filterDevices, shouldFilterDevices } = useDeviceFilter();
   
-  /* --------------------------------------------------------------------------
-     STATE MANAGEMENT
-     --------------------------------------------------------------------------
-     All state variables used throughout the dashboard
-  */
-  // Analytics data
-  const [totalAnalytics, setTotalAnalytics] = useState(0); // Total count from database
-  const [recentAnalytics, setRecentAnalytics] = useState([]); // Recent 50 records for activity feed
-  const [allAnalytics, setAllAnalytics] = useState([]); // Full analytics dataset (loaded in background)
-  
-  // Device data
-  const [devices, setDevices] = useState([]); // List of all devices
-  
-  // Map/Location data
-  const [selectedImei, setSelectedImei] = useState(""); // Currently selected device for map
-  const [locationPath, setLocationPath] = useState([]); // GPS coordinates for journey map
+  // State management
+  const [totalAnalytics, setTotalAnalytics] = useState(0);
+  const [recentAnalytics, setRecentAnalytics] = useState([]);
+  const [devices, setDevices] = useState([]);
+  const [allAnalytics, setAllAnalytics] = useState([]);
+  const [selectedImei, setSelectedImei] = useState("");
+  const [locationPath, setLocationPath] = useState([]);
   const [loading, setLoading] = useState(true);
   const [locationLoading, setLocationLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -514,44 +438,95 @@ export default function Dashboard() {
     };
   }, [filteredAnalytics, filteredDevices, displayRecentAnalytics, previousStats]);
 
-  // Load dashboard data with OPTIMIZED lazy loading strategy
+  // Load dashboard data
   const loadDashboardData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      console.log("🚀 Loading dashboard data with OPTIMIZED lazy loading...");
+      console.log("🚀 Loading dashboard data with enhanced analytics...");
       
-      // PHASE 1: Load ONLY essential data for initial render (fast!)
-      // This should complete in 2-3 seconds even with 10K devices
-      const [countData, recentData, devicesData] = await Promise.all([
-        // Load only the count (single number - very fast)
+      // Progress callback for analytics loading
+      const analyticsProgress = (progress) => {
+        setLoadingProgress(prev => ({
+          ...prev,
+          analytics: {
+            current: progress.totalItems || 0,
+            total: progress.totalEstimated || 0,
+            percentage: progress.completionPercentage || 0
+          }
+        }));
+      };
+
+      // Load data with enhanced error handling and progress tracking
+      const [countData, recentData, devicesData, allData] = await Promise.all([
+        // Use basic count (usually small and fast)
         getAnalyticsCount().catch(err => {
           console.warn("Count query failed, using fallback:", err.message);
           return 0;
         }),
         
-        // Load ONLY 50 recent records (not 200!) for activity feed
-        // This is enough to show recent activity without loading everything
-        getRecentAnalyticsSafe(50).catch(err => {
+        // Use enhanced recent analytics with truncation protection
+        // Fetch 200 records to ensure we get enough recent Normal packets with speed > 0
+        // Since about 50% of records have speed=0, we need more records to get 5 with speed>0
+        getRecentAnalyticsSafe(200).catch(err => {
           console.warn("Recent analytics failed, using fallback:", err.message);
-          return getAnalyticsPaginated(0, 50).catch(() => []);
+          return getAnalyticsPaginated(0, 200).catch(() => []);
         }),
         
-        // Load devices (usually small dataset, but limit to 100 for safety)
-        listDevicesFiltered(1, 100).catch(err => {
+        // Load devices (usually small dataset)
+        listDevicesFiltered().catch(err => {
           console.warn("Devices loading failed:", err.message);
           return { devices: [], full: [] };
+        }),
+        
+        // CRITICAL: Use getAllAnalytics() directly to ensure ALL data is loaded
+        // getAllAnalyticsSafe has pagination limits that might not load all 3314+ records
+        getAllAnalytics().catch(err => {
+          console.warn("getAllAnalytics failed, trying enhanced analytics:", err.message);
+          // Fallback to enhanced analytics with very high limits
+          return getAllAnalyticsSafe({
+            pageSize: 1000,
+            maxPages: 100,
+            onProgress: analyticsProgress,
+            includeRawData: false
+          }).catch(fallbackErr => {
+            console.error("All analytics loading methods failed:", fallbackErr.message);
+            return [];
+          });
         })
       ]);
 
-      console.log("✅ Phase 1 (Essential data) loaded:", {
+      console.log("✅ Dashboard data loaded successfully:", {
         countData,
         recentCount: recentData?.length,
-        devicesCount: Array.isArray(devicesData?.devices) ? devicesData.devices.length : 0
+        devicesCount: Array.isArray(devicesData?.devices) ? devicesData.devices.length : 0,
+        analyticsCount: allData?.length
       });
       
-      // Set initial data immediately so dashboard can render
+      console.log("📊 Raw Analytics Data Loaded:", {
+        totalRecords: allData?.length || 0,
+        isArray: Array.isArray(allData),
+        sampleRecord: allData?.[0]
+      });
+      
+      // Log packet type distribution from raw data
+      if (Array.isArray(allData) && allData.length > 0) {
+        const rawPacketTypeBreakdown = allData.reduce((acc, record) => {
+          const type = record.type || 'unknown';
+          acc[type] = (acc[type] || 0) + 1;
+          return acc;
+        }, {});
+        console.log('📊 Raw Data Packet Type Breakdown:', rawPacketTypeBreakdown);
+        console.log('📊 Expected packet_N count: 3314, Actual loaded:', rawPacketTypeBreakdown.packet_N || 0);
+        
+        if ((rawPacketTypeBreakdown.packet_N || 0) < 3314) {
+          console.warn('⚠️ WARNING: Not all packet_N records were loaded!');
+          console.warn(`   Expected: 3314, Got: ${rawPacketTypeBreakdown.packet_N || 0}`);
+          console.warn(`   Missing: ${3314 - (rawPacketTypeBreakdown.packet_N || 0)} records`);
+        }
+      }
+
       setTotalAnalytics(countData || 0);
       setRecentAnalytics(Array.isArray(recentData) ? recentData : []);
       
@@ -562,22 +537,47 @@ export default function Dashboard() {
         : [];
       
       console.log("📱 Processed devices list:", devicesList.length);
-      setDevices(devicesList);
+      setDevices(devicesList.slice(0, 10));
       
-      // Set empty analytics initially - will load in background
-      setAllAnalytics([]);
+      setAllAnalytics(Array.isArray(allData) ? allData : []);
       
-      // Mark initial loading as complete
-      setLoading(false);
+      // Update previous stats for trend calculation (only on successful load)
+      setPreviousStats(prev => {
+        // Only update if we have valid data and it's been at least 5 seconds since last update
+        const timeSinceLastUpdate = Date.now() - prev.timestamp;
+        if (timeSinceLastUpdate < 5000) {
+          return prev; // Don't update too frequently
+        }
+        
+        // Calculate current values for comparison
+        // Filter by packet type: only packet_N, packet_A, and packet_E
+        const filteredByType = Array.isArray(allData) 
+          ? allData.filter(a => {
+              const packetType = a.type || '';
+              return packetType === 'packet_N' || packetType === 'packet_A' || packetType === 'packet_E';
+            })
+          : [];
+        
+        // Then filter by device permissions if needed
+        const currentTotal = shouldFilterDevices() 
+          ? filteredByType.filter(a => {
+              const allowedIMEIs = devicesList
+                .filter(d => d.imei)
+                .map(d => d.imei.toLowerCase());
+              return a.imei && allowedIMEIs.includes(a.imei.toLowerCase());
+            }).length
+          : filteredByType.length;
+        
+        return {
+          totalAnalytics: currentTotal,
+          devicesCount: devicesList.length,
+          recentCount: Array.isArray(recentData) ? recentData.length : 0,
+          timestamp: Date.now()
+        };
+      });
       
-      // PHASE 2: Load analytics data in BACKGROUND (progressive loading)
-      // This happens AFTER the dashboard is already visible
-      console.log("🔄 Phase 2: Starting background analytics loading...");
-      
-      // Load analytics progressively in chunks
-      loadAnalyticsInBackground(devicesList);
-      
-      // Load sample geofences
+      // Load sample geofences for analytics
+      // In a real app, this would come from an API
       setGeofences([
         {
           id: "GEO1",
@@ -596,94 +596,21 @@ export default function Dashboard() {
           name: "Office Zone",
           type: "circle",
           center: { latitude: 23.305624, longitude: 85.330065 },
-          radius: 500
+          radius: 500 // meters
         }
       ]);
+      
+      // Reset progress
+      setLoadingProgress({
+        analytics: { current: 0, total: 0, percentage: 100 },
+        location: { current: 0, total: 0, percentage: 0 }
+      });
       
     } catch (err) {
       console.error("❌ Dashboard data loading error:", err);
       setError(`Failed to load dashboard data: ${err.message}`);
+    } finally {
       setLoading(false);
-    }
-  };
-
-  // NEW: Load analytics data progressively in background
-  const loadAnalyticsInBackground = async (devicesList) => {
-    try {
-      console.log("📊 Background loading: Fetching analytics data...");
-      
-      // Progress callback
-      const analyticsProgress = (progress) => {
-        setLoadingProgress(prev => ({
-          ...prev,
-          analytics: {
-            current: progress.totalItems || 0,
-            total: progress.totalEstimated || 0,
-            percentage: progress.completionPercentage || 0
-          }
-        }));
-      };
-
-      // Load ALL analytics data (like before, but in background)
-      const allData = await getAllAnalytics().catch(err => {
-        console.warn("getAllAnalytics failed, trying paginated approach:", err.message);
-        // Fallback: Load with pagination but no limits
-        return getAllAnalyticsSafe({
-          pageSize: 1000,
-          maxPages: 100, // Increased limit to load all data
-          onProgress: analyticsProgress,
-          includeRawData: false
-        }).catch(fallbackErr => {
-          console.error("All loading methods failed:", fallbackErr.message);
-          return [];
-        });
-      });
-
-      console.log("✅ Background analytics loaded:", allData?.length || 0, "records");
-      
-      // Update analytics data
-      setAllAnalytics(Array.isArray(allData) ? allData : []);
-      
-      // Update previous stats for trend calculation
-      setPreviousStats(prev => {
-        const timeSinceLastUpdate = Date.now() - prev.timestamp;
-        if (timeSinceLastUpdate < 5000) {
-          return prev;
-        }
-        
-        const filteredByType = Array.isArray(allData) 
-          ? allData.filter(a => {
-              const packetType = a.type || '';
-              return packetType === 'packet_N' || packetType === 'packet_A' || packetType === 'packet_E';
-            })
-          : [];
-        
-        const currentTotal = shouldFilterDevices() 
-          ? filteredByType.filter(a => {
-              const allowedIMEIs = devicesList
-                .filter(d => d.imei)
-                .map(d => d.imei.toLowerCase());
-              return a.imei && allowedIMEIs.includes(a.imei.toLowerCase());
-            }).length
-          : filteredByType.length;
-        
-        return {
-          totalAnalytics: currentTotal,
-          devicesCount: devicesList.length,
-          recentCount: 0,
-          timestamp: Date.now()
-        };
-      });
-      
-      // Reset progress
-      setLoadingProgress(prev => ({
-        ...prev,
-        analytics: { current: 0, total: 0, percentage: 100 }
-      }));
-      
-    } catch (err) {
-      console.error("❌ Background analytics loading error:", err);
-      // Don't show error to user - background loading failure is not critical
     }
   };
 
@@ -988,85 +915,52 @@ export default function Dashboard() {
       {/* AdminLTE v3 Small Boxes */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {/* Total Analytics - Info Color */}
-        <Tooltip 
-          content="Total number of analytics records (packet_N, packet_A, packet_E only). This shows all tracking data, alerts, and errors from your devices. Updates in real-time as new data arrives."
-          position="bottom"
-        >
-          <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#17a2b8] to-[#138496] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
-            <div className="p-4">
-              <div className="text-3xl font-bold">{stats.totalAnalytics.toLocaleString()}</div>
-              <div className="text-sm font-medium mt-1">
-                Total Analytics
-                <InfoTooltip 
-                  content="Includes Normal packets (tracking), Alert packets (geofence/speed alerts), and Error packets. Heartbeat packets are excluded."
-                  position="right"
-                />
-              </div>
-            </div>
-            <div className="absolute top-2 right-3 text-white/30">
-              <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
-              </svg>
-            </div>
-            <a href="#" className="block bg-black/20 hover:bg-black/30 transition-colors px-4 py-2 text-center text-sm">
-              More info <span className="ml-1">→</span>
-            </a>
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#17a2b8] to-[#138496] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.totalAnalytics.toLocaleString()}</div>
+            <div className="text-sm font-medium mt-1">Total Analytics</div>
           </div>
-        </Tooltip>
+          <div className="absolute top-2 right-3 text-white/30">
+            <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+            </svg>
+          </div>
+          <a href="#" className="block bg-black/20 hover:bg-black/30 transition-colors px-4 py-2 text-center text-sm">
+            More info <span className="ml-1">→</span>
+          </a>
+        </div>
 
         {/* Active Devices - Success Color */}
-        <Tooltip 
-          content="Number of active devices currently being tracked. For ADMIN users, this shows all devices. For PARENTS users, this shows only devices assigned to you."
-          position="bottom"
-        >
-          <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#28a745] to-[#218838] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
-            <div className="p-4">
-              <div className="text-3xl font-bold">{stats.devicesCount}</div>
-              <div className="text-sm font-medium mt-1">
-                Active Devices
-                <InfoTooltip 
-                  content="Devices that have sent data recently. Click to view device list and details."
-                  position="right"
-                />
-              </div>
-            </div>
-            <div className="absolute top-2 right-3 text-white/30">
-              <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/>
-              </svg>
-            </div>
-            <a href="#" className="block bg-black/20 hover:bg-black/30 transition-colors px-4 py-2 text-center text-sm">
-              More info <span className="ml-1">→</span>
-            </a>
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#28a745] to-[#218838] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.devicesCount}</div>
+            <div className="text-sm font-medium mt-1">Active Devices</div>
           </div>
-        </Tooltip>
+          <div className="absolute top-2 right-3 text-white/30">
+            <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/>
+            </svg>
+          </div>
+          <a href="#" className="block bg-black/20 hover:bg-black/30 transition-colors px-4 py-2 text-center text-sm">
+            More info <span className="ml-1">→</span>
+          </a>
+        </div>
 
         {/* Recent Activity - Warning Color */}
-        <Tooltip 
-          content="Recent activity records showing the latest 5 tracking events with speed > 0. This helps you see which devices are currently moving and their recent activity."
-          position="bottom"
-        >
-          <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#ffc107] to-[#e0a800] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
-            <div className="p-4">
-              <div className="text-3xl font-bold">{stats.recentCount}</div>
-              <div className="text-sm font-medium mt-1">
-                Recent Activity
-                <InfoTooltip 
-                  content="Shows only records with speed > 0 to filter out stationary devices. Updates every few seconds."
-                  position="right"
-                />
-              </div>
-            </div>
-            <div className="absolute top-2 right-3 text-white/30">
-              <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M13 2.05v3.03c3.39.49 6 3.39 6 6.92 0 .9-.18 1.75-.48 2.54l2.6 1.53c.56-1.24.88-2.62.88-4.07 0-5.18-3.95-9.45-9-9.95zM12 19c-3.87 0-7-3.13-7-7 0-3.53 2.61-6.43 6-6.92V2.05c-5.06.5-9 4.76-9 9.95 0 5.52 4.47 10 9.99 10 3.31 0 6.24-1.61 8.06-4.09l-2.6-1.53C16.17 17.98 14.21 19 12 19z"/>
-              </svg>
-            </div>
-            <a href="#" className="block bg-black/20 hover:bg-black/30 transition-colors px-4 py-2 text-center text-sm">
-              More info <span className="ml-1">→</span>
-            </a>
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#ffc107] to-[#e0a800] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+          <div className="p-4">
+            <div className="text-3xl font-bold">{stats.recentCount}</div>
+            <div className="text-sm font-medium mt-1">Recent Activity</div>
           </div>
-        </Tooltip>
+          <div className="absolute top-2 right-3 text-white/30">
+            <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M13 2.05v3.03c3.39.49 6 3.39 6 6.92 0 .9-.18 1.75-.48 2.54l2.6 1.53c.56-1.24.88-2.62.88-4.07 0-5.18-3.95-9.45-9-9.95zM12 19c-3.87 0-7-3.13-7-7 0-3.53 2.61-6.43 6-6.92V2.05c-5.06.5-9 4.76-9 9.95 0 5.52 4.47 10 9.99 10 3.31 0 6.24-1.61 8.06-4.09l-2.6-1.53C16.17 17.98 14.21 19 12 19z"/>
+            </svg>
+          </div>
+          <a href="#" className="block bg-black/20 hover:bg-black/30 transition-colors px-4 py-2 text-center text-sm">
+            More info <span className="ml-1">→</span>
+          </a>
+        </div>
       </div>
 
       {/* 2-Column Layout for Better Organization */}
@@ -1076,13 +970,9 @@ export default function Dashboard() {
           {/* Device Location Tracking */}
           <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
             <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-700 flex items-center">
+              <h3 className="text-lg font-semibold text-gray-700">
                 <i className="fas fa-map-marked-alt mr-2 text-[#007bff]"></i>
                 Device Location Tracking
-                <InfoTooltip 
-                  content="Real-time GPS tracking map showing device journey. Select a device to see its complete route with speed and time information. Only shows records with valid GPS coordinates and speed > 0."
-                  position="right"
-                />
               </h3>
               <div className="flex items-center gap-2">
                 <select

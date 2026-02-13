@@ -19,7 +19,6 @@ export default function Login() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
-  const [rememberMe, setRememberMe] = useState(false);
 
   // Handle success message from signup
   useEffect(() => {
@@ -67,35 +66,10 @@ export default function Login() {
       // Store parsed user context in UserContext
       setUserContext(parsedContext);
       
-      // Persist user context based on "Remember me" preference
-      if (rememberMe) {
-        // Use localStorage for persistent login (24 hours)
-        const persisted = persistUserContext(parsedContext);
-        if (!persisted) {
-          console.warn("Failed to persist user context to storage");
-        }
-        // Store tokens in localStorage (already done in authenticateUser)
-        console.log("User will stay logged in (Remember me enabled)");
-      } else {
-        // Use sessionStorage for session-only login
-        // Move tokens to sessionStorage instead of localStorage
-        const accessToken = localStorage.getItem("accessToken");
-        const refreshToken = localStorage.getItem("refreshToken");
-        const userEmail = localStorage.getItem("userEmail");
-        
-        if (accessToken) sessionStorage.setItem("accessToken", accessToken);
-        if (refreshToken) sessionStorage.setItem("refreshToken", refreshToken);
-        if (userEmail) sessionStorage.setItem("userEmail", userEmail);
-        
-        // Clear from localStorage
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("userEmail");
-        
-        // Store user context in sessionStorage
-        sessionStorage.setItem("user_context_session", JSON.stringify(parsedContext));
-        
-        console.log("User will be logged out when browser closes (Remember me disabled)");
+      // Persist user context to localStorage
+      const persisted = persistUserContext(parsedContext);
+      if (!persisted) {
+        console.warn("Failed to persist user context to storage");
       }
       
       navigate("/"); // Redirect to dashboard
@@ -187,24 +161,6 @@ export default function Login() {
               autoComplete="current-password"
               autoFocus={!!email} // Autofocus password if email is pre-filled
             />
-
-            {/* Remember Me Checkbox */}
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 focus:ring-offset-2 cursor-pointer"
-              />
-              <label
-                htmlFor="remember-me"
-                className="ml-2 block text-sm text-gray-700 cursor-pointer"
-              >
-                Remember me
-              </label>
-            </div>
 
             {/* Submit Button */}
             <Button
