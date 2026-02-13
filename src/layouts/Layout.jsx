@@ -20,6 +20,7 @@ function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { clearUserContext } = useUserContext();
+  const [expandedMenus, setExpandedMenus] = React.useState({});
 
   const handleLogout = () => {
     // Clear UserContext state
@@ -29,15 +30,48 @@ function Sidebar() {
     navigate("/login");
   };
 
-  // Enhanced navigation links with color coding and icons
+  // Toggle submenu expansion
+  const toggleMenu = (menuKey) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [menuKey]: !prev[menuKey]
+    }));
+  };
+
+  // Enhanced navigation links with color coding, icons, and submenus
   const links = [
-    { to: "/", label: "Overview", icon: <FiHome />, colorScheme: "violet", description: "Dashboard overview" },
-    { to: "/devices", label: "Devices", icon: <FiCpu />, colorScheme: "blue", description: "Device management" },
-    // { to: "/configuration", label: "Configuration", icon: <FiSliders />, colorScheme: "teal", description: "System settings" },
-    { to: "/device-settings", label: "Device Settings", icon: <FiTool />, colorScheme: "green", description: "Device configuration" },
-    { to: "/geofence", label: "Geofence", icon: <FiMapPin />, colorScheme: "lime", description: "Location boundaries" },
-    //{ to: "/analytics", label: "Analytics", icon: <FiBarChart2 />, colorScheme: "amber", description: "Data insights" },
-    { to: "/alerts", label: "Alerts", icon: <FiBell />, colorScheme: "orange", description: "System notifications" },
+    { 
+      to: "/", 
+      label: "Overview", 
+      icon: <FiHome />, 
+      colorScheme: "violet", 
+      description: "Dashboard overview" 
+    },
+    { 
+      key: "devices",
+      label: "Devices", 
+      icon: <FiCpu />, 
+      colorScheme: "blue", 
+      description: "Device management",
+      submenu: [
+        { to: "/devices", label: "Device List", description: "View all devices" },
+        { to: "/device-settings", label: "Device Settings", description: "Configure devices" }
+      ]
+    },
+    { 
+      to: "/geofence", 
+      label: "Geofence", 
+      icon: <FiMapPin />, 
+      colorScheme: "lime", 
+      description: "Location boundaries" 
+    },
+    { 
+      to: "/alerts", 
+      label: "Alerts", 
+      icon: <FiBell />, 
+      colorScheme: "orange", 
+      description: "System notifications" 
+    },
   ];
 
   // Logout action item (separate from navigation links)
@@ -50,6 +84,20 @@ function Sidebar() {
   };
 
   const userEmail = localStorage.getItem("userEmail") || "admin@example.com";
+
+  // Auto-expand menu if current route matches a submenu item
+  React.useEffect(() => {
+    links.forEach(link => {
+      if (link.submenu) {
+        const hasActiveSubmenu = link.submenu.some(sub => 
+          location.pathname === sub.to || location.pathname.startsWith(sub.to)
+        );
+        if (hasActiveSubmenu && !expandedMenus[link.key]) {
+          setExpandedMenus(prev => ({ ...prev, [link.key]: true }));
+        }
+      }
+    });
+  }, [location.pathname]);
 
   return (
     <aside className="w-64 bg-[#343a40] h-screen sticky top-0 flex flex-col">
@@ -79,6 +127,69 @@ function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 py-2 overflow-y-auto">
         {links.map((link) => {
+          // Handle items with submenus
+          if (link.submenu) {
+            const isExpanded = expandedMenus[link.key];
+            const hasActiveSubmenu = link.submenu.some(sub => 
+              location.pathname === sub.to || location.pathname.startsWith(sub.to)
+            );
+            
+            return (
+              <div key={link.key}>
+                {/* Parent menu item */}
+                <button
+                  onClick={() => toggleMenu(link.key)}
+                  className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
+                    hasActiveSubmenu
+                      ? "bg-[#007bff] text-white" 
+                      : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="text-base">
+                      {link.icon}
+                    </div>
+                    <span>{link.label}</span>
+                  </div>
+                  <svg 
+                    className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {/* Submenu items */}
+                {isExpanded && (
+                  <div className="bg-[#2c3136]">
+                    {link.submenu.map((subItem) => {
+                      const isActive = location.pathname === subItem.to || 
+                        (subItem.to !== "/" && location.pathname.startsWith(subItem.to));
+                      
+                      return (
+                        <NavLink
+                          key={subItem.to}
+                          to={subItem.to}
+                          className={`flex items-center gap-3 pl-12 pr-4 py-2 text-sm transition-colors ${
+                            isActive 
+                              ? "bg-[#0056b3] text-white border-l-4 border-white" 
+                              : "text-gray-400 hover:bg-gray-700 hover:text-white"
+                          }`}
+                        >
+                          <span className="text-xs">•</span>
+                          <span>{subItem.label}</span>
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+          
+          // Handle regular menu items (no submenu)
           const isActive = location.pathname === link.to || 
             (link.to !== "/" && location.pathname.startsWith(link.to));
           

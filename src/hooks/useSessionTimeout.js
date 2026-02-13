@@ -4,7 +4,10 @@ import { logoutUser } from '../utils/auth';
 import { useUserContext } from '../contexts/UserContext';
 
 /**
- * Hook to automatically log out users after 30 minutes of inactivity
+ * Hook to automatically log out users after inactivity
+ * Timeout duration depends on "Remember Me" setting:
+ * - Standard: 30 minutes of inactivity
+ * - Remember Me: 24 hours of inactivity
  * Resets timer on any user activity (mouse, keyboard, clicks)
  */
 export default function useSessionTimeout() {
@@ -13,8 +16,12 @@ export default function useSessionTimeout() {
   const timeoutRef = useRef(null);
   const lastActivityRef = useRef(Date.now());
   
-  // 30 minutes in milliseconds
-  const TIMEOUT_DURATION = 30 * 60 * 1000;
+  // Check if Remember Me is enabled
+  const rememberMe = localStorage.getItem('rememberMe') === 'true';
+  
+  // Timeout duration based on Remember Me setting
+  // Standard: 30 minutes, Remember Me: 24 hours
+  const TIMEOUT_DURATION = rememberMe ? 24 * 60 * 60 * 1000 : 30 * 60 * 1000;
 
   // Handle logout
   const handleLogout = () => {

@@ -24,7 +24,7 @@ const inputVariants = cva(
   // Base styles - common to all inputs with enhanced transitions
   [
     'flex w-full rounded-md border transition-all duration-300 ease-in-out',
-    'bg-surface-primary text-text-primary placeholder:text-text-tertiary',
+    'bg-white/10 text-text-primary placeholder:text-text-tertiary',
     'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-background',
     'disabled:cursor-not-allowed disabled:opacity-50',
     'file:border-0 file:bg-transparent file:text-sm file:font-medium',
@@ -40,7 +40,7 @@ const inputVariants = cva(
           'focus:shadow-lg focus:shadow-teal-500/10',
         ],
         colorful: [
-          'border-violet-400/50 bg-gradient-to-r from-surface-primary to-violet-950/20',
+          'border-violet-400/50 bg-gradient-to-r from-white/10 to-violet-950/20',
           'focus:border-violet-400 focus:ring-violet-400/30',
           'focus:shadow-lg focus:shadow-violet-500/20',
           'hover:border-violet-400/70 hover:shadow-md hover:shadow-violet-500/10',
@@ -58,25 +58,25 @@ const inputVariants = cva(
           'hover:border-white/30 hover:bg-white/10',
         ],
         error: [
-          'border-status-error bg-gradient-to-r from-surface-primary to-red-950/20',
+          'border-status-error bg-gradient-to-r from-white/10 to-red-950/20',
           'focus:border-status-error focus:ring-status-error/30',
           'focus:shadow-lg focus:shadow-red-500/20',
           'text-text-primary',
         ],
         success: [
-          'border-status-success bg-gradient-to-r from-surface-primary to-green-950/20',
+          'border-status-success bg-gradient-to-r from-white/10 to-green-950/20',
           'focus:border-status-success focus:ring-status-success/30',
           'focus:shadow-lg focus:shadow-green-500/20',
           'text-text-primary',
         ],
         warning: [
-          'border-status-warning bg-gradient-to-r from-surface-primary to-amber-950/20',
+          'border-status-warning bg-gradient-to-r from-white/10 to-amber-950/20',
           'focus:border-status-warning focus:ring-status-warning/30',
           'focus:shadow-lg focus:shadow-amber-500/20',
           'text-text-primary',
         ],
         info: [
-          'border-status-info bg-gradient-to-r from-surface-primary to-blue-950/20',
+          'border-status-info bg-gradient-to-r from-white/10 to-blue-950/20',
           'focus:border-status-info focus:ring-status-info/30',
           'focus:shadow-lg focus:shadow-blue-500/20',
           'text-text-primary',
@@ -168,7 +168,7 @@ const getColorSchemeClasses = (colorScheme, variant) => {
   const colorMap = {
     violet: {
       border: 'border-violet-400/50 focus:border-violet-400 hover:border-violet-400/70',
-      bg: 'bg-gradient-to-r from-surface-primary to-violet-950/20',
+      bg: 'bg-gradient-to-r from-white/10 to-violet-950/20',
       ring: 'focus:ring-violet-400/30',
       shadow: 'focus:shadow-violet-500/20 hover:shadow-violet-500/10',
       label: 'text-violet-300',
@@ -176,7 +176,7 @@ const getColorSchemeClasses = (colorScheme, variant) => {
     },
     blue: {
       border: 'border-blue-400/50 focus:border-blue-400 hover:border-blue-400/70',
-      bg: 'bg-gradient-to-r from-surface-primary to-blue-950/20',
+      bg: 'bg-gradient-to-r from-white/10 to-blue-950/20',
       ring: 'focus:ring-blue-400/30',
       shadow: 'focus:shadow-blue-500/20 hover:shadow-blue-500/10',
       label: 'text-blue-300',
@@ -184,7 +184,7 @@ const getColorSchemeClasses = (colorScheme, variant) => {
     },
     teal: {
       border: 'border-teal-400/50 focus:border-teal-400 hover:border-teal-400/70',
-      bg: 'bg-gradient-to-r from-surface-primary to-teal-950/20',
+      bg: 'bg-gradient-to-r from-white/10 to-teal-950/20',
       ring: 'focus:ring-teal-400/30',
       shadow: 'focus:shadow-teal-500/20 hover:shadow-teal-500/10',
       label: 'text-teal-300',
@@ -192,7 +192,7 @@ const getColorSchemeClasses = (colorScheme, variant) => {
     },
     green: {
       border: 'border-green-400/50 focus:border-green-400 hover:border-green-400/70',
-      bg: 'bg-gradient-to-r from-surface-primary to-green-950/20',
+      bg: 'bg-gradient-to-r from-white/10 to-green-950/20',
       ring: 'focus:ring-green-400/30',
       shadow: 'focus:shadow-green-500/20 hover:shadow-green-500/10',
       label: 'text-green-300',
@@ -200,7 +200,7 @@ const getColorSchemeClasses = (colorScheme, variant) => {
     },
     amber: {
       border: 'border-amber-400/50 focus:border-amber-400 hover:border-amber-400/70',
-      bg: 'bg-gradient-to-r from-surface-primary to-amber-950/20',
+      bg: 'bg-gradient-to-r from-white/10 to-amber-950/20',
       ring: 'focus:ring-amber-400/30',
       shadow: 'focus:shadow-amber-500/20 hover:shadow-amber-500/10',
       label: 'text-amber-300',
@@ -208,7 +208,7 @@ const getColorSchemeClasses = (colorScheme, variant) => {
     },
     red: {
       border: 'border-red-400/50 focus:border-red-400 hover:border-red-400/70',
-      bg: 'bg-gradient-to-r from-surface-primary to-red-950/20',
+      bg: 'bg-gradient-to-r from-white/10 to-red-950/20',
       ring: 'focus:ring-red-400/30',
       shadow: 'focus:shadow-red-500/20 hover:shadow-red-500/10',
       label: 'text-red-300',
@@ -216,7 +216,7 @@ const getColorSchemeClasses = (colorScheme, variant) => {
     },
     pink: {
       border: 'border-pink-400/50 focus:border-pink-400 hover:border-pink-400/70',
-      bg: 'bg-gradient-to-r from-surface-primary to-pink-950/20',
+      bg: 'bg-gradient-to-r from-white/10 to-pink-950/20',
       ring: 'focus:ring-pink-400/30',
       shadow: 'focus:shadow-pink-500/20 hover:shadow-pink-500/10',
       label: 'text-pink-300',
@@ -224,7 +224,7 @@ const getColorSchemeClasses = (colorScheme, variant) => {
     },
     purple: {
       border: 'border-purple-400/50 focus:border-purple-400 hover:border-purple-400/70',
-      bg: 'bg-gradient-to-r from-surface-primary to-purple-950/20',
+      bg: 'bg-gradient-to-r from-white/10 to-purple-950/20',
       ring: 'focus:ring-purple-400/30',
       shadow: 'focus:shadow-purple-500/20 hover:shadow-purple-500/10',
       label: 'text-purple-300',

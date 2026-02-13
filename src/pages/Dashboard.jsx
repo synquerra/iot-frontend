@@ -438,146 +438,140 @@ export default function Dashboard() {
     };
   }, [filteredAnalytics, filteredDevices, displayRecentAnalytics, previousStats]);
 
-  // Load dashboard data
+  // Load dashboard data with progressive loading
   const loadDashboardData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      console.log("🚀 Loading dashboard data with enhanced analytics...");
+      console.log("🚀 Loading dashboard data with progressive loading...");
       
-      // Progress callback for analytics loading
-      const analyticsProgress = (progress) => {
-        setLoadingProgress(prev => ({
-          ...prev,
-          analytics: {
-            current: progress.totalItems || 0,
-            total: progress.totalEstimated || 0,
-            percentage: progress.completionPercentage || 0
-          }
-        }));
-      };
-
-      // Load data with enhanced error handling and progress tracking
-      const [countData, recentData, devicesData, allData] = await Promise.all([
-        // Use basic count (usually small and fast)
+      // PHASE 1: Load critical data first (fast, small datasets)
+      console.log("📊 Phase 1: Loading critical data...");
+      const [countData, devicesData] = await Promise.all([
         getAnalyticsCount().catch(err => {
           console.warn("Count query failed, using fallback:", err.message);
           return 0;
         }),
-        
-        // Use enhanced recent analytics with truncation protection
-        // Fetch 200 records to ensure we get enough recent Normal packets with speed > 0
-        // Since about 50% of records have speed=0, we need more records to get 5 with speed>0
-        getRecentAnalyticsSafe(200).catch(err => {
-          console.warn("Recent analytics failed, using fallback:", err.message);
-          return getAnalyticsPaginated(0, 200).catch(() => []);
-        }),
-        
-        // Load devices (usually small dataset)
         listDevicesFiltered().catch(err => {
           console.warn("Devices loading failed:", err.message);
           return { devices: [], full: [] };
-        }),
-        
-        // CRITICAL: Use getAllAnalytics() directly to ensure ALL data is loaded
-        // getAllAnalyticsSafe has pagination limits that might not load all 3314+ records
-        getAllAnalytics().catch(err => {
-          console.warn("getAllAnalytics failed, trying enhanced analytics:", err.message);
-          // Fallback to enhanced analytics with very high limits
-          return getAllAnalyticsSafe({
-            pageSize: 1000,
-            maxPages: 100,
-            onProgress: analyticsProgress,
-            includeRawData: false
-          }).catch(fallbackErr => {
-            console.error("All analytics loading methods failed:", fallbackErr.message);
-            return [];
-          });
         })
       ]);
 
-      console.log("✅ Dashboard data loaded successfully:", {
-        countData,
-        recentCount: recentData?.length,
-        devicesCount: Array.isArray(devicesData?.devices) ? devicesData.devices.length : 0,
-        analyticsCount: allData?.length
-      });
-      
-      console.log("📊 Raw Analytics Data Loaded:", {
-        totalRecords: allData?.length || 0,
-        isArray: Array.isArray(allData),
-        sampleRecord: allData?.[0]
-      });
-      
-      // Log packet type distribution from raw data
-      if (Array.isArray(allData) && allData.length > 0) {
-        const rawPacketTypeBreakdown = allData.reduce((acc, record) => {
-          const type = record.type || 'unknown';
-          acc[type] = (acc[type] || 0) + 1;
-          return acc;
-        }, {});
-        console.log('📊 Raw Data Packet Type Breakdown:', rawPacketTypeBreakdown);
-        console.log('📊 Expected packet_N count: 3314, Actual loaded:', rawPacketTypeBreakdown.packet_N || 0);
-        
-        if ((rawPacketTypeBreakdown.packet_N || 0) < 3314) {
-          console.warn('⚠️ WARNING: Not all packet_N records were loaded!');
-          console.warn(`   Expected: 3314, Got: ${rawPacketTypeBreakdown.packet_N || 0}`);
-          console.warn(`   Missing: ${3314 - (rawPacketTypeBreakdown.packet_N || 0)} records`);
-        }
-      }
-
-      setTotalAnalytics(countData || 0);
-      setRecentAnalytics(Array.isArray(recentData) ? recentData : []);
-      
       const devicesList = Array.isArray(devicesData?.devices)
         ? devicesData.devices
         : Array.isArray(devicesData?.full)
         ? devicesData.full
         : [];
       
-      console.log("📱 Processed devices list:", devicesList.length);
+      console.log("✅ Phase 1 complete:", { countData, devicesCount: devicesList.length });
+      
+      // Update UI with initial data
+      setTotalAnalytics(countData || 0);
       setDevices(devicesList.slice(0, 10));
+      setLoading(false); // Allow UI to render with basic data
       
-      setAllAnalytics(Array.isArray(allData) ? allData : []);
-      
-      // Update previous stats for trend calculation (only on successful load)
-      setPreviousStats(prev => {
-        // Only update if we have valid data and it's been at least 5 seconds since last update
-        const timeSinceLastUpdate = Date.now() - prev.timestamp;
-        if (timeSinceLastUpdate < 5000) {
-          return prev; // Don't update too frequently
+      // PHASE 2: Load recent analytics (medium priority)
+      console.log("📊 Phase 2: Loading recent analytics...");
+      setTimeout(async () => {
+        try {
+          const recentData = await getRecentAnalyticsSafe(200).catch(err => {
+            console.warn("Recent analytics failed, using fallback:", err.message);
+            return getAnalyticsPaginated(0, 200).catch(() => []);
+          });
+          
+          console.log("✅ Phase 2 complete:", { recentCount: recentData?.length });
+          setRecentAnalytics(Array.isArray(recentData) ? recentData : []);
+        } catch (err) {
+          console.warn("Phase 2 error:", err.message);
         }
-        
-        // Calculate current values for comparison
-        // Filter by packet type: only packet_N, packet_A, and packet_E
-        const filteredByType = Array.isArray(allData) 
-          ? allData.filter(a => {
-              const packetType = a.type || '';
-              return packetType === 'packet_N' || packetType === 'packet_A' || packetType === 'packet_E';
-            })
-          : [];
-        
-        // Then filter by device permissions if needed
-        const currentTotal = shouldFilterDevices() 
-          ? filteredByType.filter(a => {
-              const allowedIMEIs = devicesList
-                .filter(d => d.imei)
-                .map(d => d.imei.toLowerCase());
-              return a.imei && allowedIMEIs.includes(a.imei.toLowerCase());
-            }).length
-          : filteredByType.length;
-        
-        return {
-          totalAnalytics: currentTotal,
-          devicesCount: devicesList.length,
-          recentCount: Array.isArray(recentData) ? recentData.length : 0,
-          timestamp: Date.now()
-        };
-      });
+      }, 500); // Load after 500ms
       
-      // Load sample geofences for analytics
-      // In a real app, this would come from an API
+      // PHASE 3: Load all analytics (heavy, can be slow)
+      console.log("📊 Phase 3: Loading all analytics (background)...");
+      setTimeout(async () => {
+        try {
+          const analyticsProgress = (progress) => {
+            setLoadingProgress(prev => ({
+              ...prev,
+              analytics: {
+                current: progress.totalItems || 0,
+                total: progress.totalEstimated || 0,
+                percentage: progress.completionPercentage || 0
+              }
+            }));
+          };
+
+          const allData = await getAllAnalytics().catch(err => {
+            console.warn("getAllAnalytics failed, trying enhanced analytics:", err.message);
+            return getAllAnalyticsSafe({
+              pageSize: 1000,
+              maxPages: 100,
+              onProgress: analyticsProgress,
+              includeRawData: false
+            }).catch(fallbackErr => {
+              console.error("All analytics loading methods failed:", fallbackErr.message);
+              return [];
+            });
+          });
+
+          console.log("✅ Phase 3 complete:", { analyticsCount: allData?.length });
+          
+          if (Array.isArray(allData) && allData.length > 0) {
+            const rawPacketTypeBreakdown = allData.reduce((acc, record) => {
+              const type = record.type || 'unknown';
+              acc[type] = (acc[type] || 0) + 1;
+              return acc;
+            }, {});
+            console.log('📊 Raw Data Packet Type Breakdown:', rawPacketTypeBreakdown);
+          }
+          
+          setAllAnalytics(Array.isArray(allData) ? allData : []);
+          
+          // Update previous stats for trend calculation
+          setPreviousStats(prev => {
+            const timeSinceLastUpdate = Date.now() - prev.timestamp;
+            if (timeSinceLastUpdate < 5000) {
+              return prev;
+            }
+            
+            const filteredByType = Array.isArray(allData) 
+              ? allData.filter(a => {
+                  const packetType = a.type || '';
+                  return packetType === 'packet_N' || packetType === 'packet_A' || packetType === 'packet_E';
+                })
+              : [];
+            
+            const currentTotal = shouldFilterDevices() 
+              ? filteredByType.filter(a => {
+                  const allowedIMEIs = devicesList
+                    .filter(d => d.imei)
+                    .map(d => d.imei.toLowerCase());
+                  return a.imei && allowedIMEIs.includes(a.imei.toLowerCase());
+                }).length
+              : filteredByType.length;
+            
+            return {
+              totalAnalytics: currentTotal,
+              devicesCount: devicesList.length,
+              recentCount: Array.isArray(allData) ? allData.length : 0,
+              timestamp: Date.now()
+            };
+          });
+          
+          // Reset progress
+          setLoadingProgress({
+            analytics: { current: 0, total: 0, percentage: 100 },
+            location: { current: 0, total: 0, percentage: 0 }
+          });
+          
+        } catch (err) {
+          console.warn("Phase 3 error:", err.message);
+        }
+      }, 1000); // Load after 1 second
+      
+      // Load sample geofences
       setGeofences([
         {
           id: "GEO1",
@@ -596,20 +590,13 @@ export default function Dashboard() {
           name: "Office Zone",
           type: "circle",
           center: { latitude: 23.305624, longitude: 85.330065 },
-          radius: 500 // meters
+          radius: 500
         }
       ]);
-      
-      // Reset progress
-      setLoadingProgress({
-        analytics: { current: 0, total: 0, percentage: 100 },
-        location: { current: 0, total: 0, percentage: 0 }
-      });
       
     } catch (err) {
       console.error("❌ Dashboard data loading error:", err);
       setError(`Failed to load dashboard data: ${err.message}`);
-    } finally {
       setLoading(false);
     }
   };
@@ -738,9 +725,15 @@ export default function Dashboard() {
     await loadDashboardData();
   };
 
-  // Load data on component mount
+  // Load data on component mount with lazy loading
   useEffect(() => {
-    loadDashboardData();
+    // Use setTimeout to defer data loading until after initial render
+    // This allows the login to complete and dashboard to render quickly
+    const loadTimer = setTimeout(() => {
+      loadDashboardData();
+    }, 100); // Small delay to allow UI to render first
+    
+    return () => clearTimeout(loadTimer);
   }, []);
 
   // Auto-select device for parents with only 1 device
@@ -915,10 +908,16 @@ export default function Dashboard() {
       {/* AdminLTE v3 Small Boxes */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {/* Total Analytics - Info Color */}
-        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#17a2b8] to-[#138496] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+        <div 
+          className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#17a2b8] to-[#138496] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+          title="Total Analytics: Counts all packet_N (Normal), packet_A (Alert), and packet_E (Error) records from your devices. Excludes packet_H (Heartbeat) packets. Filtered by your device permissions."
+        >
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.totalAnalytics.toLocaleString()}</div>
             <div className="text-sm font-medium mt-1">Total Analytics</div>
+            <div className="text-xs text-white/70 mt-1">
+              📊 Packet types: N, A, E only
+            </div>
           </div>
           <div className="absolute top-2 right-3 text-white/30">
             <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24">
@@ -931,10 +930,16 @@ export default function Dashboard() {
         </div>
 
         {/* Active Devices - Success Color */}
-        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#28a745] to-[#218838] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+        <div 
+          className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#28a745] to-[#218838] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+          title="Active Devices: Total number of devices you have access to. For ADMIN users, shows all devices. For PARENT users, shows only devices assigned to their account."
+        >
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.devicesCount}</div>
             <div className="text-sm font-medium mt-1">Active Devices</div>
+            <div className="text-xs text-white/70 mt-1">
+              📱 Based on your permissions
+            </div>
           </div>
           <div className="absolute top-2 right-3 text-white/30">
             <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24">
@@ -947,10 +952,16 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Activity - Warning Color */}
-        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#ffc107] to-[#e0a800] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+        <div 
+          className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#ffc107] to-[#e0a800] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+          title="Recent Activity: Shows the 5 most recent packet_N (Normal) records with speed > 0. Filters out stationary records (speed = 0) and non-movement packets."
+        >
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.recentCount}</div>
             <div className="text-sm font-medium mt-1">Recent Activity</div>
+            <div className="text-xs text-white/70 mt-1">
+              🚗 Moving devices (speed &gt; 0)
+            </div>
           </div>
           <div className="absolute top-2 right-3 text-white/30">
             <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24">
@@ -970,9 +981,13 @@ export default function Dashboard() {
           {/* Device Location Tracking */}
           <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
             <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-700">
+              <h3 
+                className="text-lg font-semibold text-gray-700"
+                title="Device Location Tracking: Displays GPS coordinates from analytics records on a map. Shows movement path with speed indicators. Only displays records with valid coordinates (lat/lng ≠ 0) and speed > 0."
+              >
                 <i className="fas fa-map-marked-alt mr-2 text-[#007bff]"></i>
                 Device Location Tracking
+                <span className="text-xs text-gray-500 ml-2">🗺️ GPS path visualization</span>
               </h3>
               <div className="flex items-center gap-2">
                 <select
@@ -1037,9 +1052,13 @@ export default function Dashboard() {
           {/* Trip Analytics Section */}
           <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
             <div className="border-b border-gray-200 px-4 py-3">
-              <h3 className="text-lg font-semibold text-gray-700">
+              <h3 
+                className="text-lg font-semibold text-gray-700"
+                title="Trip Analytics: Analyzes device movement patterns including trip duration, distance traveled, average speed, and stop detection. Calculated from sequential analytics records."
+              >
                 <i className="fas fa-route mr-2 text-[#007bff]"></i>
                 Trip Analytics
+                <span className="text-xs text-gray-500 ml-2">🚗 Movement analysis</span>
               </h3>
             </div>
             <div className="p-4">
@@ -1054,9 +1073,13 @@ export default function Dashboard() {
           {/* Device Activity Timeline Section */}
           <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
             <div className="border-b border-gray-200 px-4 py-3">
-              <h3 className="text-lg font-semibold text-gray-700">
+              <h3 
+                className="text-lg font-semibold text-gray-700"
+                title="Device Activity Timeline: Visualizes device activity over time. Shows when devices were active, data transmission patterns, and activity gaps. Useful for identifying usage patterns and downtime."
+              >
                 <i className="fas fa-chart-area mr-2 text-[#007bff]"></i>
                 Device Activity Timeline
+                <span className="text-xs text-gray-500 ml-2">📅 Time-based activity</span>
               </h3>
             </div>
             <div className="p-4">
@@ -1073,9 +1096,13 @@ export default function Dashboard() {
           {/* Speed Distribution Analytics */}
           <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
             <div className="border-b border-gray-200 px-4 py-3">
-              <h3 className="text-lg font-semibold text-gray-700">
+              <h3 
+                className="text-lg font-semibold text-gray-700"
+                title="Speed Distribution: Categorizes all analytics records by speed ranges. Shows how often devices are stationary, slow, moderate, or fast moving."
+              >
                 <i className="fas fa-tachometer-alt mr-2 text-[#ffc107]"></i>
                 Speed Distribution
+                <span className="text-xs text-gray-500 ml-2">📈 Speed ranges</span>
               </h3>
             </div>
             <div className="p-4">
@@ -1086,47 +1113,65 @@ export default function Dashboard() {
           {/* Quick Stats Card */}
           <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
             <div className="border-b border-gray-200 px-4 py-3">
-              <h3 className="text-base font-semibold text-gray-700">
+              <h3 
+                className="text-base font-semibold text-gray-700"
+                title="Quick Stats: Summary metrics calculated from your device data and analytics records."
+              >
                 <i className="fas fa-chart-pie mr-2 text-[#17a2b8]"></i>
                 Quick Stats
               </h3>
             </div>
             <div className="p-4 space-y-3">
               {/* Total Distance */}
-              <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded border-l-4 border-[#007bff]">
+              <div 
+                className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded border-l-4 border-[#007bff]"
+                title="Total Distance: Calculated by summing all speed values from analytics records and multiplying by 0.016 (assumes speed in km/h and 1-minute intervals). Formula: Σ(speed) × 0.016 km"
+              >
                 <div>
                   <div className="text-xs text-gray-600 font-medium">Total Distance</div>
                   <div className="text-xl font-bold text-gray-900">
                     {(filteredAnalytics.reduce((sum, a) => sum + (Number(a.speed) || 0), 0) * 0.016).toFixed(1)} km
                   </div>
+                  <div className="text-xs text-gray-500 mt-0.5">Σ(speed) × 0.016</div>
                 </div>
                 <div className="text-3xl">🛣️</div>
               </div>
 
               {/* Active Now */}
-              <div className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-green-100 rounded border-l-4 border-[#28a745]">
+              <div 
+                className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-green-100 rounded border-l-4 border-[#28a745]"
+                title="Active Now: Devices with reporting interval ≤ 30 seconds. These devices are sending data frequently and are considered actively transmitting."
+              >
                 <div>
                   <div className="text-xs text-gray-600 font-medium">Active Now</div>
                   <div className="text-xl font-bold text-gray-900">
                     {filteredDevices.filter(d => Number(d.interval) <= 30).length}
                   </div>
+                  <div className="text-xs text-gray-500 mt-0.5">Interval ≤ 30s</div>
                 </div>
                 <div className="text-3xl">✅</div>
               </div>
 
               {/* Data Points Today */}
-              <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-purple-100 rounded border-l-4 border-[#6f42c1]">
+              <div 
+                className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-purple-100 rounded border-l-4 border-[#6f42c1]"
+                title="Data Points: Total number of analytics records (packet_N, packet_A, packet_E) received from your devices. Each record represents one data transmission."
+              >
                 <div>
                   <div className="text-xs text-gray-600 font-medium">Data Points</div>
                   <div className="text-xl font-bold text-gray-900">
                     {filteredAnalytics.length.toLocaleString()}
                   </div>
+                  <div className="text-xs text-gray-500 mt-0.5">Total records</div>
                 </div>
                 <div className="text-3xl">📊</div>
               </div>
 
               {/* Avg Response Time */}
-              <div className="flex items-center justify-between p-3 bg-gradient-to-r from-orange-50 to-orange-100 rounded border-l-4 border-[#fd7e14]">
+              <div 
+                className="flex items-center justify-between p-3 bg-gradient-to-r from-orange-50 to-orange-100 rounded border-l-4 border-[#fd7e14]"
+                title="Avg Interval: Average reporting interval across all devices. Calculated as: Σ(device intervals) ÷ number of devices. Lower values indicate more frequent data transmission."
+              >
                 <div>
                   <div className="text-xs text-gray-600 font-medium">Avg Interval</div>
                   <div className="text-xl font-bold text-gray-900">
@@ -1134,6 +1179,7 @@ export default function Dashboard() {
                       ? Math.round(filteredDevices.reduce((sum, d) => sum + Number(d.interval), 0) / filteredDevices.length)
                       : 0}s
                   </div>
+                  <div className="text-xs text-gray-500 mt-0.5">Mean of all devices</div>
                 </div>
                 <div className="text-3xl">⏱️</div>
               </div>
@@ -1143,9 +1189,13 @@ export default function Dashboard() {
           {/* Top Active Devices Card */}
           <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
             <div className="border-b border-gray-200 px-4 py-3">
-              <h3 className="text-base font-semibold text-gray-700">
+              <h3 
+                className="text-base font-semibold text-gray-700"
+                title="Top Active Devices: Devices ranked by reporting interval (lowest first). Lower intervals mean more frequent data transmission. Fast: ≤30s, Normal: 31-120s, Slow: >120s"
+              >
                 <i className="fas fa-star mr-2 text-[#ffc107]"></i>
                 Top Active Devices
+                <span className="text-xs text-gray-500 ml-2">⚡ By interval</span>
               </h3>
             </div>
             <div className="p-4">
@@ -1189,9 +1239,13 @@ export default function Dashboard() {
           {/* Device Health Monitoring */}
           <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
             <div className="border-b border-gray-200 px-4 py-3">
-              <h3 className="text-base font-semibold text-gray-700">
+              <h3 
+                className="text-base font-semibold text-gray-700"
+                title="Device Health: Monitors device status based on reporting intervals and data quality. Healthy devices report regularly with valid data."
+              >
                 <i className="fas fa-heartbeat mr-2 text-[#28a745]"></i>
                 Device Health
+                <span className="text-xs text-gray-500 ml-2">💚 Status monitoring</span>
               </h3>
             </div>
             <div className="p-4">
@@ -1209,7 +1263,13 @@ export default function Dashboard() {
       <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
         <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <h3 className="text-lg font-semibold text-gray-700">Device Management</h3>
+            <h3 
+              className="text-lg font-semibold text-gray-700"
+              title="Device Management: Complete list of all devices with their reporting intervals, geographic IDs, and status. Interval indicates how frequently the device sends data. Lower intervals = more active devices."
+            >
+              Device Management
+              <span className="text-xs text-gray-500 ml-2">📋 All devices</span>
+            </h3>
             <span className="px-2.5 py-0.5 bg-green-500 text-white text-xs font-semibold rounded">
               {filteredDevicesForTable.length} devices
             </span>
@@ -1304,11 +1364,36 @@ export default function Dashboard() {
           <table className="min-w-full">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Topic</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Device IMEI</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Interval</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Geographic ID</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                <th 
+                  className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                  title="Topic: Device identifier or friendly name assigned to the device"
+                >
+                  Topic
+                </th>
+                <th 
+                  className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                  title="Device IMEI: International Mobile Equipment Identity - unique 15-digit identifier for the device"
+                >
+                  Device IMEI
+                </th>
+                <th 
+                  className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                  title="Interval: Time in seconds between data transmissions. Lower = more frequent updates. Fast: ≤30s, Normal: 31-120s, Slow: 121-600s, Very Slow: >600s"
+                >
+                  Interval
+                </th>
+                <th 
+                  className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                  title="Geographic ID: Location identifier or zone where the device is registered"
+                >
+                  Geographic ID
+                </th>
+                <th 
+                  className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                  title="Status: Device activity status based on reporting interval. Active devices send data more frequently"
+                >
+                  Status
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white">

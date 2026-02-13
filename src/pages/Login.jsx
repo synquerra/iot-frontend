@@ -15,6 +15,7 @@ export default function Login() {
   const { setUserContext } = useUserContext();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -30,6 +31,15 @@ export default function Login() {
       }
       // Clear the state to prevent showing message on refresh
       window.history.replaceState({}, document.title);
+    }
+
+    // Check if user has saved credentials (Remember Me)
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    const rememberMeEnabled = localStorage.getItem('rememberMe') === 'true';
+    
+    if (savedEmail && rememberMeEnabled) {
+      setEmail(savedEmail);
+      setRememberMe(true);
     }
   }, [location.state]);
 
@@ -70,6 +80,27 @@ export default function Login() {
       const persisted = persistUserContext(parsedContext);
       if (!persisted) {
         console.warn("Failed to persist user context to storage");
+      }
+
+      // Handle Remember Me functionality
+      if (rememberMe) {
+        // Save email for future logins
+        localStorage.setItem('rememberedEmail', email);
+        localStorage.setItem('rememberMe', 'true');
+        
+        // Set extended session expiry (30 days)
+        const extendedExpiry = new Date();
+        extendedExpiry.setDate(extendedExpiry.getDate() + 30);
+        localStorage.setItem('sessionExpiry', extendedExpiry.toISOString());
+      } else {
+        // Clear remembered credentials
+        localStorage.removeItem('rememberedEmail');
+        localStorage.removeItem('rememberMe');
+        
+        // Set standard session expiry (1 day)
+        const standardExpiry = new Date();
+        standardExpiry.setDate(standardExpiry.getDate() + 1);
+        localStorage.setItem('sessionExpiry', standardExpiry.toISOString());
       }
       
       navigate("/"); // Redirect to dashboard
@@ -161,6 +192,35 @@ export default function Login() {
               autoComplete="current-password"
               autoFocus={!!email} // Autofocus password if email is pre-filled
             />
+
+            {/* Remember Me Checkbox */}
+            <div className="flex items-center justify-between">
+              <label className="flex items-center cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-border-primary bg-white/10 text-accent 
+                    focus:ring-2 focus:ring-accent/20 focus:ring-offset-2 focus:ring-offset-surface-background
+                    transition-all duration-200 cursor-pointer
+                    checked:bg-accent checked:border-accent
+                    hover:border-border-secondary"
+                />
+                <span className="ml-2 text-sm text-text-secondary group-hover:text-text-primary transition-colors duration-200">
+                  Stay logged in
+                </span>
+              </label>
+              
+              <button
+                type="button"
+                className="text-sm text-accent hover:text-accent/80 transition-colors duration-200"
+                onClick={() => {
+                  alert("Please contact support to reset your password.");
+                }}
+              >
+                Forgot password?
+              </button>
+            </div>
 
             {/* Submit Button */}
             <Button

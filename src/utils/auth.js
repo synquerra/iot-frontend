@@ -30,10 +30,44 @@ export function isTokenExpired(token) {
 }
 
 /**
+ * 🔹 Check if session has expired based on Remember Me setting
+ * Returns true if session is still valid, false if expired
+ */
+export function isSessionValid() {
+  const sessionExpiry = localStorage.getItem('sessionExpiry');
+  
+  if (!sessionExpiry) {
+    return false;
+  }
+  
+  const expiryDate = new Date(sessionExpiry);
+  const now = new Date();
+  
+  return now < expiryDate;
+}
+
+/**
+ * 🔹 Clear Remember Me data
+ */
+export function clearRememberMe() {
+  localStorage.removeItem('rememberedEmail');
+  localStorage.removeItem('rememberMe');
+  localStorage.removeItem('sessionExpiry');
+}
+
+/**
  * 🔹 Auto logout user if token expired.
  */
 export function checkAuthAndLogout() {
   const token = localStorage.getItem("accessToken");
+  
+  // Check if session is still valid based on Remember Me setting
+  if (!isSessionValid()) {
+    logoutUser();
+    window.location.href = "/login";
+    return false;
+  }
+  
   if (!token || isTokenExpired(token)) {
     logoutUser();
     window.location.href = "/login";
@@ -117,6 +151,15 @@ export function logoutUser() {
   
   // Clear persisted user context
   clearPersistedContext();
+  
+  // Clear Remember Me data (but keep email if Remember Me was enabled)
+  const rememberMe = localStorage.getItem('rememberMe') === 'true';
+  if (!rememberMe) {
+    clearRememberMe();
+  } else {
+    // Only clear session expiry, keep email saved
+    localStorage.removeItem('sessionExpiry');
+  }
 }
 
 /**
