@@ -30,10 +30,17 @@ export function isTokenExpired(token) {
 }
 
 /**
+ * 🔹 Get token from storage (checks both localStorage and sessionStorage)
+ */
+function getToken(key) {
+  return localStorage.getItem(key) || sessionStorage.getItem(key);
+}
+
+/**
  * 🔹 Auto logout user if token expired.
  */
 export function checkAuthAndLogout() {
-  const token = localStorage.getItem("accessToken");
+  const token = getToken("accessToken");
   if (!token || isTokenExpired(token)) {
     logoutUser();
     window.location.href = "/login";
@@ -100,7 +107,7 @@ export async function authenticateUser(email, password) {
  * 🔹 Return whether the user is currently authenticated
  */
 export function isAuthenticated() {
-  const token = localStorage.getItem("accessToken");
+  const token = getToken("accessToken");
   if (!token) return false;
   return !isTokenExpired(token);
 }
@@ -126,7 +133,7 @@ export function logoutUser() {
  * @throws {Error} - If refresh fails
  */
 export async function refreshAccessToken() {
-  const refreshToken = localStorage.getItem("refreshToken");
+  const refreshToken = getToken("refreshToken");
   
   if (!refreshToken) {
     throw new Error("No refresh token available");
@@ -152,9 +159,10 @@ export async function refreshAccessToken() {
         refreshToken: data.data.tokens.refreshToken,
       };
 
-      // ✅ Update tokens in localStorage
-      localStorage.setItem("accessToken", newTokens.accessToken);
-      localStorage.setItem("refreshToken", newTokens.refreshToken);
+      // ✅ Update tokens in the same storage that was used originally
+      const storage = localStorage.getItem("accessToken") ? localStorage : sessionStorage;
+      storage.setItem("accessToken", newTokens.accessToken);
+      storage.setItem("refreshToken", newTokens.refreshToken);
 
       return newTokens;
     } else {
