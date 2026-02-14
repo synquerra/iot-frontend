@@ -19,7 +19,7 @@ import { spectrumColors, gradients } from "../design-system/tokens/colors";
 function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { clearUserContext } = useUserContext();
+  const { clearUserContext, isAdmin } = useUserContext();
   const [expandedMenus, setExpandedMenus] = React.useState({});
 
   const handleLogout = () => {
@@ -55,9 +55,35 @@ function Sidebar() {
       description: "Device management",
       submenu: [
         { to: "/devices", label: "Device List", description: "View all devices" },
-        { to: "/device-settings", label: "Device Settings", description: "Configure devices" }
+        { 
+          key: "device-settings-submenu",
+          label: "Device's Settings",
+          submenu: [
+            { to: "/commands/emergency-contacts", label: "Emergency Contacts" },
+            { to: "/commands/stop-sos", label: "Stop SOS Mode" },
+            { to: "/commands/query-normal", label: "Query Normal Status" },
+            { to: "/commands/query-device-settings", label: "Query Device Settings" },
+            { to: "/commands/device-settings-config", label: "Device Settings" },
+            { to: "/commands/call-enable", label: "Enable Call" },
+            { to: "/commands/call-disable", label: "Disable Call" },
+            { to: "/commands/led-on", label: "Turn LED On" },
+            { to: "/commands/led-off", label: "Turn LED Off" },
+            { to: "/commands/ambient-enable", label: "Enable Ambient Mode" },
+            { to: "/commands/ambient-disable", label: "Disable Ambient Mode" },
+            { to: "/commands/ambient-stop", label: "Stop Ambient Mode" },
+            { to: "/commands/airplane-enable", label: "Enable Airplane Mode" },
+            { to: "/commands/gps-disable", label: "Disable GPS" }
+          ]
+        }
       ]
     },
+    ...(isAdmin() ? [{ 
+      to: "/device-settings", 
+      label: "Device Command", 
+      icon: <FiSliders />, 
+      colorScheme: "green", 
+      description: "Send commands to devices" 
+    }] : []),
     { 
       to: "/geofence", 
       label: "Geofence", 
@@ -164,7 +190,74 @@ function Sidebar() {
                 {/* Submenu items */}
                 {isExpanded && (
                   <div className="bg-[#2c3136]">
-                    {link.submenu.map((subItem) => {
+                    {link.submenu.map((subItem, subIndex) => {
+                      // Handle nested submenu (Device's Settings)
+                      if (subItem.submenu) {
+                        const isNestedExpanded = expandedMenus[subItem.key];
+                        
+                        return (
+                          <div key={subItem.key}>
+                            {/* Nested submenu parent */}
+                            <button
+                              onClick={() => toggleMenu(subItem.key)}
+                              className="w-full flex items-center justify-between pl-12 pr-4 py-2 text-sm transition-colors text-gray-400 hover:bg-gray-700 hover:text-white"
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs">•</span>
+                                <span>{subItem.label}</span>
+                              </div>
+                              <svg 
+                                className={`w-3 h-3 transition-transform duration-200 ${isNestedExpanded ? 'rotate-180' : ''}`}
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                            
+                            {/* Nested submenu items */}
+                            {isNestedExpanded && (
+                              <div className="bg-[#23272b]">
+                                {subItem.submenu.map((nestedItem, nestedIndex) => {
+                                  // If nested item has 'to' property, make it navigable
+                                  if (nestedItem.to) {
+                                    const isNestedActive = location.pathname === nestedItem.to;
+                                    
+                                    return (
+                                      <NavLink
+                                        key={nestedIndex}
+                                        to={nestedItem.to}
+                                        className={`flex items-center gap-2 pl-20 pr-4 py-2 text-xs transition-colors ${
+                                          isNestedActive
+                                            ? "bg-[#0056b3] text-white border-l-4 border-white"
+                                            : "text-gray-500 hover:bg-gray-700 hover:text-gray-300"
+                                        }`}
+                                      >
+                                        <span className="text-xs">◦</span>
+                                        <span>{nestedItem.label}</span>
+                                      </NavLink>
+                                    );
+                                  }
+                                  
+                                  // Non-navigable item (coming soon)
+                                  return (
+                                    <div
+                                      key={nestedIndex}
+                                      className="flex items-center gap-2 pl-20 pr-4 py-2 text-xs text-gray-500 hover:bg-gray-700 hover:text-gray-300 transition-colors cursor-default"
+                                    >
+                                      <span className="text-xs">◦</span>
+                                      <span>{nestedItem.label}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+                      
+                      // Regular submenu item with navigation
                       const isActive = location.pathname === subItem.to || 
                         (subItem.to !== "/" && location.pathname.startsWith(subItem.to));
                       

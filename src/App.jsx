@@ -11,6 +11,20 @@ import Signup from "./pages/Signup";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Configuration from "./pages/Configuration";
 import DeviceSettings from "./pages/DeviceSettings";
+import EmergencyContacts from "./pages/commands/EmergencyContacts";
+import StopSOS from "./pages/commands/StopSOS";
+import QueryNormal from "./pages/commands/QueryNormal";
+import QueryDeviceSettings from "./pages/commands/QueryDeviceSettings";
+import DeviceSettingsConfig from "./pages/commands/DeviceSettingsConfig";
+import CallEnable from "./pages/commands/CallEnable";
+import CallDisable from "./pages/commands/CallDisable";
+import LEDOn from "./pages/commands/LEDOn";
+import LEDOff from "./pages/commands/LEDOff";
+import AmbientEnable from "./pages/commands/AmbientEnable";
+import AmbientDisable from "./pages/commands/AmbientDisable";
+import AmbientStop from "./pages/commands/AmbientStop";
+import AirplaneEnable from "./pages/commands/AirplaneEnable";
+import GPSDisable from "./pages/commands/GPSDisable";
 import Geofence from "./pages/Geofence";
 
 import DeviceDetails from "./pages/DeviceDetails";
@@ -36,6 +50,20 @@ export default function App() {
           <Route path="devices/:imei" element={<DeviceDetails />} />
           <Route path="devices/:imei/settings" element={<DeviceSettings />} />
           <Route path="device-settings" element={<DeviceSettings />} />
+          <Route path="commands/emergency-contacts" element={<EmergencyContacts />} />
+          <Route path="commands/stop-sos" element={<StopSOS />} />
+          <Route path="commands/query-normal" element={<QueryNormal />} />
+          <Route path="commands/query-device-settings" element={<QueryDeviceSettings />} />
+          <Route path="commands/device-settings-config" element={<DeviceSettingsConfig />} />
+          <Route path="commands/call-enable" element={<CallEnable />} />
+          <Route path="commands/call-disable" element={<CallDisable />} />
+          <Route path="commands/led-on" element={<LEDOn />} />
+          <Route path="commands/led-off" element={<LEDOff />} />
+          <Route path="commands/ambient-enable" element={<AmbientEnable />} />
+          <Route path="commands/ambient-disable" element={<AmbientDisable />} />
+          <Route path="commands/ambient-stop" element={<AmbientStop />} />
+          <Route path="commands/airplane-enable" element={<AirplaneEnable />} />
+          <Route path="commands/gps-disable" element={<GPSDisable />} />
           <Route path="configuration" element={<Configuration />} />
           <Route path="geofence" element={<Geofence />} />
           <Route path="analytics" element={<Analytics />} />

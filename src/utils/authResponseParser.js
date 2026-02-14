@@ -158,7 +158,41 @@ export function parseAuthResponse(response) {
 }
 
 /**
- * Simple XOR-based encryption for localStorage data
+ * Simple XOR-based encryption for localStorage data (Async version)
+ * Note: This is basic obfuscation. For production, consider Web Crypto API.
+ * @param {string} text - Text to encrypt
+ * @param {string} key - Encryption key
+ * @returns {Promise<string>} - Base64 encoded encrypted text
+ */
+async function encryptDataAsync(text, key) {
+  return new Promise((resolve, reject) => {
+    try {
+      // Use setTimeout to make it non-blocking
+      setTimeout(() => {
+        try {
+          const textBytes = new TextEncoder().encode(text);
+          const keyBytes = new TextEncoder().encode(key);
+          
+          const encrypted = new Uint8Array(textBytes.length);
+          for (let i = 0; i < textBytes.length; i++) {
+            encrypted[i] = textBytes[i] ^ keyBytes[i % keyBytes.length];
+          }
+          
+          // Convert to base64
+          resolve(btoa(String.fromCharCode(...encrypted)));
+        } catch (error) {
+          reject(new Error('Failed to encrypt data'));
+        }
+      }, 0);
+    } catch (error) {
+      console.error('Encryption error:', error);
+      reject(new Error('Failed to encrypt data'));
+    }
+  });
+}
+
+/**
+ * Simple XOR-based encryption for localStorage data (Sync version - kept for compatibility)
  * Note: This is basic obfuscation. For production, consider Web Crypto API.
  * @param {string} text - Text to encrypt
  * @param {string} key - Encryption key
@@ -281,7 +315,62 @@ function validateUserContext(context) {
 }
 
 /**
- * Persists user context to storage with encryption
+ * Persists user context to storage with encryption (Async version)
+ * @param {Object} userContext - Parsed user context from parseAuthResponse
+ * @returns {Promise<boolean>} - True if successfully persisted, false otherwise
+ */
+export async function persistUserContextAsync(userContext) {
+  try {
+    // Validate input
+    if (!validateUserContext(userContext)) {
+      console.error('Invalid user context: cannot persist');
+      return false;
+    }
+
+    const storage = getStorage();
+    if (!storage) {
+      console.error('Storage unavailable: cannot persist user context');
+      return false;
+    }
+
+    // Create persisted data structure
+    const now = Date.now();
+    const expiresAt = now + (CONTEXT_EXPIRY_HOURS * 60 * 60 * 1000);
+
+    const persistedData = {
+      version: STORAGE_VERSION,
+      encrypted: true,
+      data: {
+        uniqueId: userContext.uniqueId,
+        userType: userContext.userType,
+        imeis: userContext.imeis,
+        email: userContext.email,
+        firstName: userContext.firstName,
+        middleName: userContext.middleName,
+        lastName: userContext.lastName,
+        mobile: userContext.mobile,
+      },
+      timestamp: now,
+      expiresAt: expiresAt,
+    };
+
+    // Serialize and encrypt (async)
+    const jsonString = JSON.stringify(persistedData);
+    const encrypted = await encryptDataAsync(jsonString, ENCRYPTION_KEY);
+
+    // Store encrypted data
+    storage.setItem(STORAGE_KEY, encrypted);
+
+    console.log('User context persisted successfully (async)');
+    return true;
+  } catch (error) {
+    console.error('Failed to persist user context (async):', error);
+    return false;
+  }
+}
+
+/**
+ * Persists user context to storage with encryption (Sync version - kept for compatibility)
  * @param {Object} userContext - Parsed user context from parseAuthResponse
  * @returns {boolean} - True if successfully persisted, false otherwise
  */

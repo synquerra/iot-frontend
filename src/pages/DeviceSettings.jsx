@@ -19,6 +19,13 @@ export default function DeviceSettings() {
   // User context for role-based logic
   const { isAdmin, userType } = useUserContext();
   
+  // Redirect non-admin users to devices page
+  useEffect(() => {
+    if (!isAdmin()) {
+      navigate('/devices', { replace: true });
+    }
+  }, [isAdmin, navigate]);
+  
   // Device filtering hook
   const { filterDevices, shouldFilterDevices } = useDeviceFilter();
   

@@ -76,34 +76,32 @@ export default function Login() {
       // Store parsed user context in UserContext
       setUserContext(parsedContext);
       
-      // Persist user context to localStorage
-      const persisted = persistUserContext(parsedContext);
-      if (!persisted) {
-        console.warn("Failed to persist user context to storage");
-      }
-
-      // Handle Remember Me functionality
+      // Handle Remember Me functionality (fast operations)
       if (rememberMe) {
-        // Save email for future logins
         localStorage.setItem('rememberedEmail', email);
         localStorage.setItem('rememberMe', 'true');
-        
-        // Set extended session expiry (30 days)
         const extendedExpiry = new Date();
         extendedExpiry.setDate(extendedExpiry.getDate() + 30);
         localStorage.setItem('sessionExpiry', extendedExpiry.toISOString());
       } else {
-        // Clear remembered credentials
         localStorage.removeItem('rememberedEmail');
         localStorage.removeItem('rememberMe');
-        
-        // Set standard session expiry (1 day)
         const standardExpiry = new Date();
         standardExpiry.setDate(standardExpiry.getDate() + 1);
         localStorage.setItem('sessionExpiry', standardExpiry.toISOString());
       }
       
-      navigate("/"); // Redirect to dashboard
+      // Navigate immediately - don't wait for persistence
+      navigate("/");
+      
+      // Persist user context in background (non-blocking)
+      setTimeout(() => {
+        const persisted = persistUserContext(parsedContext);
+        if (!persisted) {
+          console.warn("Failed to persist user context to storage");
+        }
+      }, 0);
+      
     } catch (error) {
       setError(error.message || "Login failed. Please check your credentials and try again.");
     } finally {

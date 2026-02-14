@@ -467,18 +467,18 @@ export default function Dashboard() {
       
       console.log("✅ Phase 1 complete:", { countData, devicesCount: devicesList.length });
       
-      // Update UI with initial data
+      // Update UI with initial data IMMEDIATELY
       setTotalAnalytics(countData || 0);
-      setDevices(devicesList.slice(0, 10));
+      setDevices(devicesList);
       setLoading(false); // Allow UI to render with basic data
       
-      // PHASE 2: Load recent analytics (medium priority)
+      // PHASE 2: Load recent analytics (medium priority) - reduced from 200 to 50
       console.log("📊 Phase 2: Loading recent analytics...");
       setTimeout(async () => {
         try {
-          const recentData = await getRecentAnalyticsSafe(200).catch(err => {
+          const recentData = await getRecentAnalyticsSafe(50).catch(err => {
             console.warn("Recent analytics failed, using fallback:", err.message);
-            return getAnalyticsPaginated(0, 200).catch(() => []);
+            return getAnalyticsPaginated(0, 50).catch(() => []);
           });
           
           console.log("✅ Phase 2 complete:", { recentCount: recentData?.length });
@@ -486,9 +486,9 @@ export default function Dashboard() {
         } catch (err) {
           console.warn("Phase 2 error:", err.message);
         }
-      }, 500); // Load after 500ms
+      }, 300); // Reduced from 500ms to 300ms
       
-      // PHASE 3: Load all analytics (heavy, can be slow)
+      // PHASE 3: Load all analytics (heavy, can be slow) - DEFERRED LONGER
       console.log("📊 Phase 3: Loading all analytics (background)...");
       setTimeout(async () => {
         try {
@@ -506,8 +506,8 @@ export default function Dashboard() {
           const allData = await getAllAnalytics().catch(err => {
             console.warn("getAllAnalytics failed, trying enhanced analytics:", err.message);
             return getAllAnalyticsSafe({
-              pageSize: 1000,
-              maxPages: 100,
+              pageSize: 500, // Reduced from 1000
+              maxPages: 50, // Reduced from 100
               onProgress: analyticsProgress,
               includeRawData: false
             }).catch(fallbackErr => {
@@ -569,7 +569,7 @@ export default function Dashboard() {
         } catch (err) {
           console.warn("Phase 3 error:", err.message);
         }
-      }, 1000); // Load after 1 second
+      }, 2000); // Increased from 1000ms to 2000ms - load heavy data later
       
       // Load sample geofences
       setGeofences([
@@ -731,7 +731,7 @@ export default function Dashboard() {
     // This allows the login to complete and dashboard to render quickly
     const loadTimer = setTimeout(() => {
       loadDashboardData();
-    }, 100); // Small delay to allow UI to render first
+    }, 50); // Minimal delay to allow UI to render first
     
     return () => clearTimeout(loadTimer);
   }, []);
