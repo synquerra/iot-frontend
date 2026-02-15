@@ -16,6 +16,18 @@ export default function Devices() {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [showTamperedAlert, setShowTamperedAlert] = useState(false);
+  const [showInactiveAlert, setShowInactiveAlert] = useState(false);
+  const [showHangedAlert, setShowHangedAlert] = useState(false);
+  const [showHighTempAlert, setShowHighTempAlert] = useState(false);
+  const [showSosAlert, setShowSosAlert] = useState(false);
+  const [showOverspeedAlert, setShowOverspeedAlert] = useState(false);
+  const [showSimIssueAlert, setShowSimIssueAlert] = useState(false);
+  const [showDataIssueAlert, setShowDataIssueAlert] = useState(false);
+  const [showGpsIssueAlert, setShowGpsIssueAlert] = useState(false);
+  const [showLowBatteryAlert, setShowLowBatteryAlert] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   const navigate = useNavigate();
   
   // User context for role-based logic
@@ -90,31 +102,129 @@ export default function Devices() {
               
               // Check for various conditions
               const isHanged = timeSinceLastPacket > 3600000; // No packet for 1 hour = hanged
-              const hasSOS = packets.some(p => {
+              
+              // SOS incidents with detailed data
+              const sosPackets = packets.filter(p => {
                 const alert = String(p.alert || '').toUpperCase();
                 return alert === 'A1002' || alert === 'SOS';
-              });
-              const hasOverspeed = packets.some(p => Number(p.speed) > 70);
-              const hasHighTemp = temperature !== null && temperature > 50;
-              const hasLowBattery = batteryLevel !== null && batteryLevel < 20;
+              }).map(p => ({
+                timestamp: p.deviceTimestamp || p.timestamp,
+                alert: p.alert,
+                latitude: p.latitude,
+                longitude: p.longitude,
+                battery: p.battery,
+                signal: p.signal,
+              }));
+              const hasSOS = sosPackets.length > 0;
+              const sosIncidents = sosPackets.length;
               
-              // Check for error codes in alert/error packets
-              const hasTampered = packets.some(p => {
+              // Overspeed incidents with detailed data
+              const overspeedPackets = packets.filter(p => Number(p.speed) > 70).map(p => ({
+                timestamp: p.deviceTimestamp || p.timestamp,
+                alert: 'OVERSPEED',
+                latitude: p.latitude,
+                longitude: p.longitude,
+                battery: p.battery,
+                signal: p.signal,
+              }));
+              const hasOverspeed = overspeedPackets.length > 0;
+              const overspeedIncidents = overspeedPackets.length;
+              
+              // High temperature incidents with detailed data
+              const highTempPackets = packets.filter(p => {
+                if (p.rawTemperature !== null && p.rawTemperature !== undefined) {
+                  const tempNum = parseTemperature(p.rawTemperature);
+                  return tempNum > 50;
+                }
+                return false;
+              }).map(p => ({
+                timestamp: p.deviceTimestamp || p.timestamp,
+                alert: 'HIGH_TEMP',
+                latitude: p.latitude,
+                longitude: p.longitude,
+                battery: p.battery,
+                signal: p.signal,
+              }));
+              const hasHighTemp = temperature !== null && temperature > 50;
+              const highTempIncidents = highTempPackets.length;
+              
+              // Low battery incidents with detailed data
+              const lowBatteryPackets = packets.filter(p => {
+                if (p.battery !== null && p.battery !== undefined) {
+                  const batteryNum = Number(p.battery);
+                  return !isNaN(batteryNum) && batteryNum < 20;
+                }
+                return false;
+              }).map(p => ({
+                timestamp: p.deviceTimestamp || p.timestamp,
+                alert: 'LOW_BATTERY',
+                latitude: p.latitude,
+                longitude: p.longitude,
+                battery: p.battery,
+                signal: p.signal,
+              }));
+              const hasLowBattery = batteryLevel !== null && batteryLevel < 20;
+              const lowBatteryIncidents = lowBatteryPackets.length;
+              
+              // Tampered incidents with detailed data
+              const tamperedPackets = packets.filter(p => {
                 const alert = String(p.alert || '').toUpperCase();
                 return alert === 'A1003' || alert === 'TAMPERED';
-              });
-              const hasSimIssue = packets.some(p => {
+              }).map(p => ({
+                timestamp: p.deviceTimestamp || p.timestamp,
+                alert: p.alert,
+                latitude: p.latitude,
+                longitude: p.longitude,
+                battery: p.battery,
+                signal: p.signal,
+              }));
+              const hasTampered = tamperedPackets.length > 0;
+              const tamperedIncidents = tamperedPackets.length;
+              
+              // SIM issue incidents with detailed data
+              const simIssuePackets = packets.filter(p => {
                 const alert = String(p.alert || '').toUpperCase();
                 return alert === 'E1011' || alert === 'NO_SIM' || alert === 'NO SIM';
-              });
-              const hasDataIssue = packets.some(p => {
+              }).map(p => ({
+                timestamp: p.deviceTimestamp || p.timestamp,
+                alert: p.alert,
+                latitude: p.latitude,
+                longitude: p.longitude,
+                battery: p.battery,
+                signal: p.signal,
+              }));
+              const hasSimIssue = simIssuePackets.length > 0;
+              const simIssueIncidents = simIssuePackets.length;
+              
+              // Data issue incidents with detailed data
+              const dataIssuePackets = packets.filter(p => {
                 const alert = String(p.alert || '').toUpperCase();
                 return alert === 'E1003' || alert === 'NO_DATA_CAPABILITY' || alert === 'NO DATA CAPABILITY';
-              });
-              const hasGpsIssue = packets.some(p => {
+              }).map(p => ({
+                timestamp: p.deviceTimestamp || p.timestamp,
+                alert: p.alert,
+                latitude: p.latitude,
+                longitude: p.longitude,
+                battery: p.battery,
+                signal: p.signal,
+              }));
+              const hasDataIssue = dataIssuePackets.length > 0;
+              const dataIssueIncidents = dataIssuePackets.length;
+              
+              // GPS issue incidents with detailed data
+              const gpsIssuePackets = packets.filter(p => {
                 const alert = String(p.alert || '').toUpperCase();
                 return alert === 'E1001' || alert === 'GNSS_ERROR' || alert === 'GNSS CONNECTIVITY' || alert === 'A1004' || alert === 'GPS_DISABLED' || alert === 'GPS DISABLE';
-              });
+              }).map(p => ({
+                timestamp: p.deviceTimestamp || p.timestamp,
+                alert: p.alert,
+                latitude: p.latitude,
+                longitude: p.longitude,
+                battery: p.battery,
+                signal: p.signal,
+              }));
+              const hasGpsIssue = gpsIssuePackets.length > 0;
+              const gpsIssueIncidents = gpsIssuePackets.length;
 
               return {
                 topic: device.topic || "-",
@@ -131,13 +241,29 @@ export default function Devices() {
                 // Device condition flags
                 isHanged,
                 hasSOS,
+                sosIncidents,
+                sosPackets,
                 hasOverspeed,
+                overspeedIncidents,
+                overspeedPackets,
                 hasHighTemp,
+                highTempIncidents,
+                highTempPackets,
                 hasLowBattery,
+                lowBatteryIncidents,
+                lowBatteryPackets,
                 hasTampered,
+                tamperedIncidents,
+                tamperedPackets,
                 hasSimIssue,
+                simIssueIncidents,
+                simIssuePackets,
                 hasDataIssue,
+                dataIssueIncidents,
+                dataIssuePackets,
                 hasGpsIssue,
+                gpsIssueIncidents,
+                gpsIssuePackets,
               };
             } catch (err) {
               console.warn(`Failed to fetch telemetry for device ${device.imei}:`, err.message);
@@ -156,13 +282,29 @@ export default function Devices() {
                 signalStrength: null,
                 isHanged: false,
                 hasSOS: false,
+                sosIncidents: 0,
+                sosPackets: [],
                 hasOverspeed: false,
+                overspeedIncidents: 0,
+                overspeedPackets: [],
                 hasHighTemp: false,
+                highTempIncidents: 0,
+                highTempPackets: [],
                 hasLowBattery: false,
+                lowBatteryIncidents: 0,
+                lowBatteryPackets: [],
                 hasTampered: false,
+                tamperedIncidents: 0,
+                tamperedPackets: [],
                 hasSimIssue: false,
+                simIssueIncidents: 0,
+                simIssuePackets: [],
                 hasDataIssue: false,
+                dataIssueIncidents: 0,
+                dataIssuePackets: [],
                 hasGpsIssue: false,
+                gpsIssueIncidents: 0,
+                gpsIssuePackets: [],
               };
             }
           })
@@ -193,6 +335,207 @@ export default function Devices() {
     return matchesSearch && matchesStatus;
   });
 
+  // Generic function to render incident table
+  const renderIncidentTable = (config) => {
+    const {
+      title,
+      showAlert,
+      setShowAlert,
+      devices: allDevices,
+      filterFn,
+      getIncidentsFn,
+      color = 'red',
+      icon = 'exclamation-triangle'
+    } = config;
+
+    if (!showAlert) return null;
+
+    // Get all incidents
+    const allIncidents = allDevices
+      .filter(filterFn)
+      .flatMap(device => {
+        const incidents = getIncidentsFn(device);
+        return incidents.map((incident, idx) => ({
+          device,
+          incident,
+          incidentIndex: idx
+        }));
+      });
+
+    if (allIncidents.length === 0) return null;
+
+    // Calculate pagination
+    const totalPages = Math.ceil(allIncidents.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedIncidents = allIncidents.slice(startIndex, endIndex);
+
+    return (
+      <div className="bg-white rounded-lg shadow-md border-l-4 border-red-600">
+        <div className="border-b border-gray-200 px-4 py-3 bg-red-50 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center">
+              <i className={`fas fa-${icon} text-white text-lg`}></i>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-red-800">
+                {title}
+              </h3>
+              <p className="text-sm text-red-600">
+                {allIncidents.length} total incident{allIncidents.length > 1 ? 's' : ''}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setShowAlert(false);
+              setCurrentPage(1);
+            }}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+          >
+            <i className="fas fa-times"></i>
+            Close
+          </button>
+        </div>
+        
+        <div className="p-4">
+          <div className="overflow-x-auto">
+            <table className="min-w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-100 border-b-2 border-gray-300">
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 border border-gray-300">#</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 border border-gray-300">Device</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 border border-gray-300">Timestamp</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 border border-gray-300">Alert</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 border border-gray-300">Location</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 border border-gray-300">Battery</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 border border-gray-300">Signal</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 border border-gray-300">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedIncidents.map((item, idx) => {
+                  const { device, incident } = item;
+                  const globalIdx = startIndex + idx;
+                  const timestamp = new Date(incident.timestamp);
+                  const formattedDate = timestamp.toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                  });
+                  const formattedTime = timestamp.toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  });
+                  
+                  return (
+                    <tr 
+                      key={`${device.imei}-${globalIdx}`} 
+                      className="hover:bg-gray-50 border-b border-gray-200"
+                    >
+                      <td className="px-3 py-2 text-xs text-gray-900 border border-gray-300">{globalIdx + 1}</td>
+                      <td className="px-3 py-2 text-xs text-gray-900 border border-gray-300">{getDeviceDisplayNameWithMaskedImei(device)}</td>
+                      <td className="px-3 py-2 text-xs text-gray-900 border border-gray-300">
+                        <div>{formattedDate}</div>
+                        <div className="text-gray-600">{formattedTime}</div>
+                      </td>
+                      <td className="px-3 py-2 text-xs text-gray-900 border border-gray-300">
+                        <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-semibold">
+                          {incident.alert || 'N/A'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-xs text-gray-900 border border-gray-300">
+                        {incident.latitude && incident.longitude ? (
+                          <div>
+                            <div>{Number(incident.latitude).toFixed(4)}</div>
+                            <div>{Number(incident.longitude).toFixed(4)}</div>
+                          </div>
+                        ) : (
+                          'N/A'
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-gray-900 border border-gray-300">
+                        {incident.battery !== null && incident.battery !== undefined ? `${Math.round(incident.battery)}%` : 'N/A'}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-gray-900 border border-gray-300">
+                        {incident.signal !== null && incident.signal !== undefined ? `${Math.round(incident.signal)}%` : 'N/A'}
+                      </td>
+                      <td className="px-3 py-2 text-xs border border-gray-300">
+                        <button
+                          onClick={() => {
+                            alert(`Reset incident for device ${device.imei} at ${formattedDate} ${formattedTime}`);
+                          }}
+                          className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium flex items-center gap-1"
+                        >
+                          <i className="fas fa-redo"></i>
+                          Reset
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-between border-t border-gray-200 pt-4">
+              <div className="text-sm text-gray-600">
+                Showing {startIndex + 1} to {Math.min(endIndex, allIncidents.length)} of {allIncidents.length} incidents
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className={cn(
+                    'px-3 py-1 rounded text-sm font-medium',
+                    currentPage === 1
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-blue-500 text-white hover:bg-blue-600'
+                  )}
+                >
+                  Previous
+                </button>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={cn(
+                        'w-8 h-8 rounded text-sm font-medium',
+                        currentPage === page
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      )}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className={cn(
+                    'px-3 py-1 rounded text-sm font-medium',
+                    currentPage === totalPages
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-blue-500 text-white hover:bg-blue-600'
+                  )}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // Determine if search & filters should be shown
   // Show if: ADMIN (always) OR Parent with 2+ devices
   const shouldShowSearchFilters = useMemo(() => {
@@ -203,28 +546,53 @@ export default function Devices() {
     return devices.length >= 2;
   }, [isAdmin, devices.length]);
 
-  const stats = {
-    // Row 1
-    total: devices.length,
-    active: devices.filter(d => d.status === "active").length,
-    inactive: devices.filter(d => d.status === "inactive").length,
-    hanged: devices.filter(d => d.isHanged).length,
-    tampered: devices.filter(d => d.hasTampered).length,
-    
-    // Row 2
-    highTemp: devices.filter(d => d.hasHighTemp).length,
-    sos: devices.filter(d => d.hasSOS).length,
-    overspeed: devices.filter(d => d.hasOverspeed).length,
-    anomaly: devices.filter(d => d.isHanged || d.hasTampered).length, // Anomaly = hanged or tampered
-    restrictedEntry: 0, // Requires geofence breach detection - not implemented yet
-    
-    // Row 3
-    simNotWorking: devices.filter(d => d.hasSimIssue).length,
-    lowData: devices.filter(d => d.hasDataIssue).length,
-    gpsUplinkIssues: devices.filter(d => d.hasGpsIssue).length,
-    batteryHealth: devices.filter(d => d.hasLowBattery).length,
-    ble: 0, // BLE status not available in current data
-  };
+  const stats = useMemo(() => {
+    // Calculate total incidents count for each category
+    const totalTamperedIncidents = devices.reduce((total, device) => total + (device.tamperedIncidents || 0), 0);
+    const totalSosIncidents = devices.reduce((total, device) => total + (device.sosIncidents || 0), 0);
+    const totalOverspeedIncidents = devices.reduce((total, device) => total + (device.overspeedIncidents || 0), 0);
+    const totalHighTempIncidents = devices.reduce((total, device) => total + (device.highTempIncidents || 0), 0);
+    const totalLowBatteryIncidents = devices.reduce((total, device) => total + (device.lowBatteryIncidents || 0), 0);
+    const totalSimIssueIncidents = devices.reduce((total, device) => total + (device.simIssueIncidents || 0), 0);
+    const totalDataIssueIncidents = devices.reduce((total, device) => total + (device.dataIssueIncidents || 0), 0);
+    const totalGpsIssueIncidents = devices.reduce((total, device) => total + (device.gpsIssueIncidents || 0), 0);
+
+    return {
+      // Row 1
+      total: devices.length,
+      active: devices.filter(d => d.status === "active").length,
+      inactive: devices.filter(d => d.status === "inactive").length,
+      inactiveIncidents: devices.filter(d => d.status === "inactive").length, // Count of inactive devices
+      hanged: devices.filter(d => d.isHanged).length,
+      hangedIncidents: devices.filter(d => d.isHanged).length, // Count of hanged devices
+      tampered: devices.filter(d => d.hasTampered).length,
+      totalTamperedIncidents,
+      
+      // Row 2
+      highTemp: devices.filter(d => d.hasHighTemp).length,
+      totalHighTempIncidents,
+      sos: devices.filter(d => d.hasSOS).length,
+      totalSosIncidents,
+      overspeed: devices.filter(d => d.hasOverspeed).length,
+      totalOverspeedIncidents,
+      anomaly: devices.filter(d => d.isHanged || d.hasTampered).length,
+      totalAnomalyIncidents: devices.filter(d => d.isHanged).length + totalTamperedIncidents, // Hanged count + tampered incidents
+      restrictedEntry: 0,
+      totalRestrictedEntryIncidents: 0,
+      
+      // Row 3
+      simNotWorking: devices.filter(d => d.hasSimIssue).length,
+      totalSimIssueIncidents,
+      lowData: devices.filter(d => d.hasDataIssue).length,
+      totalDataIssueIncidents,
+      gpsUplinkIssues: devices.filter(d => d.hasGpsIssue).length,
+      totalGpsIssueIncidents,
+      batteryHealth: devices.filter(d => d.hasLowBattery).length,
+      totalLowBatteryIncidents,
+      ble: 0,
+      totalBleIncidents: 0,
+    };
+  }, [devices]);
 
   if (loading && devices.length === 0) {
     return (
@@ -312,6 +680,7 @@ export default function Devices() {
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.total}</div>
             <div className="text-sm font-medium mt-1">Total Devices</div>
+            <div className="h-5 mt-1"></div>
           </div>
           <div className="absolute top-2 right-3 text-white/30">
             <i className="fas fa-microchip text-6xl"></i>
@@ -326,6 +695,7 @@ export default function Devices() {
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.active}</div>
             <div className="text-sm font-medium mt-1">Active</div>
+            <div className="h-5 mt-1"></div>
           </div>
           <div className="absolute top-2 right-3 text-white/30">
             <i className="fas fa-check-circle text-6xl"></i>
@@ -336,10 +706,16 @@ export default function Devices() {
         </div>
 
         {/* Inactive */}
-        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#ffc107] to-[#e0a800] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+        <div 
+          onClick={() => setShowInactiveAlert(!showInactiveAlert)}
+          className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#ffc107] to-[#e0a800] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+        >
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.inactive}</div>
-            <div className="text-sm font-medium mt-1">Inactive</div>
+            <div className="text-sm font-medium mt-1">Inactive Devices</div>
+            <div className="text-xs mt-1 opacity-80">
+              {stats.inactiveIncidents} device{stats.inactiveIncidents !== 1 ? 's' : ''} offline
+            </div>
           </div>
           <div className="absolute top-2 right-3 text-white/30">
             <i className="fas fa-exclamation-triangle text-6xl"></i>
@@ -350,10 +726,16 @@ export default function Devices() {
         </div>
 
         {/* Hanged */}
-        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#dc3545] to-[#c82333] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+        <div 
+          onClick={() => setShowHangedAlert(!showHangedAlert)}
+          className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#dc3545] to-[#c82333] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+        >
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.hanged}</div>
-            <div className="text-sm font-medium mt-1">Hanged</div>
+            <div className="text-sm font-medium mt-1">Hanged Devices</div>
+            <div className="text-xs mt-1 opacity-80">
+              {stats.hangedIncidents} device{stats.hangedIncidents !== 1 ? 's' : ''} not responding
+            </div>
           </div>
           <div className="absolute top-2 right-3 text-white/30">
             <i className="fas fa-times-circle text-6xl"></i>
@@ -364,10 +746,16 @@ export default function Devices() {
         </div>
 
         {/* Tampered */}
-        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#6f42c1] to-[#5a32a3] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+        <div 
+          onClick={() => setShowTamperedAlert(!showTamperedAlert)}
+          className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#6f42c1] to-[#5a32a3] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+        >
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.tampered}</div>
-            <div className="text-sm font-medium mt-1">Tampered</div>
+            <div className="text-sm font-medium mt-1">Tampered Devices</div>
+            <div className="text-xs mt-1 opacity-80">
+              {stats.totalTamperedIncidents} total incidents
+            </div>
           </div>
           <div className="absolute top-2 right-3 text-white/30">
             <i className="fas fa-shield-alt text-6xl"></i>
@@ -381,10 +769,16 @@ export default function Devices() {
       {/* Row 2 - Alerts & Issues */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* High Temp */}
-        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#dc3545] to-[#c82333] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+        <div 
+          onClick={() => setShowHighTempAlert(!showHighTempAlert)}
+          className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#dc3545] to-[#c82333] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+        >
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.highTemp}</div>
-            <div className="text-sm font-medium mt-1">High Temp</div>
+            <div className="text-sm font-medium mt-1">High Temp Devices</div>
+            <div className="text-xs mt-1 opacity-80">
+              {stats.totalHighTempIncidents} total incident{stats.totalHighTempIncidents !== 1 ? 's' : ''}
+            </div>
           </div>
           <div className="absolute top-2 right-3 text-white/30">
             <i className="fas fa-thermometer-full text-6xl"></i>
@@ -395,10 +789,16 @@ export default function Devices() {
         </div>
 
         {/* SOS */}
-        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#fd7e14] to-[#e8590c] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+        <div 
+          onClick={() => setShowSosAlert(!showSosAlert)}
+          className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#fd7e14] to-[#e8590c] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+        >
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.sos}</div>
-            <div className="text-sm font-medium mt-1">SOS</div>
+            <div className="text-sm font-medium mt-1">SOS Devices</div>
+            <div className="text-xs mt-1 opacity-80">
+              {stats.totalSosIncidents} total incident{stats.totalSosIncidents !== 1 ? 's' : ''}
+            </div>
           </div>
           <div className="absolute top-2 right-3 text-white/30">
             <i className="fas fa-exclamation-circle text-6xl"></i>
@@ -409,10 +809,16 @@ export default function Devices() {
         </div>
 
         {/* Overspeed */}
-        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#ffc107] to-[#e0a800] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+        <div 
+          onClick={() => setShowOverspeedAlert(!showOverspeedAlert)}
+          className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#ffc107] to-[#e0a800] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+        >
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.overspeed}</div>
-            <div className="text-sm font-medium mt-1">Overspeed</div>
+            <div className="text-sm font-medium mt-1">Overspeed Devices</div>
+            <div className="text-xs mt-1 opacity-80">
+              {stats.totalOverspeedIncidents} total incident{stats.totalOverspeedIncidents !== 1 ? 's' : ''}
+            </div>
           </div>
           <div className="absolute top-2 right-3 text-white/30">
             <i className="fas fa-tachometer-alt text-6xl"></i>
@@ -426,7 +832,10 @@ export default function Devices() {
         <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#e83e8c] to-[#d63384] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.anomaly}</div>
-            <div className="text-sm font-medium mt-1">Anomaly</div>
+            <div className="text-sm font-medium mt-1">Anomaly Devices</div>
+            <div className="text-xs mt-1 opacity-80">
+              {stats.totalAnomalyIncidents} total incident{stats.totalAnomalyIncidents !== 1 ? 's' : ''}
+            </div>
           </div>
           <div className="absolute top-2 right-3 text-white/30">
             <i className="fas fa-exclamation text-6xl"></i>
@@ -441,6 +850,9 @@ export default function Devices() {
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.restrictedEntry}</div>
             <div className="text-sm font-medium mt-1">Restricted Entry</div>
+            <div className="text-xs mt-1 opacity-80">
+              {stats.totalRestrictedEntryIncidents} total incident{stats.totalRestrictedEntryIncidents !== 1 ? 's' : ''}
+            </div>
           </div>
           <div className="absolute top-2 right-3 text-white/30">
             <i className="fas fa-ban text-6xl"></i>
@@ -454,10 +866,16 @@ export default function Devices() {
       {/* Row 3 - Technical Issues */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* SIM Not Working */}
-        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#dc3545] to-[#c82333] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+        <div 
+          onClick={() => setShowSimIssueAlert(!showSimIssueAlert)}
+          className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#dc3545] to-[#c82333] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+        >
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.simNotWorking}</div>
             <div className="text-sm font-medium mt-1">SIM Not Working</div>
+            <div className="text-xs mt-1 opacity-80">
+              {stats.totalSimIssueIncidents} total incident{stats.totalSimIssueIncidents !== 1 ? 's' : ''}
+            </div>
           </div>
           <div className="absolute top-2 right-3 text-white/30">
             <i className="fas fa-sim-card text-6xl"></i>
@@ -468,10 +886,16 @@ export default function Devices() {
         </div>
 
         {/* Low Data */}
-        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#ffc107] to-[#e0a800] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+        <div 
+          onClick={() => setShowDataIssueAlert(!showDataIssueAlert)}
+          className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#ffc107] to-[#e0a800] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+        >
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.lowData}</div>
             <div className="text-sm font-medium mt-1">Low Data</div>
+            <div className="text-xs mt-1 opacity-80">
+              {stats.totalDataIssueIncidents} total incident{stats.totalDataIssueIncidents !== 1 ? 's' : ''}
+            </div>
           </div>
           <div className="absolute top-2 right-3 text-white/30">
             <i className="fas fa-database text-6xl"></i>
@@ -482,10 +906,16 @@ export default function Devices() {
         </div>
 
         {/* GPS Uplink Issues */}
-        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#fd7e14] to-[#e8590c] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+        <div 
+          onClick={() => setShowGpsIssueAlert(!showGpsIssueAlert)}
+          className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#fd7e14] to-[#e8590c] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+        >
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.gpsUplinkIssues}</div>
             <div className="text-sm font-medium mt-1">GPS Issues</div>
+            <div className="text-xs mt-1 opacity-80">
+              {stats.totalGpsIssueIncidents} total incident{stats.totalGpsIssueIncidents !== 1 ? 's' : ''}
+            </div>
           </div>
           <div className="absolute top-2 right-3 text-white/30">
             <i className="fas fa-satellite-dish text-6xl"></i>
@@ -496,10 +926,16 @@ export default function Devices() {
         </div>
 
         {/* Battery Health */}
-        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#6f42c1] to-[#5a32a3] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
+        <div 
+          onClick={() => setShowLowBatteryAlert(!showLowBatteryAlert)}
+          className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#6f42c1] to-[#5a32a3] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+        >
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.batteryHealth}</div>
             <div className="text-sm font-medium mt-1">Battery Health</div>
+            <div className="text-xs mt-1 opacity-80">
+              {stats.totalLowBatteryIncidents} total incident{stats.totalLowBatteryIncidents !== 1 ? 's' : ''}
+            </div>
           </div>
           <div className="absolute top-2 right-3 text-white/30">
             <i className="fas fa-battery-quarter text-6xl"></i>
@@ -514,6 +950,9 @@ export default function Devices() {
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.ble}</div>
             <div className="text-sm font-medium mt-1">BLE</div>
+            <div className="text-xs mt-1 opacity-80">
+              {stats.totalBleIncidents} total incident{stats.totalBleIncidents !== 1 ? 's' : ''}
+            </div>
           </div>
           <div className="absolute top-2 right-3 text-white/30">
             <i className="fas fa-bluetooth text-6xl"></i>
@@ -524,6 +963,129 @@ export default function Devices() {
         </div>
       </div>
 
+      {/* Tampered Devices Alert */}
+      {renderIncidentTable({
+        title: 'Tampered Incidents History',
+        showAlert: showTamperedAlert,
+        setShowAlert: setShowTamperedAlert,
+        devices: devices,
+        filterFn: (d) => d.hasTampered,
+        getIncidentsFn: (device) => device.tamperedPackets || [],
+        icon: 'shield-alt'
+      })}
+
+      {/* Inactive Devices Alert */}
+      {stats.inactive > 0 && renderIncidentTable({
+        title: 'Inactive Devices History',
+        showAlert: showInactiveAlert,
+        setShowAlert: setShowInactiveAlert,
+        devices: devices,
+        filterFn: (d) => d.status === 'inactive',
+        getIncidentsFn: (device) => [{
+          timestamp: device.lastSeen,
+          alert: 'INACTIVE',
+          latitude: null,
+          longitude: null,
+          battery: device.batteryLevel,
+          signal: device.signalStrength
+        }],
+        icon: 'power-off'
+      })}
+
+      {/* Hanged Devices Alert */}
+      {stats.hanged > 0 && renderIncidentTable({
+        title: 'Hanged Devices History',
+        showAlert: showHangedAlert,
+        setShowAlert: setShowHangedAlert,
+        devices: devices,
+        filterFn: (d) => d.isHanged,
+        getIncidentsFn: (device) => [{
+          timestamp: device.lastSeen,
+          alert: 'HANGED',
+          latitude: null,
+          longitude: null,
+          battery: device.batteryLevel,
+          signal: device.signalStrength
+        }],
+        icon: 'times-circle'
+      })}
+
+      {/* High Temp Alert */}
+      {stats.highTemp > 0 && renderIncidentTable({
+        title: 'High Temperature Incidents',
+        showAlert: showHighTempAlert,
+        setShowAlert: setShowHighTempAlert,
+        devices: devices,
+        filterFn: (d) => d.hasHighTemp,
+        getIncidentsFn: (device) => device.highTempPackets || [],
+        icon: 'thermometer-full'
+      })}
+
+      {/* SOS Alert */}
+      {stats.sos > 0 && renderIncidentTable({
+        title: 'SOS Incidents',
+        showAlert: showSosAlert,
+        setShowAlert: setShowSosAlert,
+        devices: devices,
+        filterFn: (d) => d.hasSOS,
+        getIncidentsFn: (device) => device.sosPackets || [],
+        icon: 'exclamation-circle'
+      })}
+
+      {/* Overspeed Alert */}
+      {stats.overspeed > 0 && renderIncidentTable({
+        title: 'Overspeed Incidents',
+        showAlert: showOverspeedAlert,
+        setShowAlert: setShowOverspeedAlert,
+        devices: devices,
+        filterFn: (d) => d.hasOverspeed,
+        getIncidentsFn: (device) => device.overspeedPackets || [],
+        icon: 'tachometer-alt'
+      })}
+
+      {/* SIM Issue Alert */}
+      {stats.simNotWorking > 0 && renderIncidentTable({
+        title: 'SIM Issue Incidents',
+        showAlert: showSimIssueAlert,
+        setShowAlert: setShowSimIssueAlert,
+        devices: devices,
+        filterFn: (d) => d.hasSimIssue,
+        getIncidentsFn: (device) => device.simIssuePackets || [],
+        icon: 'sim-card'
+      })}
+
+      {/* Data Issue Alert */}
+      {stats.lowData > 0 && renderIncidentTable({
+        title: 'Data Issue Incidents',
+        showAlert: showDataIssueAlert,
+        setShowAlert: setShowDataIssueAlert,
+        devices: devices,
+        filterFn: (d) => d.hasDataIssue,
+        getIncidentsFn: (device) => device.dataIssuePackets || [],
+        icon: 'database'
+      })}
+
+      {/* GPS Issue Alert */}
+      {stats.gpsUplinkIssues > 0 && renderIncidentTable({
+        title: 'GPS Issue Incidents',
+        showAlert: showGpsIssueAlert,
+        setShowAlert: setShowGpsIssueAlert,
+        devices: devices,
+        filterFn: (d) => d.hasGpsIssue,
+        getIncidentsFn: (device) => device.gpsIssuePackets || [],
+        icon: 'satellite-dish'
+      })}
+
+      {/* Low Battery Alert */}
+      {stats.batteryHealth > 0 && renderIncidentTable({
+        title: 'Low Battery Incidents',
+        showAlert: showLowBatteryAlert,
+        setShowAlert: setShowLowBatteryAlert,
+        devices: devices,
+        filterFn: (d) => d.hasLowBattery,
+        getIncidentsFn: (device) => device.lowBatteryPackets || [],
+        icon: 'battery-quarter'
+      })}
       {/* Search and Filters - AdminLTE Style - Only show for ADMIN or Parent with 2+ devices */}
       {shouldShowSearchFilters && (
         <div className="bg-white rounded-lg shadow-md">
