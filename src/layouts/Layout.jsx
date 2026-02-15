@@ -69,36 +69,36 @@ function Sidebar() {
       description: "Device management",
       submenu: [
         { to: "/devices", label: "Device List", icon: <FiList />, description: "View all devices" },
-        { 
-          key: "device-settings-submenu",
-          label: "Device's Settings",
-          icon: <FiSettings />,
-          submenu: [
-            { to: "/commands/emergency-contacts", label: "Emergency Contacts", icon: <FiUsers /> },
-            { to: "/commands/stop-sos", label: "Stop SOS Mode", icon: <FiAlertOctagon /> },
-            { to: "/commands/query-normal", label: "Query Normal Status", icon: <FiCheckCircle /> },
-            { to: "/commands/query-device-settings", label: "Query Device Settings", icon: <FiInfo /> },
-            { to: "/commands/device-settings-config", label: "Device Settings", icon: <FiSliders /> },
-            { to: "/commands/call-enable", label: "Enable Call", icon: <FiPhone /> },
-            { to: "/commands/call-disable", label: "Disable Call", icon: <FiPhoneOff /> },
-            { to: "/commands/led-on", label: "Turn LED On", icon: <FiZap /> },
-            { to: "/commands/led-off", label: "Turn LED Off", icon: <FiZapOff /> },
-            { to: "/commands/ambient-enable", label: "Enable Ambient Mode", icon: <FiVolume2 /> },
-            { to: "/commands/ambient-disable", label: "Disable Ambient Mode", icon: <FiVolumeX /> },
-            { to: "/commands/ambient-stop", label: "Stop Ambient Mode", icon: <FiPower /> },
-            { to: "/commands/airplane-enable", label: "Enable Airplane Mode", icon: <FiAirplay /> },
-            { to: "/commands/gps-disable", label: "Disable GPS", icon: <FiNavigation /> }
-          ]
-        }
+        ...(isAdmin() ? [{ 
+          to: "/device-settings", 
+          label: "Device Settings", 
+          icon: <FiSliders />, 
+          description: "Send commands to devices" 
+        }] : []),
+        // Hidden: Device's Settings submenu
+        // { 
+        //   key: "device-settings-submenu",
+        //   label: "Device's Settings",
+        //   icon: <FiSettings />,
+        //   submenu: [
+        //     { to: "/commands/emergency-contacts", label: "Emergency Contacts", icon: <FiUsers /> },
+        //     { to: "/commands/stop-sos", label: "Stop SOS Mode", icon: <FiAlertOctagon /> },
+        //     { to: "/commands/query-normal", label: "Query Normal Status", icon: <FiCheckCircle /> },
+        //     { to: "/commands/query-device-settings", label: "Query Device Settings", icon: <FiInfo /> },
+        //     { to: "/commands/device-settings-config", label: "Device Settings", icon: <FiSliders /> },
+        //     { to: "/commands/call-enable", label: "Enable Call", icon: <FiPhone /> },
+        //     { to: "/commands/call-disable", label: "Disable Call", icon: <FiPhoneOff /> },
+        //     { to: "/commands/led-on", label: "Turn LED On", icon: <FiZap /> },
+        //     { to: "/commands/led-off", label: "Turn LED Off", icon: <FiZapOff /> },
+        //     { to: "/commands/ambient-enable", label: "Enable Ambient Mode", icon: <FiVolume2 /> },
+        //     { to: "/commands/ambient-disable", label: "Disable Ambient Mode", icon: <FiVolumeX /> },
+        //     { to: "/commands/ambient-stop", label: "Stop Ambient Mode", icon: <FiPower /> },
+        //     { to: "/commands/airplane-enable", label: "Enable Airplane Mode", icon: <FiAirplay /> },
+        //     { to: "/commands/gps-disable", label: "Disable GPS", icon: <FiNavigation /> }
+        //   ]
+        // }
       ]
     },
-    ...(isAdmin() ? [{ 
-      to: "/device-settings", 
-      label: "Device Command", 
-      icon: <FiSliders />, 
-      colorScheme: "green", 
-      description: "Send commands to devices" 
-    }] : []),
     { 
       to: "/geofence", 
       label: "Geofence", 

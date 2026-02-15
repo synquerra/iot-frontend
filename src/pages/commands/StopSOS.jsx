@@ -8,6 +8,7 @@ import { useUserContext } from "../../contexts/UserContext";
 import { useDeviceFilter } from "../../hooks/useDeviceFilter";
 import { listDevicesFiltered } from "../../utils/deviceFiltered";
 import CommandHistory from "../../components/CommandHistory";
+import { getDeviceDisplayName } from "../../utils/deviceDisplay";
 
 export default function StopSOS() {
   const navigate = useNavigate();
@@ -151,7 +152,7 @@ export default function StopSOS() {
                     <option value="">Select a device...</option>
                     {filteredDevices.map((device) => (
                       <option key={device.imei} value={device.imei}>
-                        {device.imei}
+                        {getDeviceDisplayName(device)}
                       </option>
                     ))}
                   </select>

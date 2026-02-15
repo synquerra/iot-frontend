@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getAnalyticsByImei, getAnalyticsHealth, getAnalyticsUptime } from "../utils/analytics";
+import { getDeviceByTopic } from "../utils/device";
+import { getDeviceDisplayNameWithMaskedImei } from "../utils/deviceDisplay";
 import { Card } from "../design-system/components";
 import { Button } from "../design-system/components";
 import { Loading } from "../design-system/components";
@@ -477,6 +479,7 @@ export default function DeviceDetails() {
   const [loading, setLoading] = useState(true);
   const [health, setHealth] = useState(null);
   const [uptime, setUptime] = useState(null);
+  const [device, setDevice] = useState(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
@@ -530,6 +533,16 @@ export default function DeviceDetails() {
 
         const uptimeData = await getAnalyticsUptime(imei);
         setUptime(uptimeData);
+        
+        // Fetch device info to get studentName
+        if (byImei.length > 0 && byImei[0].topic) {
+          try {
+            const deviceData = await getDeviceByTopic(byImei[0].topic);
+            setDevice(deviceData);
+          } catch (err) {
+            console.warn('Failed to fetch device info:', err);
+          }
+        }
         
         const normalized = byImei.map((p) => {
           const serverTS =
@@ -732,7 +745,9 @@ export default function DeviceDetails() {
             Device Telemetry
           </h1>
           <p className="text-sm text-gray-600 mt-1">
-            Real-time monitoring and analytics for device <span className="font-mono font-semibold text-gray-900">{imei}</span>
+            Real-time monitoring and analytics for device <span className="font-mono font-semibold text-gray-900">
+              {device ? getDeviceDisplayNameWithMaskedImei(device) : imei}
+            </span>
           </p>
         </div>
       </div>
@@ -762,7 +777,17 @@ export default function DeviceDetails() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* GPS & Speed Small Box */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="p-4 bg-gradient-to-br from-[#28a745] to-[#20c997]">
+          <div className={cn(
+            "p-4 bg-gradient-to-br",
+            (() => {
+              const speed = normal.speed;
+              const n = speed == null ? NaN : Number(speed);
+              if (isNaN(n)) return "from-gray-400 to-gray-500";
+              if (n > 70) return "from-[#dc3545] to-[#c82333]"; // Red - Overspeeding
+              if (n > 40) return "from-[#ffc107] to-[#ffca2c]"; // Yellow - Moderate
+              return "from-[#28a745] to-[#20c997]"; // Green - Normal
+            })()
+          )}>
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="text-white/90 text-sm font-medium mb-1">GPS & Speed</div>
@@ -774,9 +799,11 @@ export default function DeviceDetails() {
                     <div className={cn('w-2 h-2 rounded-full', getGpsStatus(normal).color)}></div>
                     <span className="text-white/80 text-xs">{getGpsStatus(normal).text}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className={cn('w-2 h-2 rounded-full', getSpeedStatus(normal).color)}></div>
-                    <span className="text-white/80 text-xs">{getSpeedStatus(normal).text}</span>
+                  <div className="text-white/70 text-xs">
+                    Status: {getSpeedStatus(normal).text}
+                  </div>
+                  <div className="text-white/70 text-xs">
+                    Tracking: Active
                   </div>
                 </div>
               </div>
@@ -792,7 +819,17 @@ export default function DeviceDetails() {
 
         {/* Battery Small Box */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="p-4 bg-gradient-to-br from-[#6f42c1] to-[#9561e2]">
+          <div className={cn(
+            "p-4 bg-gradient-to-br",
+            (() => {
+              const b = normal.battery;
+              const n = b == null ? NaN : Number(String(b).replace(/[^\d.-]/g, ""));
+              if (isNaN(n)) return "from-gray-400 to-gray-500";
+              if (n > 60) return "from-[#28a745] to-[#20c997]"; // Green
+              if (n > 30) return "from-[#ffc107] to-[#ffca2c]"; // Yellow
+              return "from-[#dc3545] to-[#c82333]"; // Red
+            })()
+          )}>
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="text-white/90 text-sm font-medium mb-1">Battery</div>
@@ -828,16 +865,34 @@ export default function DeviceDetails() {
 
         {/* Signal Small Box */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="p-4 bg-gradient-to-br from-[#ffc107] to-[#ffca2c]">
+          <div className={cn(
+            "p-4 bg-gradient-to-br",
+            (() => {
+              const s = normal.signal;
+              const n = s == null ? NaN : Number(s);
+              if (isNaN(n)) return "from-gray-400 to-gray-500";
+              if (n > 70) return "from-[#28a745] to-[#20c997]"; // Green
+              if (n > 40) return "from-[#ffc107] to-[#ffca2c]"; // Yellow
+              return "from-[#dc3545] to-[#c82333]"; // Red
+            })()
+          )}>
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="text-white/90 text-sm font-medium mb-1">Signal</div>
                 <div className="text-white text-2xl font-bold mb-2">
-                  {normal.signal != null && !isNaN(Number(normal.signal)) ? normal.signal : '-'}
+                  {normal.signal != null && !isNaN(Number(normal.signal)) ? `${normal.signal}%` : '-'}
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                  <span className="text-white/80 text-xs">Strength</span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                    <span className="text-white/80 text-xs">Strength</span>
+                  </div>
+                  <div className="text-white/70 text-xs">
+                    Network: Active
+                  </div>
+                  <div className="text-white/70 text-xs">
+                    Status: Connected
+                  </div>
                 </div>
               </div>
               <div className="text-white/30">
@@ -851,156 +906,158 @@ export default function DeviceDetails() {
         </div>
       </div>
 
-      {/* Latest Packet Information - AdminLTE White Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Latest Packet (Any Type) */}
-        <div className="bg-white rounded-lg shadow-md p-4">
-          <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
-            <div className={cn(
-              'w-3 h-3 rounded-full',
-              latest.packetType === 'N' ? 'bg-[#28a745]' : 
-              (() => {
-                const alertCode = String(latest.alert || '').toUpperCase();
-                if (alertCode.startsWith('A')) return 'bg-[#ffc107]';
-                if (alertCode.startsWith('E')) return 'bg-[#dc3545]';
-                return latest.packetType === 'A' ? 'bg-[#ffc107]' : 'bg-[#dc3545]';
-              })()
-            )}></div>
-            {(() => {
-              if (latest.packetType === 'N') {
-                return 'Latest Normal Packet';
-              } else if (latest.alert) {
-                // Auto-detect packet type from alert code if needed
-                let detectedPacketType = latest.packetType;
-                const alertCode = String(latest.alert).toUpperCase();
-                   
-                // If alert code starts with E, it's an error
-                if (alertCode.startsWith('E')) {
-                  detectedPacketType = 'E';
-                }
-                // If alert code starts with A, it's an alert
-                else if (alertCode.startsWith('A')) {
-                  detectedPacketType = 'A';
-                }
-                
-                const mapped = mapAlertErrorCode(latest.alert, detectedPacketType);
-                return mapped.description;
-              } else {
-                return `Latest ${latest.packetType === 'A' ? 'Alert' : 'Error'} Packet`;
-              }
-            })()}
-          </h3>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between items-center py-2 border-b border-gray-200">
-              <span className="text-gray-600">Device IMEI</span>
-              <span className="font-mono text-gray-800 bg-gray-100 px-2 py-1 rounded text-xs">{latest.imei}</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-gray-200">
-              <span className="text-gray-600">Timestamp</span>
-              <span className="text-gray-800 text-xs">{formatIST(latest.serverTimestampISO || latest.deviceRawTimestamp)}</span>
-            </div>
-            <div className="flex justify-between items-center py-2">
-              <span className="text-gray-600">Received</span>
-              <span className="text-gray-800 font-medium">{timeAgo(latest.serverTimestampISO || latest.deviceRawTimestamp)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Latest Normal Packet Data - Enhanced Device Status */}
-        <div className="bg-white rounded-lg shadow-md p-4">
-          <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
-            <i className="fas fa-heartbeat text-[#28a745]"></i>
-            Device Status
-          </h3>
-          
-          {/* Status Badges - More Prominent */}
-          <div className="grid grid-cols-3 gap-3 mb-4 pb-4 border-b border-gray-200">
-            <div className="text-center">
-              <div className={cn('w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center', getGpsStatus(normal).color)}>
-                <i className="fas fa-satellite text-white text-lg"></i>
-              </div>
-              <div className="text-xs font-semibold text-gray-800">{getGpsStatus(normal).text}</div>
-              <div className="text-xs text-gray-500">GPS</div>
-            </div>
-            <div className="text-center">
-              <div className={cn('w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center', getSpeedStatus(normal).color)}>
-                <i className="fas fa-tachometer-alt text-white text-lg"></i>
-              </div>
-              <div className="text-xs font-semibold text-gray-800">{getSpeedStatus(normal).text}</div>
-              <div className="text-xs text-gray-500">Speed</div>
-            </div>
-            <div className="text-center">
-              <div className={cn('w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center', getBatteryStatus(normal).color)}>
-                <i className="fas fa-battery-three-quarters text-white text-lg"></i>
-              </div>
-              <div className="text-xs font-semibold text-gray-800">{getBatteryStatus(normal).text}</div>
-              <div className="text-xs text-gray-500">Battery</div>
-            </div>
-          </div>
-          
-          {/* Device Details */}
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-gray-600" title="Geofence ID when device enters any geofence">GEO ID</span>
-                <span className="text-gray-800 font-medium">{normal.geoid ?? "-"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600" title="View device location on Google Maps">View on Map</span>
-                {(() => {
-                  const lat = Number(normal.latitude);
-                  const lon = Number(normal.longitude);
-                  const hasValidCoords = lat && lon && !isNaN(lat) && !isNaN(lon);
-                  
-                  return hasValidCoords ? (
-                    <a
-                      href={`https://www.google.com/maps?q=${lat},${lon}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#007bff] hover:text-[#0056b3] text-xs underline flex items-center gap-1"
-                    >
-                      <i className="fas fa-map-marker-alt"></i>
-                      Open Maps
-                    </a>
-                  ) : (
-                    <span className="text-gray-400 text-xs">No location</span>
-                  );
-                })()}
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600" title="Current speed in kilometers per hour">Speed</span>
-                <span className="text-gray-800 font-medium">{normal.speed ?? "-"} km/h</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600" title="Current signal strength percentage">Signal</span>
-                <span className="text-gray-800 font-medium">{normal.signal ?? "-"}%</span>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-gray-600" title="Time interval for normal packet transmission">Interval</span>
-                <span className="text-gray-800 font-medium">-</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600" title="Current device temperature in Celsius">Temperature</span>
-                <span className="text-gray-800 font-medium">{parseTemperature(normal.rawTemperature)}°C</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600" title="Current date and time from device">Timestamp</span>
-                <span className="text-gray-800 text-xs">{formatIST(normal.deviceTimestamp)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600" title="Current battery percentage">Battery</span>
-                <span className="text-gray-800 font-medium">{normal.battery ?? "-"}%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Tab Content */}
       {activeTab === "overview" && (
         <div className="space-y-6">
+
+          {/* Latest Packet Information - AdminLTE White Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Latest Packet (Any Type) */}
+            <div className="bg-white rounded-lg shadow-md p-4">
+              <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
+                <div className={cn(
+                  'w-3 h-3 rounded-full',
+                  latest.packetType === 'N' ? 'bg-[#28a745]' : 
+                  (() => {
+                    const alertCode = String(latest.alert || '').toUpperCase();
+                    if (alertCode.startsWith('A')) return 'bg-[#ffc107]';
+                    if (alertCode.startsWith('E')) return 'bg-[#dc3545]';
+                    return latest.packetType === 'A' ? 'bg-[#ffc107]' : 'bg-[#dc3545]';
+                  })()
+                )}></div>
+                {(() => {
+                  if (latest.packetType === 'N') {
+                    return 'Latest Normal Packet';
+                  } else if (latest.alert) {
+                    // Auto-detect packet type from alert code if needed
+                    let detectedPacketType = latest.packetType;
+                    const alertCode = String(latest.alert).toUpperCase();
+                       
+                    // If alert code starts with E, it's an error
+                    if (alertCode.startsWith('E')) {
+                      detectedPacketType = 'E';
+                    }
+                    // If alert code starts with A, it's an alert
+                    else if (alertCode.startsWith('A')) {
+                      detectedPacketType = 'A';
+                    }
+                    
+                    const mapped = mapAlertErrorCode(latest.alert, detectedPacketType);
+                    return mapped.description;
+                  } else {
+                    return `Latest ${latest.packetType === 'A' ? 'Alert' : 'Error'} Packet`;
+                  }
+                })()}
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="text-gray-600">Device</span>
+                  <span className="font-mono text-gray-800 bg-gray-100 px-2 py-1 rounded text-xs">
+                    {device ? getDeviceDisplayNameWithMaskedImei(device) : latest.imei}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="text-gray-600">Timestamp</span>
+                  <span className="text-gray-800 text-xs">{formatIST(latest.serverTimestampISO || latest.deviceRawTimestamp)}</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-600">Received</span>
+                  <span className="text-gray-800 font-medium">{timeAgo(latest.serverTimestampISO || latest.deviceRawTimestamp)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Latest Normal Packet Data - Enhanced Device Status */}
+            <div className="bg-white rounded-lg shadow-md p-4">
+              <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
+                <i className="fas fa-heartbeat text-[#28a745]"></i>
+                Device Status
+              </h3>
+              
+              {/* Status Badges - More Prominent */}
+              <div className="grid grid-cols-3 gap-3 mb-4 pb-4 border-b border-gray-200">
+                <div className="text-center">
+                  <div className={cn('w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center', getGpsStatus(normal).color)}>
+                    <i className="fas fa-satellite text-white text-lg"></i>
+                  </div>
+                  <div className="text-xs font-semibold text-gray-800">{getGpsStatus(normal).text}</div>
+                  <div className="text-xs text-gray-500">GPS</div>
+                </div>
+                <div className="text-center">
+                  <div className={cn('w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center', getSpeedStatus(normal).color)}>
+                    <i className="fas fa-tachometer-alt text-white text-lg"></i>
+                  </div>
+                  <div className="text-xs font-semibold text-gray-800">{getSpeedStatus(normal).text}</div>
+                  <div className="text-xs text-gray-500">Speed</div>
+                </div>
+                <div className="text-center">
+                  <div className={cn('w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center', getBatteryStatus(normal).color)}>
+                    <i className="fas fa-battery-three-quarters text-white text-lg"></i>
+                  </div>
+                  <div className="text-xs font-semibold text-gray-800">{getBatteryStatus(normal).text}</div>
+                  <div className="text-xs text-gray-500">Battery</div>
+                </div>
+              </div>
+              
+              {/* Device Details */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600" title="Geofence ID when device enters any geofence">GEO ID</span>
+                    <span className="text-gray-800 font-medium">{normal.geoid ?? "-"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600" title="View device location on Google Maps">View on Map</span>
+                    {(() => {
+                      const lat = Number(normal.latitude);
+                      const lon = Number(normal.longitude);
+                      const hasValidCoords = lat && lon && !isNaN(lat) && !isNaN(lon);
+                      
+                      return hasValidCoords ? (
+                        <a
+                          href={`https://www.google.com/maps?q=${lat},${lon}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#007bff] hover:text-[#0056b3] text-xs underline flex items-center gap-1"
+                        >
+                          <i className="fas fa-map-marker-alt"></i>
+                          Open Maps
+                        </a>
+                      ) : (
+                        <span className="text-gray-400 text-xs">No location</span>
+                      );
+                    })()}
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600" title="Current speed in kilometers per hour">Speed</span>
+                    <span className="text-gray-800 font-medium">{normal.speed ?? "-"} km/h</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600" title="Current signal strength percentage">Signal</span>
+                    <span className="text-gray-800 font-medium">{normal.signal ?? "-"}%</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600" title="Time interval for normal packet transmission">Interval</span>
+                    <span className="text-gray-800 font-medium">-</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600" title="Current device temperature in Celsius">Temperature</span>
+                    <span className="text-gray-800 font-medium">{parseTemperature(normal.rawTemperature)}°C</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600" title="Current date and time from device">Timestamp</span>
+                    <span className="text-gray-800 text-xs">{formatIST(normal.deviceTimestamp)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600" title="Current battery percentage">Battery</span>
+                    <span className="text-gray-800 font-medium">{normal.battery ?? "-"}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Device Information - AdminLTE White Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1011,8 +1068,10 @@ export default function DeviceDetails() {
               </h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="text-gray-600">IMEI</span>
-                  <span className="font-mono text-gray-800 bg-gray-100 px-2 py-1 rounded text-xs">{latest.imei}</span>
+                  <span className="text-gray-600">Device</span>
+                  <span className="font-mono text-gray-800 bg-gray-100 px-2 py-1 rounded text-xs">
+                    {device ? getDeviceDisplayNameWithMaskedImei(device) : latest.imei}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
                   <span className="text-gray-600">GEO ID</span>

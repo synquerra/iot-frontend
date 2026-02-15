@@ -7,6 +7,7 @@ import { Notification } from "../../components/Notification";
 import { useUserContext } from "../../contexts/UserContext";
 import { useDeviceFilter } from "../../hooks/useDeviceFilter";
 import { listDevicesFiltered } from "../../utils/deviceFiltered";
+import { getDeviceDisplayName } from "../../utils/deviceDisplay";
 
 export default function SimpleCommandPage({ 
   commandType, 
@@ -214,7 +215,7 @@ export default function SimpleCommandPage({
                     <option value="">Select a device...</option>
                     {filteredDevices.map((device) => (
                       <option key={device.imei} value={device.imei}>
-                        {device.imei}
+                        {getDeviceDisplayName(device)}
                       </option>
                     ))}
                   </select>

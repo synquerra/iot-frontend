@@ -12,6 +12,7 @@ import GeofenceMap from "../components/GeofenceMap";
 import GeofenceDeleteDialog from "../components/GeofenceDeleteDialog";
 import ValidationError from "../components/ValidationError";
 import ValidationWarning from "../components/ValidationWarning";
+import { getDeviceDisplayName, getDeviceDisplayNameWithMaskedImei } from "../utils/deviceDisplay";
 
 export default function Geofence() {
   const { imeis, isAdmin } = useUserContext();
@@ -386,7 +387,7 @@ export default function Geofence() {
                   </option>
                   {filteredDevices.map((device) => (
                     <option key={device.imei} value={device.imei} style={{ background: 'white', color: '#1f2937' }}>
-                      {device.imei}
+                      {getDeviceDisplayNameWithMaskedImei(device)}
                     </option>
                   ))}
                 </select>
@@ -584,7 +585,10 @@ export default function Geofence() {
                     // If device is already selected, show it as disabled
                     <input
                       type="text"
-                      value={imei}
+                      value={(() => {
+                        const device = filteredDevices.find(d => d.imei === imei);
+                        return device ? getDeviceDisplayNameWithMaskedImei(device) : imei;
+                      })()}
                       readOnly
                       disabled
                       className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-gray-100 text-gray-800 font-medium cursor-not-allowed"
@@ -602,7 +606,7 @@ export default function Geofence() {
                       </option>
                       {filteredDevices.map((device) => (
                         <option key={device.imei} value={device.imei} style={{ background: 'white', color: '#1f2937' }}>
-                          {device.imei}
+                          {getDeviceDisplayNameWithMaskedImei(device)}
                         </option>
                       ))}
                     </select>
@@ -610,7 +614,10 @@ export default function Geofence() {
                     // If no device selected and filter shouldn't show (single device parent)
                     <input
                       type="text"
-                      value={imei}
+                      value={(() => {
+                        const device = filteredDevices.find(d => d.imei === imei);
+                        return device ? getDeviceDisplayNameWithMaskedImei(device) : imei;
+                      })()}
                       readOnly
                       disabled
                       className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-gray-100 text-gray-800 font-medium cursor-not-allowed"

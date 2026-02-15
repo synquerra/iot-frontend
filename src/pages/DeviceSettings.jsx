@@ -11,6 +11,7 @@ import { Notification } from "../components/Notification";
 import { useUserContext } from "../contexts/UserContext";
 import { useDeviceFilter } from "../hooks/useDeviceFilter";
 import { listDevicesFiltered } from "../utils/deviceFiltered";
+import { getDeviceDisplayName, getDeviceDisplayNameWithMaskedImei } from "../utils/deviceDisplay";
 
 export default function DeviceSettings() {
   const { imei: routeImei } = useParams();
@@ -426,16 +427,19 @@ export default function DeviceSettings() {
                     <option value="" style={{ background: 'white', color: '#1f2937' }}>Select a device...</option>
                     {filteredDevices.map((device) => (
                       <option key={device.imei} value={device.imei} style={{ background: 'white', color: '#1f2937' }}>
-                        {device.imei}
+                        {getDeviceDisplayNameWithMaskedImei(device)}
                       </option>
                     ))}
                   </select>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-500 text-sm">IMEI:</span>
+                  <span className="text-gray-500 text-sm">Device:</span>
                   <span className="font-mono text-gray-800 font-semibold bg-gray-100 px-3 py-1 rounded">
-                    {imei || "N/A"}
+                    {(() => {
+                      const device = devices.find(d => d.imei === imei);
+                      return device ? getDeviceDisplayNameWithMaskedImei(device) : imei || "N/A";
+                    })()}
                   </span>
                 </div>
               )}
@@ -443,8 +447,13 @@ export default function DeviceSettings() {
             
             <div className="flex items-center gap-6">
               <div className="text-right">
-                <div className="text-gray-500 text-sm">IMEI Number</div>
-                <div className="text-gray-800 text-lg font-mono font-bold">{imei || "N/A"}</div>
+                <div className="text-gray-500 text-sm">Device</div>
+                <div className="text-gray-800 text-lg font-semibold">
+                  {(() => {
+                    const device = devices.find(d => d.imei === imei);
+                    return device ? getDeviceDisplayNameWithMaskedImei(device) : imei || "N/A";
+                  })()}
+                </div>
                 <div className="text-gray-500 text-xs">Device Identifier</div>
               </div>
               <div className="w-px h-16 bg-gray-300"></div>

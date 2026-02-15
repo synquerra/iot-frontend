@@ -58,6 +58,7 @@ import {
   EnhancedAnalyticsAPI
 } from "../utils/enhancedAnalytics";
 import { listDevicesFiltered } from "../utils/deviceFiltered";
+import { getDeviceDisplayNameWithMaskedImei } from "../utils/deviceDisplay";
 
 // Speed analytics utilities
 import {
@@ -873,7 +874,7 @@ export default function Dashboard() {
                 <optgroup label="Individual Devices">
                   {filteredDevices.map((d) => (
                     <option key={d.imei} value={d.imei}>
-                      📱 {d.topic || d.imei} ({d.imei.slice(-6)})
+                      📱 {getDeviceDisplayNameWithMaskedImei(d)}
                     </option>
                   ))}
                 </optgroup>
@@ -898,7 +899,12 @@ export default function Dashboard() {
             <div className="mt-3 p-3 bg-blue-50 border-l-4 border-[#007bff] rounded">
               <p className="text-sm text-gray-700">
                 <i className="fas fa-info-circle text-[#007bff] mr-2"></i>
-                Showing data for device: <span className="font-mono font-semibold">{selectedDeviceFilter}</span>
+                Showing data for device: <span className="font-semibold">{
+                  (() => {
+                    const device = filteredDevices.find(d => d.imei === selectedDeviceFilter);
+                    return device ? getDeviceDisplayNameWithMaskedImei(device) : selectedDeviceFilter;
+                  })()
+                }</span>
               </p>
             </div>
           )}
@@ -999,7 +1005,7 @@ export default function Dashboard() {
                   <option value="">Select Device</option>
                   {filteredDevices.map((d) => (
                     <option key={d.imei} value={d.imei}>
-                      {d.imei}
+                      {getDeviceDisplayNameWithMaskedImei(d)}
                     </option>
                   ))}
                 </select>
@@ -1124,64 +1130,64 @@ export default function Dashboard() {
             <div className="p-4 space-y-3">
               {/* Total Distance */}
               <div 
-                className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded border-l-4 border-[#007bff]"
+                className="flex items-center p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded border-l-4 border-[#007bff]"
                 title="Total Distance: Calculated by summing all speed values from analytics records and multiplying by 0.016 (assumes speed in km/h and 1-minute intervals). Formula: Σ(speed) × 0.016 km"
               >
-                <div>
+                <div className="flex-1 pr-2 overflow-hidden">
                   <div className="text-xs text-gray-600 font-medium">Total Distance</div>
-                  <div className="text-xl font-bold text-gray-900">
+                  <div className="text-xl font-bold text-gray-900 truncate">
                     {(filteredAnalytics.reduce((sum, a) => sum + (Number(a.speed) || 0), 0) * 0.016).toFixed(1)} km
                   </div>
                   <div className="text-xs text-gray-500 mt-0.5">Σ(speed) × 0.016</div>
                 </div>
-                <div className="text-3xl">🛣️</div>
+                <div className="w-8 h-8 flex items-center justify-center text-lg flex-shrink-0">🛣️</div>
               </div>
 
               {/* Active Now */}
               <div 
-                className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-green-100 rounded border-l-4 border-[#28a745]"
+                className="flex items-center p-3 bg-gradient-to-r from-green-50 to-green-100 rounded border-l-4 border-[#28a745]"
                 title="Active Now: Devices with reporting interval ≤ 30 seconds. These devices are sending data frequently and are considered actively transmitting."
               >
-                <div>
+                <div className="flex-1 pr-2 overflow-hidden">
                   <div className="text-xs text-gray-600 font-medium">Active Now</div>
-                  <div className="text-xl font-bold text-gray-900">
+                  <div className="text-xl font-bold text-gray-900 truncate">
                     {filteredDevices.filter(d => Number(d.interval) <= 30).length}
                   </div>
                   <div className="text-xs text-gray-500 mt-0.5">Interval ≤ 30s</div>
                 </div>
-                <div className="text-3xl">✅</div>
+                <div className="w-8 h-8 flex items-center justify-center text-lg flex-shrink-0">✅</div>
               </div>
 
               {/* Data Points Today */}
               <div 
-                className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-purple-100 rounded border-l-4 border-[#6f42c1]"
+                className="flex items-center p-3 bg-gradient-to-r from-purple-50 to-purple-100 rounded border-l-4 border-[#6f42c1]"
                 title="Data Points: Total number of analytics records (packet_N, packet_A, packet_E) received from your devices. Each record represents one data transmission."
               >
-                <div>
+                <div className="flex-1 pr-2 overflow-hidden">
                   <div className="text-xs text-gray-600 font-medium">Data Points</div>
-                  <div className="text-xl font-bold text-gray-900">
+                  <div className="text-xl font-bold text-gray-900 truncate">
                     {filteredAnalytics.length.toLocaleString()}
                   </div>
                   <div className="text-xs text-gray-500 mt-0.5">Total records</div>
                 </div>
-                <div className="text-3xl">📊</div>
+                <div className="w-8 h-8 flex items-center justify-center text-lg flex-shrink-0">📊</div>
               </div>
 
               {/* Avg Response Time */}
               <div 
-                className="flex items-center justify-between p-3 bg-gradient-to-r from-orange-50 to-orange-100 rounded border-l-4 border-[#fd7e14]"
+                className="flex items-center p-3 bg-gradient-to-r from-orange-50 to-orange-100 rounded border-l-4 border-[#fd7e14]"
                 title="Avg Interval: Average reporting interval across all devices. Calculated as: Σ(device intervals) ÷ number of devices. Lower values indicate more frequent data transmission."
               >
-                <div>
+                <div className="flex-1 pr-2 overflow-hidden">
                   <div className="text-xs text-gray-600 font-medium">Avg Interval</div>
-                  <div className="text-xl font-bold text-gray-900">
+                  <div className="text-xl font-bold text-gray-900 truncate">
                     {filteredDevices.length > 0 
                       ? Math.round(filteredDevices.reduce((sum, d) => sum + Number(d.interval), 0) / filteredDevices.length)
                       : 0}s
                   </div>
                   <div className="text-xs text-gray-500 mt-0.5">Mean of all devices</div>
                 </div>
-                <div className="text-3xl">⏱️</div>
+                <div className="w-8 h-8 flex items-center justify-center text-lg flex-shrink-0">⏱️</div>
               </div>
             </div>
           </div>
@@ -1216,7 +1222,7 @@ export default function Dashboard() {
                             #{idx + 1}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-xs font-mono text-gray-900 truncate">...{device.imei.slice(-8)}</div>
+                            <div className="text-xs font-semibold text-gray-900 truncate">{getDeviceDisplayNameWithMaskedImei(device)}</div>
                             <div className="text-xs text-gray-500">{device.topic || 'Unknown'}</div>
                           </div>
                         </div>
@@ -1366,15 +1372,9 @@ export default function Dashboard() {
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th 
                   className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
-                  title="Topic: Device identifier or friendly name assigned to the device"
+                  title="Device Name with masked IMEI for privacy"
                 >
-                  Topic
-                </th>
-                <th 
-                  className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
-                  title="Device IMEI: International Mobile Equipment Identity - unique 15-digit identifier for the device"
-                >
-                  Device IMEI
+                  Device
                 </th>
                 <th 
                   className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
@@ -1446,8 +1446,7 @@ export default function Dashboard() {
                   
                   return (
                     <tr key={device.imei || idx} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-sm text-gray-700">{device.topic}</td>
-                      <td className="px-4 py-3 text-sm font-mono text-gray-900">{device.imei}</td>
+                      <td className="px-4 py-3 text-sm font-semibold text-gray-900">{getDeviceDisplayNameWithMaskedImei(device)}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-gray-700 font-medium">{device.interval}s</span>

@@ -8,6 +8,7 @@ import { parseTemperature } from "../utils/telemetryTransformers";
 import { cn } from "../design-system/utils/cn";
 import { useDeviceFilter } from "../hooks/useDeviceFilter";
 import { useUserContext } from "../contexts/UserContext";
+import { getDeviceDisplayName, maskImei, getDeviceDisplayNameWithMaskedImei } from "../utils/deviceDisplay";
 
 export default function Devices() {
   const [devices, setDevices] = useState([]);
@@ -118,6 +119,8 @@ export default function Devices() {
               return {
                 topic: device.topic || "-",
                 imei: device.imei || "-",
+                studentName: device.studentName || null,
+                studentId: device.studentId || null,
                 temperature: temperature,
                 geoid: device.geoid || "-",
                 createdAt: device.createdAt || "-",
@@ -142,6 +145,8 @@ export default function Devices() {
               return {
                 topic: device.topic || "-",
                 imei: device.imei || "-",
+                studentName: device.studentName || null,
+                studentId: device.studentId || null,
                 temperature: null,
                 geoid: device.geoid || "-",
                 createdAt: device.createdAt || "-",
@@ -180,8 +185,10 @@ export default function Devices() {
 
   // Filter devices based on search and status
   const filteredDevices = devices.filter(device => {
+    const displayName = getDeviceDisplayNameWithMaskedImei(device);
     const matchesSearch = device.imei.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         device.topic.toLowerCase().includes(searchTerm.toLowerCase());
+                         device.topic.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         displayName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === "all" || device.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
@@ -631,8 +638,7 @@ export default function Devices() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Topic</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">IMEI</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Device</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Battery</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Signal</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Temperature</th>
@@ -642,13 +648,13 @@ export default function Devices() {
             <tbody className="bg-white">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="px-4 py-12 text-center">
+                  <td colSpan="6" className="px-4 py-12 text-center">
                     <Loading type="spinner" size="md" />
                   </td>
                 </tr>
               ) : filteredDevices.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-4 py-12 text-center text-gray-500 text-sm">
+                  <td colSpan="6" className="px-4 py-12 text-center text-gray-500 text-sm">
                     {searchTerm || filterStatus !== 'all' 
                       ? "No devices match your filters" 
                       : "No devices found"}
@@ -675,18 +681,10 @@ export default function Devices() {
                       </span>
                     </td>
                     
-                    {/* Topic */}
+                    {/* Device Name / IMEI */}
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-[#17a2b8] rounded-full"></div>
-                        <span className="font-semibold text-gray-900 text-sm">{device.topic}</span>
-                      </div>
-                    </td>
-                    
-                    {/* IMEI */}
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-xs text-gray-700 bg-gray-100 px-2 py-1 rounded">
-                        {device.imei}
+                      <span className="font-semibold text-sm text-gray-900">
+                        {getDeviceDisplayNameWithMaskedImei(device)}
                       </span>
                     </td>
                     
