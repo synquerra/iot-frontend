@@ -480,54 +480,105 @@ export default function Devices() {
           
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between border-t border-gray-200 pt-4">
-              <div className="text-sm text-gray-600">
-                Showing {startIndex + 1} to {Math.min(endIndex, allIncidents.length)} of {allIncidents.length} incidents
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className={cn(
-                    'px-3 py-1 rounded text-sm font-medium',
-                    currentPage === 1
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-blue-500 text-white hover:bg-blue-600'
-                  )}
-                >
-                  Previous
-                </button>
-                
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={cn(
-                        'w-8 h-8 rounded text-sm font-medium',
-                        currentPage === page
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      )}
-                    >
-                      {page}
-                    </button>
-                  ))}
+            <div className="mt-4 border-t border-gray-200 pt-4">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="text-sm text-gray-600 order-2 sm:order-1">
+                  Showing {startIndex + 1} to {Math.min(endIndex, allIncidents.length)} of {allIncidents.length} incidents
                 </div>
                 
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className={cn(
-                    'px-3 py-1 rounded text-sm font-medium',
-                    currentPage === totalPages
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-blue-500 text-white hover:bg-blue-600'
-                  )}
-                >
-                  Next
-                </button>
+                <div className="flex items-center gap-2 order-1 sm:order-2 flex-wrap justify-center">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className={cn(
+                      'px-3 py-1 rounded text-sm font-medium',
+                      currentPage === 1
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'bg-blue-500 text-white hover:bg-blue-600'
+                    )}
+                  >
+                    Previous
+                  </button>
+                  
+                  <div className="flex items-center gap-1 flex-wrap justify-center">
+                    {(() => {
+                      const maxVisiblePages = 5;
+                      let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+                      let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+                      
+                      if (endPage - startPage < maxVisiblePages - 1) {
+                        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                      }
+                      
+                      const pages = [];
+                      
+                      // First page
+                      if (startPage > 1) {
+                        pages.push(
+                          <button
+                            key={1}
+                            onClick={() => setCurrentPage(1)}
+                            className="w-8 h-8 rounded text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          >
+                            1
+                          </button>
+                        );
+                        if (startPage > 2) {
+                          pages.push(<span key="start-ellipsis" className="px-2 text-gray-500">...</span>);
+                        }
+                      }
+                      
+                      // Visible pages
+                      for (let i = startPage; i <= endPage; i++) {
+                        pages.push(
+                          <button
+                            key={i}
+                            onClick={() => setCurrentPage(i)}
+                            className={cn(
+                              'w-8 h-8 rounded text-sm font-medium',
+                              currentPage === i
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            )}
+                          >
+                            {i}
+                          </button>
+                        );
+                      }
+                      
+                      // Last page
+                      if (endPage < totalPages) {
+                        if (endPage < totalPages - 1) {
+                          pages.push(<span key="end-ellipsis" className="px-2 text-gray-500">...</span>);
+                        }
+                        pages.push(
+                          <button
+                            key={totalPages}
+                            onClick={() => setCurrentPage(totalPages)}
+                            className="w-8 h-8 rounded text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          >
+                            {totalPages}
+                          </button>
+                        );
+                      }
+                      
+                      return pages;
+                    })()}
+                  </div>
+                  
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className={cn(
+                      'px-3 py-1 rounded text-sm font-medium',
+                      currentPage === totalPages
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'bg-blue-500 text-white hover:bg-blue-600'
+                    )}
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -575,8 +626,8 @@ export default function Devices() {
       totalSosIncidents,
       overspeed: devices.filter(d => d.hasOverspeed).length,
       totalOverspeedIncidents,
-      anomaly: devices.filter(d => d.isHanged || d.hasTampered).length,
-      totalAnomalyIncidents: devices.filter(d => d.isHanged).length + totalTamperedIncidents, // Hanged count + tampered incidents
+      anomaly: 0,
+      totalAnomalyIncidents: 0,
       restrictedEntry: 0,
       totalRestrictedEntryIncidents: 0,
       
@@ -963,129 +1014,132 @@ export default function Devices() {
         </div>
       </div>
 
-      {/* Tampered Devices Alert */}
-      {renderIncidentTable({
-        title: 'Tampered Incidents History',
-        showAlert: showTamperedAlert,
-        setShowAlert: setShowTamperedAlert,
-        devices: devices,
-        filterFn: (d) => d.hasTampered,
-        getIncidentsFn: (device) => device.tamperedPackets || [],
-        icon: 'shield-alt'
-      })}
+      {/* Incident Tables Section - Wrapped in proper container */}
+      <div className="space-y-4">
+        {/* Tampered Devices Alert */}
+        {renderIncidentTable({
+          title: 'Tampered Incidents History',
+          showAlert: showTamperedAlert,
+          setShowAlert: setShowTamperedAlert,
+          devices: devices,
+          filterFn: (d) => d.hasTampered,
+          getIncidentsFn: (device) => device.tamperedPackets || [],
+          icon: 'shield-alt'
+        })}
 
-      {/* Inactive Devices Alert */}
-      {stats.inactive > 0 && renderIncidentTable({
-        title: 'Inactive Devices History',
-        showAlert: showInactiveAlert,
-        setShowAlert: setShowInactiveAlert,
-        devices: devices,
-        filterFn: (d) => d.status === 'inactive',
-        getIncidentsFn: (device) => [{
-          timestamp: device.lastSeen,
-          alert: 'INACTIVE',
-          latitude: null,
-          longitude: null,
-          battery: device.batteryLevel,
-          signal: device.signalStrength
-        }],
-        icon: 'power-off'
-      })}
+        {/* Inactive Devices Alert */}
+        {stats.inactive > 0 && renderIncidentTable({
+          title: 'Inactive Devices History',
+          showAlert: showInactiveAlert,
+          setShowAlert: setShowInactiveAlert,
+          devices: devices,
+          filterFn: (d) => d.status === 'inactive',
+          getIncidentsFn: (device) => [{
+            timestamp: device.lastSeen,
+            alert: 'INACTIVE',
+            latitude: null,
+            longitude: null,
+            battery: device.batteryLevel,
+            signal: device.signalStrength
+          }],
+          icon: 'power-off'
+        })}
 
-      {/* Hanged Devices Alert */}
-      {stats.hanged > 0 && renderIncidentTable({
-        title: 'Hanged Devices History',
-        showAlert: showHangedAlert,
-        setShowAlert: setShowHangedAlert,
-        devices: devices,
-        filterFn: (d) => d.isHanged,
-        getIncidentsFn: (device) => [{
-          timestamp: device.lastSeen,
-          alert: 'HANGED',
-          latitude: null,
-          longitude: null,
-          battery: device.batteryLevel,
-          signal: device.signalStrength
-        }],
-        icon: 'times-circle'
-      })}
+        {/* Hanged Devices Alert */}
+        {stats.hanged > 0 && renderIncidentTable({
+          title: 'Hanged Devices History',
+          showAlert: showHangedAlert,
+          setShowAlert: setShowHangedAlert,
+          devices: devices,
+          filterFn: (d) => d.isHanged,
+          getIncidentsFn: (device) => [{
+            timestamp: device.lastSeen,
+            alert: 'HANGED',
+            latitude: null,
+            longitude: null,
+            battery: device.batteryLevel,
+            signal: device.signalStrength
+          }],
+          icon: 'times-circle'
+        })}
 
-      {/* High Temp Alert */}
-      {stats.highTemp > 0 && renderIncidentTable({
-        title: 'High Temperature Incidents',
-        showAlert: showHighTempAlert,
-        setShowAlert: setShowHighTempAlert,
-        devices: devices,
-        filterFn: (d) => d.hasHighTemp,
-        getIncidentsFn: (device) => device.highTempPackets || [],
-        icon: 'thermometer-full'
-      })}
+        {/* High Temp Alert */}
+        {stats.highTemp > 0 && renderIncidentTable({
+          title: 'High Temperature Incidents',
+          showAlert: showHighTempAlert,
+          setShowAlert: setShowHighTempAlert,
+          devices: devices,
+          filterFn: (d) => d.hasHighTemp,
+          getIncidentsFn: (device) => device.highTempPackets || [],
+          icon: 'thermometer-full'
+        })}
 
-      {/* SOS Alert */}
-      {stats.sos > 0 && renderIncidentTable({
-        title: 'SOS Incidents',
-        showAlert: showSosAlert,
-        setShowAlert: setShowSosAlert,
-        devices: devices,
-        filterFn: (d) => d.hasSOS,
-        getIncidentsFn: (device) => device.sosPackets || [],
-        icon: 'exclamation-circle'
-      })}
+        {/* SOS Alert */}
+        {stats.sos > 0 && renderIncidentTable({
+          title: 'SOS Incidents',
+          showAlert: showSosAlert,
+          setShowAlert: setShowSosAlert,
+          devices: devices,
+          filterFn: (d) => d.hasSOS,
+          getIncidentsFn: (device) => device.sosPackets || [],
+          icon: 'exclamation-circle'
+        })}
 
-      {/* Overspeed Alert */}
-      {stats.overspeed > 0 && renderIncidentTable({
-        title: 'Overspeed Incidents',
-        showAlert: showOverspeedAlert,
-        setShowAlert: setShowOverspeedAlert,
-        devices: devices,
-        filterFn: (d) => d.hasOverspeed,
-        getIncidentsFn: (device) => device.overspeedPackets || [],
-        icon: 'tachometer-alt'
-      })}
+        {/* Overspeed Alert */}
+        {stats.overspeed > 0 && renderIncidentTable({
+          title: 'Overspeed Incidents',
+          showAlert: showOverspeedAlert,
+          setShowAlert: setShowOverspeedAlert,
+          devices: devices,
+          filterFn: (d) => d.hasOverspeed,
+          getIncidentsFn: (device) => device.overspeedPackets || [],
+          icon: 'tachometer-alt'
+        })}
 
-      {/* SIM Issue Alert */}
-      {stats.simNotWorking > 0 && renderIncidentTable({
-        title: 'SIM Issue Incidents',
-        showAlert: showSimIssueAlert,
-        setShowAlert: setShowSimIssueAlert,
-        devices: devices,
-        filterFn: (d) => d.hasSimIssue,
-        getIncidentsFn: (device) => device.simIssuePackets || [],
-        icon: 'sim-card'
-      })}
+        {/* SIM Issue Alert */}
+        {stats.simNotWorking > 0 && renderIncidentTable({
+          title: 'SIM Issue Incidents',
+          showAlert: showSimIssueAlert,
+          setShowAlert: setShowSimIssueAlert,
+          devices: devices,
+          filterFn: (d) => d.hasSimIssue,
+          getIncidentsFn: (device) => device.simIssuePackets || [],
+          icon: 'sim-card'
+        })}
 
-      {/* Data Issue Alert */}
-      {stats.lowData > 0 && renderIncidentTable({
-        title: 'Data Issue Incidents',
-        showAlert: showDataIssueAlert,
-        setShowAlert: setShowDataIssueAlert,
-        devices: devices,
-        filterFn: (d) => d.hasDataIssue,
-        getIncidentsFn: (device) => device.dataIssuePackets || [],
-        icon: 'database'
-      })}
+        {/* Data Issue Alert */}
+        {stats.lowData > 0 && renderIncidentTable({
+          title: 'Data Issue Incidents',
+          showAlert: showDataIssueAlert,
+          setShowAlert: setShowDataIssueAlert,
+          devices: devices,
+          filterFn: (d) => d.hasDataIssue,
+          getIncidentsFn: (device) => device.dataIssuePackets || [],
+          icon: 'database'
+        })}
 
-      {/* GPS Issue Alert */}
-      {stats.gpsUplinkIssues > 0 && renderIncidentTable({
-        title: 'GPS Issue Incidents',
-        showAlert: showGpsIssueAlert,
-        setShowAlert: setShowGpsIssueAlert,
-        devices: devices,
-        filterFn: (d) => d.hasGpsIssue,
-        getIncidentsFn: (device) => device.gpsIssuePackets || [],
-        icon: 'satellite-dish'
-      })}
+        {/* GPS Issue Alert */}
+        {stats.gpsUplinkIssues > 0 && renderIncidentTable({
+          title: 'GPS Issue Incidents',
+          showAlert: showGpsIssueAlert,
+          setShowAlert: setShowGpsIssueAlert,
+          devices: devices,
+          filterFn: (d) => d.hasGpsIssue,
+          getIncidentsFn: (device) => device.gpsIssuePackets || [],
+          icon: 'satellite-dish'
+        })}
 
-      {/* Low Battery Alert */}
-      {stats.batteryHealth > 0 && renderIncidentTable({
-        title: 'Low Battery Incidents',
-        showAlert: showLowBatteryAlert,
-        setShowAlert: setShowLowBatteryAlert,
-        devices: devices,
-        filterFn: (d) => d.hasLowBattery,
-        getIncidentsFn: (device) => device.lowBatteryPackets || [],
-        icon: 'battery-quarter'
-      })}
+        {/* Low Battery Alert */}
+        {stats.batteryHealth > 0 && renderIncidentTable({
+          title: 'Low Battery Incidents',
+          showAlert: showLowBatteryAlert,
+          setShowAlert: setShowLowBatteryAlert,
+          devices: devices,
+          filterFn: (d) => d.hasLowBattery,
+          getIncidentsFn: (device) => device.lowBatteryPackets || [],
+          icon: 'battery-quarter'
+        })}
+      </div>
       {/* Search and Filters - AdminLTE Style - Only show for ADMIN or Parent with 2+ devices */}
       {shouldShowSearchFilters && (
         <div className="bg-white rounded-lg shadow-md">
