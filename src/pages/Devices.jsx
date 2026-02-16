@@ -30,6 +30,26 @@ export default function Devices() {
   const itemsPerPage = 5;
   const navigate = useNavigate();
   
+  // Card visibility state
+  const [visibleCards, setVisibleCards] = useState({
+    total: true,
+    active: true,
+    inactive: true,
+    hanged: true,
+    tampered: true,
+    highTemp: true,
+    sos: true,
+    overspeed: true,
+    anomaly: true,
+    restrictedEntry: true,
+    simNotWorking: true,
+    lowData: true,
+    gpsUplinkIssues: true,
+    batteryHealth: true,
+    ble: true,
+  });
+  const [showCardFilter, setShowCardFilter] = useState(false);
+  
   // User context for role-based logic
   const { isAdmin } = useUserContext();
   
@@ -724,9 +744,213 @@ export default function Devices() {
         </div>
       </div>
 
-      {/* AdminLTE v3 Small Boxes - Row 1: Main Stats */}
+      {/* Card Filter Section */}
+      <div className="bg-white rounded-lg shadow-md">
+        <div 
+          className="border-b border-gray-200 px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+          onClick={() => setShowCardFilter(!showCardFilter)}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <i className="fas fa-filter text-white text-lg"></i>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800">Card Visibility Filter</h3>
+              <p className="text-sm text-gray-600">
+                {Object.values(visibleCards).filter(Boolean).length} of {Object.keys(visibleCards).length} cards visible
+              </p>
+            </div>
+          </div>
+          <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+            <i className={`fas fa-chevron-${showCardFilter ? 'up' : 'down'}`}></i>
+            {showCardFilter ? 'Hide' : 'Show'} Filter
+          </button>
+        </div>
+        
+        {showCardFilter && (
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
+              <span className="text-sm font-medium text-gray-700">Select cards to display</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setVisibleCards(Object.keys(visibleCards).reduce((acc, key) => ({ ...acc, [key]: true }), {}))}
+                  className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium transition-colors"
+                >
+                  <i className="fas fa-check-double mr-1"></i>
+                  Select All
+                </button>
+                <button
+                  onClick={() => setVisibleCards(Object.keys(visibleCards).reduce((acc, key) => ({ ...acc, [key]: false }), {}))}
+                  className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition-colors"
+                >
+                  <i className="fas fa-times mr-1"></i>
+                  Deselect All
+                </button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              {/* Row 1 Cards */}
+              <label className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={visibleCards.total}
+                  onChange={(e) => setVisibleCards({ ...visibleCards, total: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Total Devices</span>
+              </label>
+              
+              <label className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={visibleCards.active}
+                  onChange={(e) => setVisibleCards({ ...visibleCards, active: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Active</span>
+              </label>
+              
+              <label className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={visibleCards.inactive}
+                  onChange={(e) => setVisibleCards({ ...visibleCards, inactive: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Inactive</span>
+              </label>
+              
+              <label className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={visibleCards.hanged}
+                  onChange={(e) => setVisibleCards({ ...visibleCards, hanged: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Hanged</span>
+              </label>
+              
+              <label className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={visibleCards.tampered}
+                  onChange={(e) => setVisibleCards({ ...visibleCards, tampered: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Tampered</span>
+              </label>
+              
+              {/* Row 2 Cards */}
+              <label className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={visibleCards.highTemp}
+                  onChange={(e) => setVisibleCards({ ...visibleCards, highTemp: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">High Temp</span>
+              </label>
+              
+              <label className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={visibleCards.sos}
+                  onChange={(e) => setVisibleCards({ ...visibleCards, sos: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">SOS</span>
+              </label>
+              
+              <label className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={visibleCards.overspeed}
+                  onChange={(e) => setVisibleCards({ ...visibleCards, overspeed: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Overspeed</span>
+              </label>
+              
+              <label className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={visibleCards.anomaly}
+                  onChange={(e) => setVisibleCards({ ...visibleCards, anomaly: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Anomaly</span>
+              </label>
+              
+              <label className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={visibleCards.restrictedEntry}
+                  onChange={(e) => setVisibleCards({ ...visibleCards, restrictedEntry: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Restricted Entry</span>
+              </label>
+              
+              {/* Row 3 Cards */}
+              <label className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={visibleCards.simNotWorking}
+                  onChange={(e) => setVisibleCards({ ...visibleCards, simNotWorking: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">SIM Not Working</span>
+              </label>
+              
+              <label className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={visibleCards.lowData}
+                  onChange={(e) => setVisibleCards({ ...visibleCards, lowData: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Low Data</span>
+              </label>
+              
+              <label className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={visibleCards.gpsUplinkIssues}
+                  onChange={(e) => setVisibleCards({ ...visibleCards, gpsUplinkIssues: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">GPS Issues</span>
+              </label>
+              
+              <label className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={visibleCards.batteryHealth}
+                  onChange={(e) => setVisibleCards({ ...visibleCards, batteryHealth: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Battery Health</span>
+              </label>
+              
+              <label className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={visibleCards.ble}
+                  onChange={(e) => setVisibleCards({ ...visibleCards, ble: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">BLE</span>
+              </label>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* All Cards - Single Grid for Auto-Arrangement */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* Total Devices */}
+        {visibleCards.total && (
         <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#17a2b8] to-[#138496] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.total}</div>
@@ -740,8 +964,10 @@ export default function Devices() {
             All registered
           </div>
         </div>
+        )}
 
         {/* Active */}
+        {visibleCards.active && (
         <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#28a745] to-[#218838] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.active}</div>
@@ -755,8 +981,10 @@ export default function Devices() {
             Online now
           </div>
         </div>
+        )}
 
         {/* Inactive */}
+        {visibleCards.inactive && (
         <div 
           onClick={() => setShowInactiveAlert(!showInactiveAlert)}
           className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#ffc107] to-[#e0a800] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
@@ -775,8 +1003,10 @@ export default function Devices() {
             Offline
           </div>
         </div>
+        )}
 
         {/* Hanged */}
+        {visibleCards.hanged && (
         <div 
           onClick={() => setShowHangedAlert(!showHangedAlert)}
           className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#dc3545] to-[#c82333] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
@@ -795,8 +1025,10 @@ export default function Devices() {
             Not responding
           </div>
         </div>
+        )}
 
         {/* Tampered */}
+        {visibleCards.tampered && (
         <div 
           onClick={() => setShowTamperedAlert(!showTamperedAlert)}
           className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#6f42c1] to-[#5a32a3] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
@@ -815,11 +1047,10 @@ export default function Devices() {
             Security alert
           </div>
         </div>
-      </div>
+        )}
 
-      {/* Row 2 - Alerts & Issues */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* High Temp */}
+        {visibleCards.highTemp && (
         <div 
           onClick={() => setShowHighTempAlert(!showHighTempAlert)}
           className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#dc3545] to-[#c82333] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
@@ -838,8 +1069,10 @@ export default function Devices() {
             &gt;50°C
           </div>
         </div>
+        )}
 
         {/* SOS */}
+        {visibleCards.sos && (
         <div 
           onClick={() => setShowSosAlert(!showSosAlert)}
           className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#fd7e14] to-[#e8590c] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
@@ -858,8 +1091,10 @@ export default function Devices() {
             Emergency
           </div>
         </div>
+        )}
 
         {/* Overspeed */}
+        {visibleCards.overspeed && (
         <div 
           onClick={() => setShowOverspeedAlert(!showOverspeedAlert)}
           className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#ffc107] to-[#e0a800] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
@@ -878,8 +1113,10 @@ export default function Devices() {
             &gt;70 km/h
           </div>
         </div>
+        )}
 
         {/* Anomaly */}
+        {visibleCards.anomaly && (
         <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#e83e8c] to-[#d63384] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.anomaly}</div>
@@ -895,8 +1132,10 @@ export default function Devices() {
             Unusual behavior
           </div>
         </div>
+        )}
 
         {/* Restricted Entry */}
+        {visibleCards.restrictedEntry && (
         <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#6610f2] to-[#520dc2] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.restrictedEntry}</div>
@@ -912,11 +1151,10 @@ export default function Devices() {
             Geofence breach
           </div>
         </div>
-      </div>
+        )}
 
-      {/* Row 3 - Technical Issues */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* SIM Not Working */}
+        {visibleCards.simNotWorking && (
         <div 
           onClick={() => setShowSimIssueAlert(!showSimIssueAlert)}
           className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#dc3545] to-[#c82333] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
@@ -935,8 +1173,10 @@ export default function Devices() {
             No SIM
           </div>
         </div>
+        )}
 
         {/* Low Data */}
+        {visibleCards.lowData && (
         <div 
           onClick={() => setShowDataIssueAlert(!showDataIssueAlert)}
           className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#ffc107] to-[#e0a800] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
@@ -955,8 +1195,10 @@ export default function Devices() {
             Data issue
           </div>
         </div>
+        )}
 
         {/* GPS Uplink Issues */}
+        {visibleCards.gpsUplinkIssues && (
         <div 
           onClick={() => setShowGpsIssueAlert(!showGpsIssueAlert)}
           className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#fd7e14] to-[#e8590c] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
@@ -975,8 +1217,10 @@ export default function Devices() {
             GNSS error
           </div>
         </div>
+        )}
 
         {/* Battery Health */}
+        {visibleCards.batteryHealth && (
         <div 
           onClick={() => setShowLowBatteryAlert(!showLowBatteryAlert)}
           className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#6f42c1] to-[#5a32a3] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
@@ -995,8 +1239,10 @@ export default function Devices() {
             Low battery
           </div>
         </div>
+        )}
 
         {/* BLE */}
+        {visibleCards.ble && (
         <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-[#17a2b8] to-[#138496] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer">
           <div className="p-4">
             <div className="text-3xl font-bold">{stats.ble}</div>
@@ -1012,6 +1258,7 @@ export default function Devices() {
             Bluetooth
           </div>
         </div>
+        )}
       </div>
 
       {/* Incident Tables Section - Wrapped in proper container */}
