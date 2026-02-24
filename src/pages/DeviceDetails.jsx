@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getAnalyticsByImei, getAnalyticsHealth, getAnalyticsUptime, getAnalyticsByFilter } from "../utils/analytics";
 import { getDeviceByTopic } from "../utils/device";
-import { getDeviceDisplayNameWithMaskedImei } from "../utils/deviceDisplay";
+import { getDeviceDisplayNameWithMaskedImei, getDeviceDisplayName } from "../utils/deviceDisplay";
 import { Card } from "../design-system/components";
 import { Button } from "../design-system/components";
 import { Loading } from "../design-system/components";
@@ -484,6 +484,7 @@ export default function DeviceDetails() {
   const [health, setHealth] = useState(null);
   const [uptime, setUptime] = useState(null);
   const [device, setDevice] = useState(null);
+  const [deviceError, setDeviceError] = useState(null);
   const [parentUser, setParentUser] = useState(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -518,6 +519,7 @@ export default function DeviceDetails() {
   const [ambientLoading, setAmbientLoading] = useState(false);
   const [isAmbientListenOn, setIsAmbientListenOn] = useState(false);
   const [isLedOn, setIsLedOn] = useState(false);
+  const [alertSubTab, setAlertSubTab] = useState('errors'); // 'errors' or 'alerts'
 
   const handleAckSOS = async () => {
     setSosLoading(true);
@@ -847,13 +849,14 @@ export default function DeviceDetails() {
         }
         
         // Fetch device info to get studentName
-        if (byImei.length > 0 && byImei[0].topic) {
-          try {
-            const deviceData = await getDeviceByTopic(byImei[0].topic);
-            setDevice(deviceData);
-          } catch (err) {
-            console.warn('Failed to fetch device info:', err);
-          }
+        try {
+          let topic = byImei.length > 0 && byImei[0].topic ? byImei[0].topic : `${imei}/pub`;
+          console.log('Fetching device info for topic:', topic);
+          const deviceData = await getDeviceByTopic(topic);
+          console.log('Device data received:', deviceData);
+          setDevice(deviceData);
+        } catch (err) {
+          console.warn('Failed to fetch device info:', err);
         }
         
         // Fetch parent user details by IMEI
@@ -1010,7 +1013,7 @@ export default function DeviceDetails() {
     { id: "overview", label: "Overview", icon: "📊" },
     { id: "telemetry", label: "Telemetry", icon: "📡" },
     { id: "trips", label: "Trips", icon: "🚗" },
-    { id: "alerts", label: "Alerts", icon: "⚠️" },
+    { id: "alerts", label: "Alert & Error", icon: "⚠️" },
     { id: "settings", label: "Settings", icon: "⚙️" },
     { id: "esim", label: "E-SIM", icon: "📱" }
   ];
@@ -1568,149 +1571,180 @@ export default function DeviceDetails() {
 
       {activeTab === "alerts" && (
         <div className="space-y-6">
-          {/* Alert Packets - AdminLTE White Card */}
+          {/* Sub-tabs: Errors and Alerts */}
           <div className="bg-white rounded-lg shadow-md p-4">
-            <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
-              <i className="fas fa-exclamation-triangle text-[#ffc107]"></i>
-              Alert Packets (A)
-              <span className="ml-2 px-2 py-1 bg-[#ffc107] text-white text-xs rounded-full">
-                {alertPackets.length}
-              </span>
-            </h3>
-            {alertPackets.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
-                  <i className="fas fa-check-circle text-3xl text-[#28a745]"></i>
-                </div>
-                <div className="text-[#28a745] font-semibold mb-2">No Alerts</div>
-                <div className="text-gray-600 text-sm">Your device is operating normally</div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {alertPackets.map((alert, i) => {
-                  // Auto-detect packet type from alert code
-                  let detectedPacketType = 'A';
-                  const alertCode = String(alert.alert || '').toUpperCase();
-                  
-                  if (alertCode.startsWith('E')) {
-                    detectedPacketType = 'E';
-                    } else if (alertCode.startsWith('A')) {
-                    detectedPacketType = 'A';
-                  }
-                  
-                  const mapped = mapAlertErrorCode(alert.alert, detectedPacketType);
-                  return (
-                    <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-[#ffc107] bg-opacity-20 rounded-full flex items-center justify-center">
-                          <i className="fas fa-exclamation-triangle text-[#ffc107]"></i>
-                        </div>
-                        <div>
-                          <div className="text-gray-800 font-semibold text-sm">{mapped.description}</div>
-                          <div className="text-gray-600 text-xs">{timeAgo(alert.deviceRawTimestamp)}</div>
-                        </div>
-                      </div>
-                      <div className="text-gray-700 text-sm">
-                        {formatIST(alert.deviceRawTimestamp)}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Error Packets - AdminLTE White Card */}
-          <div className="bg-white rounded-lg shadow-md p-4">
-            <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
-              <i className="fas fa-times-circle text-[#dc3545]"></i>
-              Error Packets (E)
-              <span className="ml-2 px-2 py-1 bg-[#dc3545] text-white text-xs rounded-full">
-                {errorPackets.length}
-              </span>
-            </h3>
-            {errorPackets.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
-                  <i className="fas fa-check-circle text-3xl text-[#28a745]"></i>
-                </div>
-                <div className="text-[#28a745] font-semibold mb-2">No Errors</div>
-                <div className="text-gray-600 text-sm">Your device is running smoothly</div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {errorPackets.map((error, i) => {
-                  // Auto-detect packet type from alert code
-                  let detectedPacketType = 'E';
-                  const alertCode = String(error.alert || '').toUpperCase();
-                  
-                  if (alertCode.startsWith('E')) {
-                    detectedPacketType = 'E';
-                  } else if (alertCode.startsWith('A')) {
-                    detectedPacketType = 'A';
-                  }
-                  
-                  const mapped = mapAlertErrorCode(error.alert, detectedPacketType);
-                  return (
-                    <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-[#dc3545] bg-opacity-20 rounded-full flex items-center justify-center">
-                          <i className="fas fa-times-circle text-[#dc3545]"></i>
-                        </div>
-                        <div>
-                          <div className="text-gray-800 font-semibold text-sm">{mapped.description}</div>
-                          <div className="text-gray-600 text-xs">{timeAgo(error.deviceRawTimestamp)}</div>
-                        </div>
-                      </div>
-                      <div className="text-gray-700 text-sm">
-                        {formatIST(error.deviceRawTimestamp)}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* SOS Panel - AdminLTE White Card */}
-          <div className="bg-white rounded-lg shadow-md p-4">
-            <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
-              <i className="fas fa-microphone text-[#dc3545]"></i>
-              SOS Emergency
-            </h3>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex flex-col gap-2">
-                  <div className="w-4 h-4 bg-[#28a745] rounded-full"></div>
-                  <div className="w-4 h-4 bg-[#dc3545] rounded-full"></div>
-                  <div className="w-4 h-4 bg-[#ffc107] rounded-full"></div>
-                </div>
-                <div className="text-gray-600 text-sm">
-                  <div>System Status: Normal</div>
-                  <div>Emergency: Not Active</div>
-                  <div>Response: Ready</div>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={handleAckSOS}
-                  disabled={sosLoading}
-                  className="px-4 py-2 bg-[#ffc107] hover:bg-[#e0a800] text-white rounded transition-colors text-sm font-medium disabled:opacity-50"
-                >
-                  {sosLoading ? (
-                    <>
-                      <i className="fas fa-spinner fa-spin mr-2"></i>
-                      Sending...
-                    </>
-                  ) : (
-                    "ACK"
-                  )}
-                </button>
-                <button className="px-4 py-2 bg-[#28a745] hover:bg-[#218838] text-white rounded transition-colors text-sm font-medium">
-                  Reset
-                </button>
-              </div>
+            <div className="flex gap-2 mb-6">
+              <button
+                onClick={() => setAlertSubTab('errors')}
+                className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                  alertSubTab === 'errors'
+                    ? 'bg-gray-800 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Errors
+              </button>
+              <button
+                onClick={() => setAlertSubTab('alerts')}
+                className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                  alertSubTab === 'alerts'
+                    ? 'bg-gray-800 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Alerts
+              </button>
             </div>
+
+            {/* Errors Tab Content */}
+            {alertSubTab === 'errors' && (
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">Errors</h2>
+                
+                {/* Error Category Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-red-600 text-white p-6 rounded-lg shadow-md">
+                    <div className="text-4xl font-bold mb-2">
+                      {errorPackets.filter(e => {
+                        const mapped = mapAlertErrorCode(e.alert, 'E');
+                        return mapped.severity === 'critical';
+                      }).length}
+                    </div>
+                    <div className="text-sm font-medium">Critical</div>
+                  </div>
+                  <div className="bg-orange-600 text-white p-6 rounded-lg shadow-md">
+                    <div className="text-4xl font-bold mb-2">
+                      {errorPackets.filter(e => {
+                        const mapped = mapAlertErrorCode(e.alert, 'E');
+                        return mapped.severity === 'warning';
+                      }).length}
+                    </div>
+                    <div className="text-sm font-medium">Warning</div>
+                  </div>
+                  <div className="bg-yellow-500 text-white p-6 rounded-lg shadow-md">
+                    <div className="text-4xl font-bold mb-2">
+                      {errorPackets.filter(e => {
+                        const mapped = mapAlertErrorCode(e.alert, 'E');
+                        return mapped.severity === 'advisory' || !mapped.severity;
+                      }).length}
+                    </div>
+                    <div className="text-sm font-medium">Advisory</div>
+                  </div>
+                </div>
+
+                {/* Error History */}
+                <div className="bg-gray-100 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-800">Error History</h3>
+                    <button className="text-sm text-gray-600 hover:text-gray-800">All</button>
+                  </div>
+                  
+                  {errorPackets.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">No errors found</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {errorPackets.slice(0, 10).map((error, i) => {
+                        const mapped = mapAlertErrorCode(error.alert, 'E');
+                        return (
+                          <div key={i} className="bg-white rounded-lg p-4 border border-red-200">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="text-red-600 font-semibold text-sm mb-1">{mapped.description}</div>
+                                <div className="text-gray-600 text-xs">
+                                  <span className="font-medium">Name:</span> {device?.studentName || 'Loading...'} | 
+                                  <span className="font-medium ml-2">IMEI:</span> {imei}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <div className="text-gray-500 text-xs">{formatIST(error.deviceRawTimestamp)}</div>
+                                <button className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded transition-colors">
+                                  View
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Alerts Tab Content */}
+            {alertSubTab === 'alerts' && (
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">Alerts</h2>
+                
+                {/* Alert Category Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-red-600 text-white p-6 rounded-lg shadow-md">
+                    <div className="text-4xl font-bold mb-2">
+                      {alertPackets.filter(a => {
+                        const mapped = mapAlertErrorCode(a.alert, 'A');
+                        return mapped.severity === 'danger';
+                      }).length}
+                    </div>
+                    <div className="text-sm font-medium">Danger</div>
+                  </div>
+                  <div className="bg-orange-600 text-white p-6 rounded-lg shadow-md">
+                    <div className="text-4xl font-bold mb-2">
+                      {alertPackets.filter(a => {
+                        const mapped = mapAlertErrorCode(a.alert, 'A');
+                        return mapped.severity === 'caution';
+                      }).length}
+                    </div>
+                    <div className="text-sm font-medium">Caution</div>
+                  </div>
+                  <div className="bg-yellow-500 text-white p-6 rounded-lg shadow-md">
+                    <div className="text-4xl font-bold mb-2">
+                      {alertPackets.filter(a => {
+                        const mapped = mapAlertErrorCode(a.alert, 'A');
+                        return mapped.severity === 'notice' || !mapped.severity;
+                      }).length}
+                    </div>
+                    <div className="text-sm font-medium">Notice</div>
+                  </div>
+                </div>
+
+                {/* Alert History */}
+                <div className="bg-gray-100 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-800">Alert History</h3>
+                    <button className="text-sm text-gray-600 hover:text-gray-800">All</button>
+                  </div>
+                  
+                  {alertPackets.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">No alerts found</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {alertPackets.slice(0, 10).map((alert, i) => {
+                        const mapped = mapAlertErrorCode(alert.alert, 'A');
+                        return (
+                          <div key={i} className="bg-white rounded-lg p-4 border border-orange-200">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="text-orange-600 font-semibold text-sm mb-1">{mapped.description}</div>
+                                <div className="text-gray-600 text-xs">
+                                  <span className="font-medium">Name:</span> {getDeviceDisplayName(device)} | 
+                                  <span className="font-medium ml-2">IMEI:</span> {imei}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <div className="text-gray-500 text-xs">{formatIST(alert.deviceRawTimestamp)}</div>
+                                <button className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded transition-colors">
+                                  View
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
