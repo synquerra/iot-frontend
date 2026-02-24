@@ -85,7 +85,7 @@ export async function listDevices(page = 1, limit = 20) {
 export async function getDeviceByTopic(topic) {
   // Use basic query without batteryLevel/signalStrength (not supported by backend yet)
   let query = `
-    { deviceByTopic(topic: "${topic}") { topic imei interval geoid createdAt studentName studentId } }
+    { deviceByTopic(topic: "${topic}") { topic imei interval geoid createdAt studentName studentId parentName parentPhone } }
   `;
 
   const res = await fetch(`${API_BASE_URL}/device/device-master-query`, {
@@ -111,6 +111,8 @@ export async function getDeviceByTopic(topic) {
       ...device,
       studentName: device.studentName || null,
       studentId: device.studentId || null,
+      parentName: device.parentName || null,
+      parentPhone: device.parentPhone || null,
       batteryLevel: null,
       signalStrength: null
     };

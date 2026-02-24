@@ -1,7 +1,7 @@
 // src/pages/DeviceDetails.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getAnalyticsByImei, getAnalyticsHealth, getAnalyticsUptime } from "../utils/analytics";
+import { getAnalyticsByImei, getAnalyticsHealth, getAnalyticsUptime, getAnalyticsByFilter } from "../utils/analytics";
 import { getDeviceByTopic } from "../utils/device";
 import { getDeviceDisplayNameWithMaskedImei } from "../utils/deviceDisplay";
 import { Card } from "../design-system/components";
@@ -13,6 +13,9 @@ import TripSummary from "../components/TripSummary";
 import { sendDeviceCommand } from "../utils/deviceCommandAPI";
 import { Notification } from "../components/Notification";
 import { mapAlertErrorCode } from "../utils/alertErrorMapper";
+import { useUserContext } from "../contexts/UserContext";
+import { getUserByIMEI } from "../utils/auth";
+import { fetchDeviceCommands } from "../utils/deviceCommandsAPI";
 /* ------------------------------------
    TIMESTAMP HELPERS (RAW TIMESTAMP LOGIC)
 ------------------------------------- */
@@ -474,17 +477,47 @@ function movementBreakdown(list) {
 export default function DeviceDetails() {
   const { imei } = useParams();
   const navigate = useNavigate();
+  const userContext = useUserContext();
 
   const [packets, setPackets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [health, setHealth] = useState(null);
   const [uptime, setUptime] = useState(null);
   const [device, setDevice] = useState(null);
+  const [parentUser, setParentUser] = useState(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
   const [sosLoading, setSosLoading] = useState(false);
   const [notification, setNotification] = useState(null);
+  const [configData, setConfigData] = useState(null);
+  const [editingContacts, setEditingContacts] = useState(false);
+  const [editingIntervals, setEditingIntervals] = useState(false);
+  const [commandLoading, setCommandLoading] = useState(false);
+  const [contactNumbers, setContactNumbers] = useState({
+    phonenum1: '',
+    phonenum2: '',
+    controlroomnum: ''
+  });
+  const [intervalSettings, setIntervalSettings] = useState({
+    NormalSendingInterval: '',
+    SOSSendingInterval: '',
+    NormalScanningInterval: '',
+    AirplaneInterval: '',
+    LowbatLimit: ''
+  });
+  const [safetySettings, setSafetySettings] = useState({
+    TemperatureLimit: '',
+    SpeedLimit: ''
+  });
+  const [contactErrors, setContactErrors] = useState({});
+  const [intervalErrors, setIntervalErrors] = useState({});
+  const [safetyErrors, setSafetyErrors] = useState({});
+  const [editingSafety, setEditingSafety] = useState(false);
+  const [ambientListenEnabled, setAmbientListenEnabled] = useState(false);
+  const [ambientLoading, setAmbientLoading] = useState(false);
+  const [isAmbientListenOn, setIsAmbientListenOn] = useState(false);
+  const [isLedOn, setIsLedOn] = useState(false);
 
   const handleAckSOS = async () => {
     setSosLoading(true);
@@ -521,6 +554,238 @@ export default function DeviceDetails() {
     }
   };
 
+  // Validation functions
+  const validatePhoneNumber = (value) => {
+    if (!value || value.trim() === '') {
+      return 'Phone number is required';
+    }
+    // Exactly 10 digits, no special characters
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(value)) {
+      return 'Phone number must be exactly 10 digits';
+    }
+    return '';
+  };
+
+  const validatePositiveInteger = (value, fieldName, min = 1, max = null) => {
+    if (!value || value.trim() === '') {
+      return `${fieldName} is required`;
+    }
+    const num = parseInt(value, 10);
+    if (isNaN(num) || num < min) {
+      return `${fieldName} must be at least ${min}`;
+    }
+    if (max !== null && num > max) {
+      return `${fieldName} must be at most ${max}`;
+    }
+    if (num.toString() !== value.trim()) {
+      return `${fieldName} must be a valid integer`;
+    }
+    return '';
+  };
+
+  const validateBatteryLimit = (value) => {
+    if (!value || value.trim() === '') {
+      return 'Low Battery Limit is required';
+    }
+    const num = parseFloat(value);
+    if (isNaN(num)) {
+      return 'Low Battery Limit must be a number';
+    }
+    if (num < 0 || num > 100) {
+      return 'Low Battery Limit must be between 0 and 100';
+    }
+    return '';
+  };
+
+  const validateContactNumbers = () => {
+    const errors = {};
+    errors.phonenum1 = validatePhoneNumber(contactNumbers.phonenum1);
+    errors.phonenum2 = validatePhoneNumber(contactNumbers.phonenum2);
+    errors.controlroomnum = validatePhoneNumber(contactNumbers.controlroomnum);
+    
+    setContactErrors(errors);
+    return !Object.values(errors).some(error => error !== '');
+  };
+
+  const validateIntervals = () => {
+    const errors = {};
+    errors.NormalSendingInterval = validatePositiveInteger(intervalSettings.NormalSendingInterval, 'Normal Sending Interval');
+    errors.SOSSendingInterval = validatePositiveInteger(intervalSettings.SOSSendingInterval, 'SOS Sending Interval');
+    errors.NormalScanningInterval = validatePositiveInteger(intervalSettings.NormalScanningInterval, 'Normal Scanning Interval');
+    errors.AirplaneInterval = validatePositiveInteger(intervalSettings.AirplaneInterval, 'Airplane Interval', 1, 10);
+    errors.LowbatLimit = validateBatteryLimit(intervalSettings.LowbatLimit);
+    
+    setIntervalErrors(errors);
+    return !Object.values(errors).some(error => error !== '');
+  };
+
+  const validateSafety = () => {
+    const errors = {};
+    errors.TemperatureLimit = validatePositiveInteger(safetySettings.TemperatureLimit, 'Temperature Limit');
+    errors.SpeedLimit = validatePositiveInteger(safetySettings.SpeedLimit, 'Speed Limit');
+    
+    setSafetyErrors(errors);
+    return !Object.values(errors).some(error => error !== '');
+  };
+
+  // Fetch and parse ambient listen toggle status from device commands API
+  const fetchAmbientListenStatus = async () => {
+    try {
+      console.log('🎧 Fetching ambient listen status for IMEI:', imei);
+      
+      // Fetch device commands with limit 1000
+      const commands = await fetchDeviceCommands(imei, 1000);
+      console.log('🎧 Fetched commands:', commands);
+      
+      if (!commands || commands.length === 0) {
+        console.log('🎧 No commands found, defaulting to OFF');
+        setIsAmbientListenOn(false);
+        return;
+      }
+      
+      // Filter for AMBIENT_ENABLE, AMBIENT_DISABLE, and AMBIENT_STOP commands
+      const ambientCommands = commands.filter(cmd => 
+        cmd.command === 'AMBIENT_ENABLE' || 
+        cmd.command === 'AMBIENT_DISABLE' || 
+        cmd.command === 'AMBIENT_STOP'
+      );
+      
+      if (ambientCommands.length === 0) {
+        console.log('🎧 No ambient commands found, defaulting to OFF');
+        setIsAmbientListenOn(false);
+        return;
+      }
+      
+      // Sort by created_at timestamp to find the latest command
+      const latestCommand = ambientCommands.sort((a, b) => 
+        new Date(b.created_at) - new Date(a.created_at)
+      )[0];
+      
+      console.log('🎧 Latest ambient command:', latestCommand);
+      
+      // Parse the payload to determine toggle status
+      const payload = latestCommand.payload;
+      
+      if (latestCommand.command === 'AMBIENT_ENABLE' && payload?.AmbientListen === 'Enable') {
+        console.log('🎧 AMBIENT_ENABLE with Enable, setting toggle to ON');
+        setIsAmbientListenOn(true);
+      } else if (latestCommand.command === 'AMBIENT_DISABLE' && payload?.AmbientListen === 'Disable') {
+        console.log('🎧 AMBIENT_DISABLE with Disable, setting toggle to OFF');
+        setIsAmbientListenOn(false);
+      } else if (latestCommand.command === 'AMBIENT_STOP' && payload?.AmbientListen === 'Start') {
+        console.log('🎧 AMBIENT_STOP with Start, setting toggle to ON');
+        setIsAmbientListenOn(true);
+      } else if (latestCommand.command === 'AMBIENT_STOP' && payload?.AmbientListen === 'Stop') {
+        console.log('🎧 AMBIENT_STOP with Stop, setting toggle to OFF');
+        setIsAmbientListenOn(false);
+      } else {
+        console.log('🎧 Payload format unexpected, defaulting to OFF');
+        setIsAmbientListenOn(false);
+      }
+    } catch (error) {
+      console.error('🎧 Error fetching ambient listen status:', error);
+      // Default to OFF on error
+      setIsAmbientListenOn(false);
+    }
+  };
+
+  const handleAmbientToggle = async () => {
+    try {
+      const newState = !isAmbientListenOn;
+      const command = newState ? 'AMBIENT_ENABLE' : 'AMBIENT_DISABLE';
+      
+      console.log(`🎧 Sending ${command} command for IMEI:`, imei);
+      
+      // Send the command
+      await sendDeviceCommand(imei, command);
+      
+      console.log(`🎧 ${command} command sent successfully`);
+      
+      // Optimistically update the UI
+      setIsAmbientListenOn(newState);
+      
+      // Refresh data after a short delay to get the latest status
+      setTimeout(() => {
+        fetchAmbientListenStatus();
+      }, 1000);
+    } catch (error) {
+      console.error('🎧 Error sending ambient command:', error);
+      alert('Failed to update Ambient Listen status. Please try again.');
+    }
+  };
+
+  const fetchLedStatus = async () => {
+    try {
+      console.log('💡 Fetching LED status for IMEI:', imei);
+      
+      const commands = await fetchDeviceCommands(imei, 1000);
+      console.log('💡 Fetched commands:', commands);
+      
+      if (!commands || commands.length === 0) {
+        console.log('💡 No commands found, defaulting to OFF');
+        setIsLedOn(false);
+        return;
+      }
+      
+      // Filter for LED_ON and LED_OFF commands
+      const ledCommands = commands.filter(cmd => 
+        cmd.command === 'LED_ON' || cmd.command === 'LED_OFF'
+      );
+      
+      if (ledCommands.length === 0) {
+        console.log('💡 No LED commands found, defaulting to OFF');
+        setIsLedOn(false);
+        return;
+      }
+      
+      // Sort by created_at timestamp to find the latest command
+      const latestCommand = ledCommands.sort((a, b) => 
+        new Date(b.created_at) - new Date(a.created_at)
+      )[0];
+      
+      console.log('💡 Latest LED command:', latestCommand);
+      
+      const payload = latestCommand.payload;
+      
+      if (latestCommand.command === 'LED_ON' && payload?.LED === 'SwitchOnLed') {
+        console.log('💡 LED_ON with SwitchOnLed, setting toggle to ON');
+        setIsLedOn(true);
+      } else if (latestCommand.command === 'LED_OFF' && payload?.LED === 'SwitchoffLed') {
+        console.log('💡 LED_OFF with SwitchoffLed, setting toggle to OFF');
+        setIsLedOn(false);
+      } else {
+        console.log('💡 Payload format unexpected, defaulting to OFF');
+        setIsLedOn(false);
+      }
+    } catch (error) {
+      console.error('💡 Error fetching LED status:', error);
+      setIsLedOn(false);
+    }
+  };
+
+  const handleLedToggle = async () => {
+    try {
+      const newState = !isLedOn;
+      const command = newState ? 'LED_ON' : 'LED_OFF';
+      
+      console.log(`💡 Sending ${command} command for IMEI:`, imei);
+      
+      await sendDeviceCommand(imei, command);
+      
+      console.log(`💡 ${command} command sent successfully`);
+      
+      setIsLedOn(newState);
+      
+      setTimeout(() => {
+        fetchLedStatus();
+      }, 1000);
+    } catch (error) {
+      console.error('💡 Error sending LED command:', error);
+      alert('Failed to update LED status. Please try again.');
+    }
+  };
+
   useEffect(() => {
     let timer;
 
@@ -534,6 +799,53 @@ export default function DeviceDetails() {
         const uptimeData = await getAnalyticsUptime(imei);
         setUptime(uptimeData);
         
+        // Fetch config data for phone numbers and intervals
+        try {
+          const configPackets = await getAnalyticsByFilter(imei, "config_or_misc");
+          if (configPackets && configPackets.length > 0) {
+            // Always update configData
+            setConfigData(configPackets[0]);
+            
+            // Only update contactNumbers if NOT editing contacts
+            if (!editingContacts) {
+              setContactNumbers({
+                phonenum1: configPackets[0].rawPhone1 || '',
+                phonenum2: configPackets[0].rawPhone2 || '',
+                controlroomnum: configPackets[0].rawControlPhone || ''
+              });
+            } else {
+              console.log('⏸️ Skipping contact numbers refresh - user is editing');
+            }
+            
+            // Only update intervalSettings if NOT editing intervals
+            if (!editingIntervals) {
+              setIntervalSettings({
+                NormalSendingInterval: configPackets[0].rawNormalSendingInterval || '',
+                SOSSendingInterval: configPackets[0].rawSOSSendingInterval || '',
+                NormalScanningInterval: configPackets[0].rawNormalScanningInterval || '',
+                AirplaneInterval: configPackets[0].rawAirplaneInterval || '',
+                LowbatLimit: configPackets[0].rawLowbatLimit || ''
+              });
+            } else {
+              console.log('⏸️ Skipping interval settings refresh - user is editing');
+            }
+            
+            // Only update safetySettings if NOT editing safety
+            if (!editingSafety) {
+              setSafetySettings({
+                TemperatureLimit: configPackets[0].rawTemperature || '',
+                SpeedLimit: configPackets[0].rawSpeedLimit || ''
+              });
+            } else {
+              console.log('⏸️ Skipping safety settings refresh - user is editing');
+            }
+            
+            console.log('📞 Config data loaded:', configPackets[0]);
+          }
+        } catch (err) {
+          console.warn('Failed to fetch config data:', err);
+        }
+        
         // Fetch device info to get studentName
         if (byImei.length > 0 && byImei[0].topic) {
           try {
@@ -543,6 +855,23 @@ export default function DeviceDetails() {
             console.warn('Failed to fetch device info:', err);
           }
         }
+        
+        // Fetch parent user details by IMEI
+        try {
+          console.log('Fetching parent user for IMEI:', imei);
+          const parentData = await getUserByIMEI(imei);
+          console.log('Parent user data received:', parentData);
+          setParentUser(parentData);
+        } catch (err) {
+          console.error('Failed to fetch parent user by IMEI:', err);
+          console.error('Error details:', err.message);
+        }
+        
+        // Fetch ambient listen toggle status from device commands API
+        await fetchAmbientListenStatus();
+        
+        // Fetch LED toggle status from device commands API
+        await fetchLedStatus();
         
         const normalized = byImei.map((p) => {
           const serverTS =
@@ -595,7 +924,7 @@ export default function DeviceDetails() {
     timer = setInterval(load, 10000);
 
     return () => clearInterval(timer);
-  }, [imei]);
+  }, [imei, editingContacts, editingIntervals, editingSafety]);
 
   if (loading) {
     return (
@@ -682,6 +1011,7 @@ export default function DeviceDetails() {
     { id: "telemetry", label: "Telemetry", icon: "📡" },
     { id: "trips", label: "Trips", icon: "🚗" },
     { id: "alerts", label: "Alerts", icon: "⚠️" },
+    { id: "settings", label: "Settings", icon: "⚙️" },
     { id: "esim", label: "E-SIM", icon: "📱" }
   ];
 
@@ -773,364 +1103,314 @@ export default function DeviceDetails() {
         </div>
       </div>
 
-      {/* Status Section - GPS, Speed, Battery, Signal at Top - AdminLTE Small Boxes */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* GPS & Speed Small Box */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className={cn(
-            "p-4 bg-gradient-to-br",
-            (() => {
-              const speed = normal.speed;
-              const n = speed == null ? NaN : Number(speed);
-              if (isNaN(n)) return "from-gray-400 to-gray-500";
-              if (n > 70) return "from-[#dc3545] to-[#c82333]"; // Red - Overspeeding
-              if (n > 40) return "from-[#ffc107] to-[#ffca2c]"; // Yellow - Moderate
-              return "from-[#28a745] to-[#20c997]"; // Green - Normal
-            })()
-          )}>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-white/90 text-sm font-medium mb-1">GPS & Speed</div>
-                <div className="text-white text-2xl font-bold mb-2">
-                  {normal.speed != null && !isNaN(Number(normal.speed)) ? `${normal.speed} km/h` : '-'}
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className={cn('w-2 h-2 rounded-full', getGpsStatus(normal).color)}></div>
-                    <span className="text-white/80 text-xs">{getGpsStatus(normal).text}</span>
-                  </div>
-                  <div className="text-white/70 text-xs">
-                    Status: {getSpeedStatus(normal).text}
-                  </div>
-                  <div className="text-white/70 text-xs">
-                    Tracking: Active
-                  </div>
-                </div>
-              </div>
-              <div className="text-white/30">
-                <i className="fas fa-tachometer-alt text-5xl"></i>
+      {/* Status Cards - Only show on non-Settings tabs */}
+      {activeTab !== "settings" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Movement Status Card */}
+          <div className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
+            <div className={cn(
+              "p-4 text-white flex-1 bg-gradient-to-br",
+              (() => {
+                const speed = Number(normal.speed) || 0;
+                if (speed > 70) return "from-red-400 to-red-500"; // Overspeeding
+                if (speed > 0) return "from-green-400 to-green-500"; // Moving
+                return "from-yellow-400 to-yellow-500"; // Idle
+              })()
+            )}>
+              <div className="text-sm font-medium mb-2">Movement Status</div>
+              <div className="text-3xl font-bold mb-1">{normal.speed || "0"} km/h</div>
+              <div className="text-xs opacity-90">
+                {latest.latitude && latest.longitude 
+                  ? `${Number(latest.latitude).toFixed(5)} N, ${Number(latest.longitude).toFixed(5)} E`
+                  : "No GPS data"}
               </div>
             </div>
+            <div className="bg-white px-4 py-3 text-center border-t border-dashed border-gray-300 h-12 flex items-center justify-center">
+              <span className="text-gray-600 text-xs">
+                {normal.geoid ? `Inside Geofence: ${normal.geoid}` : "Home/ Outside Geofence"}
+              </span>
+            </div>
           </div>
-          <div className="bg-white px-4 py-2 text-center">
-            <span className="text-gray-600 text-xs">Real-time tracking</span>
-          </div>
-        </div>
 
-        {/* Battery Small Box */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className={cn(
-            "p-4 bg-gradient-to-br",
-            (() => {
-              const b = normal.battery;
-              const n = b == null ? NaN : Number(String(b).replace(/[^\d.-]/g, ""));
-              if (isNaN(n)) return "from-gray-400 to-gray-500";
-              if (n > 60) return "from-[#28a745] to-[#20c997]"; // Green
-              if (n > 30) return "from-[#ffc107] to-[#ffca2c]"; // Yellow
-              return "from-[#dc3545] to-[#c82333]"; // Red
-            })()
-          )}>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-white/90 text-sm font-medium mb-1">Battery</div>
-                <div className="text-white text-2xl font-bold mb-2">
-                  {(() => {
-                    const b = normal.battery;
-                    const n = b == null ? NaN : Number(String(b).replace(/[^\d.-]/g, ""));
-                    return !isNaN(n) ? `${n}%` : '-';
-                  })()}
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className={cn('w-2 h-2 rounded-full', getBatteryStatus(normal).color)}></div>
-                    <span className="text-white/80 text-xs">{getBatteryStatus(normal).text}</span>
-                  </div>
-                  <div className="text-white/70 text-xs">
-                    Drain: {computeBatteryDrainTime(packets)}
-                  </div>
-                  <div className="text-white/70 text-xs">
-                    Runtime: {computeBatteryRuntimeHours(packets)} hrs
-                  </div>
-                </div>
+          {/* Battery Status Card */}
+          <div className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
+            <div className={cn(
+              "p-4 text-white flex-1 bg-gradient-to-br",
+              (() => {
+                const b = normal.battery;
+                const battery = b == null ? NaN : Number(String(b).replace(/[^\d.-]/g, ""));
+                if (isNaN(battery)) return "from-gray-400 to-gray-500";
+                if (battery >= 60) return "from-green-400 to-green-500"; // Good
+                if (battery >= 20) return "from-yellow-400 to-yellow-500"; // Medium
+                return "from-red-400 to-red-500"; // Low
+              })()
+            )}>
+              <div className="text-sm font-medium mb-2">Battery Status</div>
+              <div className="text-3xl font-bold mb-1">
+                {(() => {
+                  const b = normal.battery;
+                  const n = b == null ? NaN : Number(String(b).replace(/[^\d.-]/g, ""));
+                  return !isNaN(n) ? `${n}%` : '-';
+                })()}
               </div>
-              <div className="text-white/30">
-                <i className="fas fa-battery-three-quarters text-5xl"></i>
+              <div className="text-xs opacity-90 space-y-1">
+                <div>LAST CHARGED: {computeBatteryDrainTime(packets)} ago</div>
+                <div>ESTIMATED NEXT CHARGE: -</div>
               </div>
             </div>
+            <div className="bg-white px-4 py-3 text-center border-t border-dashed border-gray-300 h-12 flex items-center justify-center">
+              <span className="text-gray-600 text-xs">
+                {(() => {
+                  const b = normal.battery;
+                  const n = b == null ? NaN : Number(String(b).replace(/[^\d.-]/g, ""));
+                  if (isNaN(n)) return "-";
+                  const hours = parseFloat(computeBatteryRuntimeHours(packets));
+                  if (isNaN(hours)) return "-";
+                  const remaining = Math.max(0, 24 - hours);
+                  return `${Math.floor(remaining)} hrs ${Math.floor((remaining % 1) * 60)} mins remaining`;
+                })()}
+              </span>
+            </div>
           </div>
-          <div className="bg-white px-4 py-2 text-center">
-            <span className="text-gray-600 text-xs">Updated: {timeAgo(normal.deviceTimestamp)}</span>
-          </div>
-        </div>
 
-        {/* Signal Small Box */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className={cn(
-            "p-4 bg-gradient-to-br",
-            (() => {
-              const s = normal.signal;
-              const n = s == null ? NaN : Number(s);
-              if (isNaN(n)) return "from-gray-400 to-gray-500";
-              if (n > 70) return "from-[#28a745] to-[#20c997]"; // Green
-              if (n > 40) return "from-[#ffc107] to-[#ffca2c]"; // Yellow
-              return "from-[#dc3545] to-[#c82333]"; // Red
-            })()
-          )}>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-white/90 text-sm font-medium mb-1">Signal</div>
-                <div className="text-white text-2xl font-bold mb-2">
-                  {normal.signal != null && !isNaN(Number(normal.signal)) ? `${normal.signal}%` : '-'}
+          {/* Network Status Card */}
+          <div className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
+            <div className={cn(
+              "p-4 text-white flex-1 bg-gradient-to-br",
+              (() => {
+                const signal = Number(normal.signal) || 0;
+                if (signal >= 70) return "from-green-400 to-green-500"; // Good
+                if (signal >= 40) return "from-yellow-400 to-yellow-500"; // Medium
+                if (signal > 0) return "from-red-400 to-red-500"; // Poor
+                return "from-gray-400 to-gray-500"; // No signal
+              })()
+            )}>
+              <div className="text-sm font-medium mb-2">Network Status</div>
+              <div className="text-xs space-y-1 mb-2">
+                <div className="flex justify-between">
+                  <span>SIM 1 SIGNAL</span>
+                  <span className="font-bold">{normal.signal || "0"}</span>
                 </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                    <span className="text-white/80 text-xs">Strength</span>
-                  </div>
-                  <div className="text-white/70 text-xs">
-                    Network: Active
-                  </div>
-                  <div className="text-white/70 text-xs">
-                    Status: Connected
-                  </div>
+                <div className="flex justify-between">
+                  <span>SIM 2 SIGNAL</span>
+                  <span className="font-bold">-</span>
                 </div>
-              </div>
-              <div className="text-white/30">
-                <i className="fas fa-signal text-5xl"></i>
+                <div className="flex justify-between">
+                  <span>GPS SIGNAL</span>
+                  <span className="font-bold">
+                    {latest.latitude && latest.longitude ? "✓" : "✗"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>GPS NO OF SATELLITE</span>
+                  <span className="font-bold">-</span>
+                </div>
               </div>
             </div>
+            <div className="bg-white px-4 py-3 text-center border-t border-dashed border-gray-300 h-12 flex items-center justify-center">
+              <span className="text-gray-600 text-xs">SIM 1 ACTIVE</span>
+            </div>
           </div>
-          <div className="bg-white px-4 py-2 text-center">
-            <span className="text-gray-600 text-xs">Network status</span>
+
+          {/* Location Status Card */}
+          <div className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
+            <div className="relative h-32 bg-gray-200 flex-1">
+              {latest.latitude && latest.longitude ? (
+                <a
+                  href={`https://www.openstreetmap.org/?mlat=${latest.latitude}&mlon=${latest.longitude}&zoom=15`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full h-full relative group"
+                >
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    scrolling="no"
+                    marginHeight="0"
+                    marginWidth="0"
+                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${Number(latest.longitude)-0.01},${Number(latest.latitude)-0.01},${Number(latest.longitude)+0.01},${Number(latest.latitude)+0.01}&layer=mapnik&marker=${latest.latitude},${latest.longitude}`}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                  <div className="absolute top-2 left-2 bg-gray-800 text-white text-xs px-2 py-1 rounded z-10">
+                    Location Status
+                  </div>
+                </a>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center text-gray-400">
+                    <i className="fas fa-map-marker-alt text-3xl mb-2"></i>
+                    <div className="text-xs">No location data</div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="bg-white px-4 py-3 text-center border-t border-dashed border-gray-300 h-12 flex items-center justify-center">
+              <a
+                href={latest.latitude && latest.longitude ? `https://www.openstreetmap.org/?mlat=${latest.latitude}&mlon=${latest.longitude}&zoom=15` : "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`text-xs ${latest.latitude && latest.longitude ? 'text-blue-600 hover:text-blue-800 underline' : 'text-gray-400 cursor-not-allowed'}`}
+              >
+                Click here to get current location
+              </a>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Tab Content */}
       {activeTab === "overview" && (
         <div className="space-y-6">
 
-          {/* Latest Packet Information - AdminLTE White Cards */}
+          {/* Device Status and Activity Details - Matching Screenshot */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Latest Packet (Any Type) */}
-            <div className="bg-white rounded-lg shadow-md p-4">
-              <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
-                <div className={cn(
-                  'w-3 h-3 rounded-full',
-                  latest.packetType === 'N' ? 'bg-[#28a745]' : 
-                  (() => {
-                    const alertCode = String(latest.alert || '').toUpperCase();
-                    if (alertCode.startsWith('A')) return 'bg-[#ffc107]';
-                    if (alertCode.startsWith('E')) return 'bg-[#dc3545]';
-                    return latest.packetType === 'A' ? 'bg-[#ffc107]' : 'bg-[#dc3545]';
-                  })()
-                )}></div>
-                {(() => {
-                  if (latest.packetType === 'N') {
-                    return 'Latest Normal Packet';
-                  } else if (latest.alert) {
-                    // Auto-detect packet type from alert code if needed
-                    let detectedPacketType = latest.packetType;
-                    const alertCode = String(latest.alert).toUpperCase();
-                       
-                    // If alert code starts with E, it's an error
-                    if (alertCode.startsWith('E')) {
-                      detectedPacketType = 'E';
-                    }
-                    // If alert code starts with A, it's an alert
-                    else if (alertCode.startsWith('A')) {
-                      detectedPacketType = 'A';
-                    }
-                    
-                    const mapped = mapAlertErrorCode(latest.alert, detectedPacketType);
-                    return mapped.description;
-                  } else {
-                    return `Latest ${latest.packetType === 'A' ? 'Alert' : 'Error'} Packet`;
-                  }
-                })()}
-              </h3>
+            {/* Device Status */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-gray-800 text-lg font-semibold mb-4 border-b border-gray-300 pb-2">Device Status</h3>
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="text-gray-600">Device</span>
-                  <span className="font-mono text-gray-800 bg-gray-100 px-2 py-1 rounded text-xs">
-                    {device ? getDeviceDisplayNameWithMaskedImei(device) : latest.imei}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="text-gray-600">Timestamp</span>
-                  <span className="text-gray-800 text-xs">{formatIST(latest.serverTimestampISO || latest.deviceRawTimestamp)}</span>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">Alert</span>
+                  <span className="text-gray-900 font-medium">SOS/Normal</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-600">Received</span>
-                  <span className="text-gray-800 font-medium">{timeAgo(latest.serverTimestampISO || latest.deviceRawTimestamp)}</span>
+                  <span className="text-gray-700">Temperature</span>
+                  <span className="text-gray-900 font-medium">{parseTemperature(normal.rawTemperature)}°C</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">Current Mode</span>
+                  <span className="text-gray-900 font-medium">Incognito</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">Performance Score</span>
+                  <span className="text-gray-900 font-medium">{normal.signal || "86"}/100</span>
                 </div>
               </div>
             </div>
 
-            {/* Latest Normal Packet Data - Enhanced Device Status */}
-            <div className="bg-white rounded-lg shadow-md p-4">
-              <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
-                <i className="fas fa-heartbeat text-[#28a745]"></i>
-                Device Status
-              </h3>
-              
-              {/* Status Badges - More Prominent */}
-              <div className="grid grid-cols-3 gap-3 mb-4 pb-4 border-b border-gray-200">
-                <div className="text-center">
-                  <div className={cn('w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center', getGpsStatus(normal).color)}>
-                    <i className="fas fa-satellite text-white text-lg"></i>
-                  </div>
-                  <div className="text-xs font-semibold text-gray-800">{getGpsStatus(normal).text}</div>
-                  <div className="text-xs text-gray-500">GPS</div>
+            {/* Activity Details (in last 24 hrs) */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-gray-800 text-lg font-semibold mb-4 border-b border-gray-300 pb-2">Activity Details (in last 24 hrs)</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">Distance traveled</span>
+                  <span className="text-gray-900 font-medium">{computeTodayDistance(packets)}Km</span>
                 </div>
-                <div className="text-center">
-                  <div className={cn('w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center', getSpeedStatus(normal).color)}>
-                    <i className="fas fa-tachometer-alt text-white text-lg"></i>
-                  </div>
-                  <div className="text-xs font-semibold text-gray-800">{getSpeedStatus(normal).text}</div>
-                  <div className="text-xs text-gray-500">Speed</div>
-                </div>
-                <div className="text-center">
-                  <div className={cn('w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center', getBatteryStatus(normal).color)}>
-                    <i className="fas fa-battery-three-quarters text-white text-lg"></i>
-                  </div>
-                  <div className="text-xs font-semibold text-gray-800">{getBatteryStatus(normal).text}</div>
-                  <div className="text-xs text-gray-500">Battery</div>
-                </div>
-              </div>
-              
-              {/* Device Details */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600" title="Geofence ID when device enters any geofence">GEO ID</span>
-                    <span className="text-gray-800 font-medium">{normal.geoid ?? "-"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600" title="View device location on Google Maps">View on Map</span>
-                    {(() => {
-                      const lat = Number(normal.latitude);
-                      const lon = Number(normal.longitude);
-                      const hasValidCoords = lat && lon && !isNaN(lat) && !isNaN(lon);
-                      
-                      return hasValidCoords ? (
-                        <a
-                          href={`https://www.google.com/maps?q=${lat},${lon}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[#007bff] hover:text-[#0056b3] text-xs underline flex items-center gap-1"
-                        >
-                          <i className="fas fa-map-marker-alt"></i>
-                          Open Maps
-                        </a>
-                      ) : (
-                        <span className="text-gray-400 text-xs">No location</span>
-                      );
-                    })()}
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600" title="Current speed in kilometers per hour">Speed</span>
-                    <span className="text-gray-800 font-medium">{normal.speed ?? "-"} km/h</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600" title="Current signal strength percentage">Signal</span>
-                    <span className="text-gray-800 font-medium">{normal.signal ?? "-"}%</span>
+                <div className="py-2">
+                  <div className="text-gray-700 mb-2">Activity Analysis</div>
+                  <div className="flex gap-3">
+                    <button className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm rounded-full hover:bg-gray-50">
+                      Crawling: 5
+                    </button>
+                    <button className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm rounded-full hover:bg-gray-50">
+                      Stationary: 5
+                    </button>
+                    <button className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm rounded-full hover:bg-gray-50">
+                      Overspeeding: 5
+                    </button>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600" title="Time interval for normal packet transmission">Interval</span>
-                    <span className="text-gray-800 font-medium">-</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600" title="Current device temperature in Celsius">Temperature</span>
-                    <span className="text-gray-800 font-medium">{parseTemperature(normal.rawTemperature)}°C</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600" title="Current date and time from device">Timestamp</span>
-                    <span className="text-gray-800 text-xs">{formatIST(normal.deviceTimestamp)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600" title="Current battery percentage">Battery</span>
-                    <span className="text-gray-800 font-medium">{normal.battery ?? "-"}%</span>
-                  </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">Steps</span>
+                  <span className="text-gray-900 font-medium">8554</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">No of safety events occurred today</span>
+                  <span className="text-gray-900 font-medium">{alertPackets.length + errorPackets.length}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Device Information - AdminLTE White Cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-lg shadow-md p-4">
-              <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
-                <i className="fas fa-info-circle text-[#007bff]"></i>
-                Device Information
-              </h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="text-gray-600">Device</span>
-                  <span className="font-mono text-gray-800 bg-gray-100 px-2 py-1 rounded text-xs">
-                    {device ? getDeviceDisplayNameWithMaskedImei(device) : latest.imei}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="text-gray-600">GEO ID</span>
-                  <span className="text-gray-800">{normal.geoid || "-"}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="text-gray-600">Firmware</span>
-                  <span className="text-gray-800">-</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="text-gray-600">Temperature</span>
-                  <span className="text-gray-800">{parseTemperature(normal.rawTemperature)}°C</span>
+          {/* Device Information - Exact Layout from Screenshot */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-gray-800 text-lg font-semibold mb-4 border-b border-gray-300 pb-2">Device Information</h3>
+            <div className="grid grid-cols-2 gap-0 text-sm">
+              {/* Left Column */}
+              <div className="border-r border-gray-300 pr-6">
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">Imei No.</span>
+                  <span className="text-gray-900 font-medium">{imei || "894861351616151515"}</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-600">Last Update</span>
-                  <span className="text-gray-800 text-xs">{formatIST(normal.deviceTimestamp)}</span>
+                  <span className="text-gray-700">Guardian 1 Details:-</span>
+                  <span className="text-gray-900 font-medium"></span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">Name</span>
+                  <span className="text-gray-900 font-medium">-</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">Phone Number</span>
+                  <span className="text-gray-900 font-medium">-</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">Guardian 2 Details:-</span>
+                  <span className="text-gray-900 font-medium"></span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">Name</span>
+                  <span className="text-gray-900 font-medium">-</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">Phone Number</span>
+                  <span className="text-gray-900 font-medium">-</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">Data Receiving Interval</span>
+                  <span className="text-gray-900 font-medium">600s</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">GPS Scanning Interval</span>
+                  <span className="text-gray-900 font-medium">300s</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">SoS Interval</span>
+                  <span className="text-gray-900 font-medium">50s</span>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-white rounded-lg shadow-md p-4">
-              <h3 className="text-gray-800 text-lg font-semibold mb-4 flex items-center gap-2">
-                <i className="fas fa-map-marker-alt text-[#28a745]"></i>
-                Location & Movement
-              </h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="text-gray-600">Distance Today</span>
-                  <span className="text-gray-800">{computeTodayDistance(packets)} km</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="text-gray-600">Movement</span>
-                  <div className="text-right">
-                    {(() => {
-                      const m = movementBreakdown(packets);
-                      return (
-                        <div className="text-xs">
-                          <span className="text-[#28a745]">{m.movingPct}% moving</span>
-                          <span className="text-gray-400 mx-1">•</span>
-                          <span className="text-[#ffc107]">{m.idlePct}% idle</span>
-                        </div>
-                      );
-                    })()}
-                  </div>
+              {/* Right Column */}
+              <div className="pl-6">
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">Audio Recording</span>
+                  <span className="text-gray-900 font-medium">Ambient Listening Active</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-600">View on Map</span>
-                  {latest.latitude && latest.longitude ? (
-                    <a
-                      href={`https://www.google.com/maps?q=${latest.latitude},${latest.longitude}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#007bff] hover:text-[#0056b3] text-xs underline"
-                    >
-                      Open Maps
-                    </a>
-                  ) : (
-                    <span className="text-gray-400 text-xs">No location</span>
-                  )}
+                  <span className="text-gray-700">Aeroplane Mode</span>
+                  <span className="text-gray-900 font-medium">Inactive</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">O/G Call Facility</span>
+                  <span className="text-gray-900 font-medium">Active</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">SMS Facility</span>
+                  <span className="text-gray-900 font-medium">Active</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">BLE</span>
+                  <span className="text-gray-900 font-medium">Inactive</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">LED Status</span>
+                  <span className="text-gray-900 font-medium">On</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">Data Available</span>
+                  <span className="text-gray-900 font-medium">64 MB</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">Next Recharge Due</span>
+                  <span className="text-gray-900 font-medium">12-12-21</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">Working Mode</span>
+                  <span className="text-gray-900 font-medium">Manual</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-700">Weather</span>
+                  <span className="text-gray-900 font-medium">Normal</span>
                 </div>
               </div>
             </div>
@@ -1430,6 +1710,935 @@ export default function DeviceDetails() {
                   Reset
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Tab */}
+      {activeTab === "settings" && (
+        <div className="space-y-6">
+          {/* Top Row - Phone Numbers and Intervals */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Registered Mobile Numbers Section */}
+            <div className="bg-white rounded-lg shadow-md p-5 border border-gray-200 hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-gray-800 text-base font-bold flex items-center gap-2">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <i className="fas fa-phone-alt text-blue-600 text-sm"></i>
+                  </div>
+                  Registered Mobile Numbers
+                </h3>
+                {!editingContacts ? (
+                  <button 
+                    onClick={() => setEditingContacts(true)}
+                    className="text-gray-500 hover:text-blue-600 transition-colors"
+                  >
+                    <i className="fas fa-edit"></i>
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={async () => {
+                        // Validate before sending
+                        if (!validateContactNumbers()) {
+                          setNotification({
+                            type: 'error',
+                            message: 'Please fix validation errors before saving'
+                          });
+                          setTimeout(() => setNotification(null), 5000);
+                          return;
+                        }
+                        
+                        try {
+                          setCommandLoading(true);
+                          
+                          // Step 1: Send SET_CONTACTS command
+                          await sendDeviceCommand(imei, 'SET_CONTACTS', contactNumbers);
+                          
+                          console.log('✅ SET_CONTACTS command sent successfully');
+                          
+                          // Step 2: Wait 2 seconds then send QUERY_DEVICE_SETTINGS command
+                          setTimeout(async () => {
+                            try {
+                              await sendDeviceCommand(imei, 'QUERY_DEVICE_SETTINGS', {});
+                              console.log('✅ QUERY_DEVICE_SETTINGS command sent successfully after 2s delay');
+                            } catch (queryError) {
+                              console.warn('⚠️ Failed to send QUERY_DEVICE_SETTINGS:', queryError);
+                            }
+                          }, 2000);
+                          
+                          setNotification({
+                            type: 'success',
+                            message: 'Emergency contacts updated successfully'
+                          });
+                          
+                          setEditingContacts(false);
+                          
+                          // Refresh config data with longer delays to ensure backend has processed
+                          // Try 3 times: after 3s, 6s, and 10s
+                          const refreshAttempts = [3000, 6000, 10000];
+                          
+                          refreshAttempts.forEach((delay, index) => {
+                            setTimeout(async () => {
+                              try {
+                                console.log(`🔄 Refresh attempt ${index + 1}/${refreshAttempts.length} after ${delay}ms`);
+                                const configPackets = await getAnalyticsByFilter(imei, "config_or_misc");
+                                
+                                if (configPackets && configPackets.length > 0) {
+                                  const latestData = configPackets[0];
+                                  
+                                  console.log('📊 Latest data from backend:', {
+                                    rawPhone1: latestData.rawPhone1,
+                                    rawPhone2: latestData.rawPhone2,
+                                    rawControlPhone: latestData.rawControlPhone
+                                  });
+                                  
+                                  // Always update with latest data
+                                  setConfigData(latestData);
+                                  setContactNumbers({
+                                    phonenum1: latestData.rawPhone1 || '',
+                                    phonenum2: latestData.rawPhone2 || '',
+                                    controlroomnum: latestData.rawControlPhone || ''
+                                  });
+                                  
+                                  console.log(`✅ Config data refreshed (attempt ${index + 1})`);
+                                }
+                              } catch (err) {
+                                console.warn(`Failed refresh attempt ${index + 1}:`, err);
+                              }
+                            }, delay);
+                          });
+                          
+                          setTimeout(() => setNotification(null), 5000);
+                        } catch (error) {
+                          setNotification({
+                            type: 'error',
+                            message: 'Failed to update emergency contacts'
+                          });
+                        } finally {
+                          setCommandLoading(false);
+                        }
+                      }}
+                      disabled={commandLoading}
+                      className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-semibold transition-colors disabled:opacity-50"
+                    >
+                      {commandLoading ? 'Saving...' : 'Save'}
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setEditingContacts(false);
+                        setContactNumbers({
+                          phonenum1: configData?.rawPhone1 || '',
+                          phonenum2: configData?.rawPhone2 || '',
+                          controlroomnum: configData?.rawControlPhone || ''
+                        });
+                      }}
+                      className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded text-xs font-semibold transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            
+            <div className="space-y-3">
+              {/* Phone Number 1 (Primary) */}
+              <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                    <i className="fas fa-user text-green-600 text-sm"></i>
+                  </div>
+                  <div className="flex-1">
+                    <span className="text-gray-600 text-xs block">Phone Number 1 (Primary)</span>
+                    {editingContacts ? (
+                      <div>
+                        <input
+                          type="text"
+                          value={contactNumbers.phonenum1}
+                          onChange={(e) => {
+                            setContactNumbers({...contactNumbers, phonenum1: e.target.value});
+                            if (contactErrors.phonenum1) {
+                              setContactErrors({...contactErrors, phonenum1: ''});
+                            }
+                          }}
+                          className={`text-gray-900 font-semibold font-mono border rounded px-2 py-1 text-sm w-full ${
+                            contactErrors.phonenum1 ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
+                          placeholder="10 digits only"
+                        />
+                        {contactErrors.phonenum1 && (
+                          <p className="text-red-600 text-xs mt-1">{contactErrors.phonenum1}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-900 font-semibold font-mono">{configData?.rawPhone1 || 'Not Set'}</span>
+                    )}
+                  </div>
+                </div>
+                {!editingContacts && (
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600 text-sm">Call</span>
+                      <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600 text-sm">Text</span>
+                      <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                        <i className="fas fa-check text-white text-xs"></i>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Phone Number 2 */}
+              <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <i className="fas fa-user text-blue-600 text-sm"></i>
+                  </div>
+                  <div className="flex-1">
+                    <span className="text-gray-600 text-xs block">Phone Number 2</span>
+                    {editingContacts ? (
+                      <div>
+                        <input
+                          type="text"
+                          value={contactNumbers.phonenum2}
+                          onChange={(e) => {
+                            setContactNumbers({...contactNumbers, phonenum2: e.target.value});
+                            if (contactErrors.phonenum2) {
+                              setContactErrors({...contactErrors, phonenum2: ''});
+                            }
+                          }}
+                          className={`text-gray-900 font-semibold font-mono border rounded px-2 py-1 text-sm w-full ${
+                            contactErrors.phonenum2 ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
+                          placeholder="10 digits only"
+                        />
+                        {contactErrors.phonenum2 && (
+                          <p className="text-red-600 text-xs mt-1">{contactErrors.phonenum2}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-900 font-semibold font-mono">{configData?.rawPhone2 || 'Not Set'}</span>
+                    )}
+                  </div>
+                </div>
+                {!editingContacts && (
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600 text-sm">Call</span>
+                      <div className="w-5 h-5 rounded-full border-2 border-gray-300 bg-white"></div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600 text-sm">Text</span>
+                      <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                        <i className="fas fa-check text-white text-xs"></i>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Control Room Number */}
+              <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <i className="fas fa-headset text-purple-600 text-sm"></i>
+                  </div>
+                  <div className="flex-1">
+                    <span className="text-gray-600 text-xs block">Control Room Number</span>
+                    {editingContacts ? (
+                      <input
+                        type="text"
+                        value={contactNumbers.controlroomnum}
+                        onChange={(e) => setContactNumbers({...contactNumbers, controlroomnum: e.target.value})}
+                        className="text-gray-900 font-semibold font-mono border border-gray-300 rounded px-2 py-1 text-sm w-full"
+                        placeholder="10 digits only"
+                      />
+                    ) : (
+                      <span className="text-gray-900 font-semibold font-mono">{configData?.rawControlPhone || 'Not Set'}</span>
+                    )}
+                  </div>
+                </div>
+                {!editingContacts && (
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600 text-sm">Call</span>
+                      <div className="w-5 h-5 rounded-full border-2 border-gray-300 bg-white"></div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600 text-sm">Text</span>
+                      <div className="w-5 h-5 rounded-full border-2 border-gray-300 bg-white"></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+            {/* Intervals Section */}
+            <div className="bg-white rounded-lg shadow-md p-5 border border-gray-200 hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-gray-800 text-base font-bold flex items-center gap-2">
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <i className="fas fa-clock text-purple-600 text-sm"></i>
+                  </div>
+                  Intervals
+                </h3>
+                {!editingIntervals ? (
+                  <button 
+                    onClick={() => setEditingIntervals(true)}
+                    className="text-gray-500 hover:text-purple-600 transition-colors"
+                  >
+                    <i className="fas fa-edit"></i>
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={async () => {
+                        // Validate before sending
+                        if (!validateIntervals()) {
+                          setNotification({
+                            type: 'error',
+                            message: 'Please fix validation errors before saving'
+                          });
+                          setTimeout(() => setNotification(null), 5000);
+                          return;
+                        }
+                        
+                        try {
+                          setCommandLoading(true);
+                          
+                          // Step 1: Send DEVICE_SETTINGS command with intervals
+                          console.log('📤 Sending DEVICE_SETTINGS command with intervals:', intervalSettings);
+                          await sendDeviceCommand(imei, 'DEVICE_SETTINGS', intervalSettings);
+                          
+                          console.log('✅ DEVICE_SETTINGS command sent successfully');
+                          console.log('🔍 Sent values:', {
+                            NormalSendingInterval: intervalSettings.NormalSendingInterval,
+                            SOSSendingInterval: intervalSettings.SOSSendingInterval,
+                            NormalScanningInterval: intervalSettings.NormalScanningInterval,
+                            AirplaneInterval: intervalSettings.AirplaneInterval,
+                            LowbatLimit: intervalSettings.LowbatLimit
+                          });
+                          
+                          // Step 2: Wait 2 seconds then send QUERY_DEVICE_SETTINGS command
+                          setTimeout(async () => {
+                            try {
+                              await sendDeviceCommand(imei, 'QUERY_DEVICE_SETTINGS', {});
+                              console.log('✅ QUERY_DEVICE_SETTINGS command sent successfully after 2s delay');
+                            } catch (queryError) {
+                              console.warn('⚠️ Failed to send QUERY_DEVICE_SETTINGS:', queryError);
+                            }
+                          }, 2000);
+                          
+                          setNotification({
+                            type: 'success',
+                            message: 'Interval settings updated successfully'
+                          });
+                          
+                          setEditingIntervals(false);
+                          
+                          // Refresh config data with longer delays to ensure backend has processed
+                          // Try 3 times: after 3s, 6s, and 10s
+                          const refreshAttempts = [3000, 6000, 10000];
+                          
+                          refreshAttempts.forEach((delay, index) => {
+                            setTimeout(async () => {
+                              try {
+                                console.log(`🔄 Refresh attempt ${index + 1}/${refreshAttempts.length} after ${delay}ms`);
+                                const configPackets = await getAnalyticsByFilter(imei, "config_or_misc");
+                                
+                                if (configPackets && configPackets.length > 0) {
+                                  const latestData = configPackets[0];
+                                  
+                                  console.log('📊 Latest data from backend:', {
+                                    NormalSendingInterval: latestData.rawNormalSendingInterval,
+                                    SOSSendingInterval: latestData.rawSOSSendingInterval,
+                                    NormalScanningInterval: latestData.rawNormalScanningInterval,
+                                    AirplaneInterval: latestData.rawAirplaneInterval,
+                                    LowbatLimit: latestData.rawLowbatLimit
+                                  });
+                                  
+                                  // Always update with latest data
+                                  setConfigData(latestData);
+                                  setIntervalSettings({
+                                    NormalSendingInterval: latestData.rawNormalSendingInterval || '',
+                                    SOSSendingInterval: latestData.rawSOSSendingInterval || '',
+                                    NormalScanningInterval: latestData.rawNormalScanningInterval || '',
+                                    AirplaneInterval: latestData.rawAirplaneInterval || '',
+                                    LowbatLimit: latestData.rawLowbatLimit || ''
+                                  });
+                                  
+                                  console.log(`✅ Config data refreshed (attempt ${index + 1})`);
+                                }
+                              } catch (err) {
+                                console.warn(`Failed refresh attempt ${index + 1}:`, err);
+                              }
+                            }, delay);
+                          });
+                          
+                          setTimeout(() => setNotification(null), 5000);
+                        } catch (error) {
+                          setNotification({
+                            type: 'error',
+                            message: 'Failed to update interval settings'
+                          });
+                        } finally {
+                          setCommandLoading(false);
+                        }
+                      }}
+                      disabled={commandLoading}
+                      className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-semibold transition-colors disabled:opacity-50"
+                    >
+                      {commandLoading ? 'Saving...' : 'Save'}
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setEditingIntervals(false);
+                        setIntervalSettings({
+                          NormalSendingInterval: configData?.rawNormalSendingInterval || '',
+                          SOSSendingInterval: configData?.rawSOSSendingInterval || '',
+                          NormalScanningInterval: configData?.rawNormalScanningInterval || '',
+                          AirplaneInterval: configData?.rawAirplaneInterval || '',
+                          LowbatLimit: configData?.rawLowbatLimit || ''
+                        });
+                      }}
+                      className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded text-xs font-semibold transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-blue-50 p-2 rounded-lg border border-blue-100">
+                  <span className="text-gray-600 text-xs block">Normal Sending Interval</span>
+                  {editingIntervals ? (
+                    <input
+                      type="text"
+                      value={intervalSettings.NormalSendingInterval}
+                      onChange={(e) => setIntervalSettings({...intervalSettings, NormalSendingInterval: e.target.value})}
+                      className="text-gray-900 font-bold text-sm border border-gray-300 rounded px-2 py-1 w-full"
+                      placeholder="600"
+                    />
+                  ) : (
+                    <span className="text-gray-900 font-bold text-sm">{configData?.rawNormalSendingInterval || "Not Set"}</span>
+                  )}
+                </div>
+                <div className="bg-red-50 p-2 rounded-lg border border-red-100">
+                  <span className="text-gray-600 text-xs block">SOS Sending Interval</span>
+                  {editingIntervals ? (
+                    <input
+                      type="text"
+                      value={intervalSettings.SOSSendingInterval}
+                      onChange={(e) => setIntervalSettings({...intervalSettings, SOSSendingInterval: e.target.value})}
+                      className="text-gray-900 font-bold text-sm border border-gray-300 rounded px-2 py-1 w-full"
+                      placeholder="60"
+                    />
+                  ) : (
+                    <span className="text-gray-900 font-bold text-sm">{configData?.rawSOSSendingInterval || "Not Set"}</span>
+                  )}
+                </div>
+                <div className="bg-green-50 p-2 rounded-lg border border-green-100">
+                  <span className="text-gray-600 text-xs block">Normal Scanning Interval</span>
+                  {editingIntervals ? (
+                    <input
+                      type="text"
+                      value={intervalSettings.NormalScanningInterval}
+                      onChange={(e) => setIntervalSettings({...intervalSettings, NormalScanningInterval: e.target.value})}
+                      className="text-gray-900 font-bold text-sm border border-gray-300 rounded px-2 py-1 w-full"
+                      placeholder="300"
+                    />
+                  ) : (
+                    <span className="text-gray-900 font-bold text-sm">{configData?.rawNormalScanningInterval || "Not Set"}</span>
+                  )}
+                </div>
+                <div className="bg-indigo-50 p-2 rounded-lg border border-indigo-100">
+                  <span className="text-gray-600 text-xs block">Aeroplane Interval</span>
+                  {editingIntervals ? (
+                    <input
+                      type="text"
+                      value={intervalSettings.AirplaneInterval}
+                      onChange={(e) => setIntervalSettings({...intervalSettings, AirplaneInterval: e.target.value})}
+                      className="text-gray-900 font-bold text-sm border border-gray-300 rounded px-2 py-1 w-full"
+                      placeholder="400"
+                    />
+                  ) : (
+                    <span className="text-gray-900 font-bold text-sm">{configData?.rawAirplaneInterval || "Not Set"}</span>
+                  )}
+                </div>
+                <div className="bg-yellow-50 p-2 rounded-lg border border-yellow-100">
+                  <span className="text-gray-600 text-xs block">Low Bat Data</span>
+                  {editingIntervals ? (
+                    <input
+                      type="text"
+                      value={intervalSettings.LowbatLimit}
+                      onChange={(e) => setIntervalSettings({...intervalSettings, LowbatLimit: e.target.value})}
+                      className="text-gray-900 font-bold text-sm border border-gray-300 rounded px-2 py-1 w-full"
+                      placeholder="900"
+                    />
+                  ) : (
+                    <span className="text-gray-900 font-bold text-sm">{configData?.rawLowbatLimit || "Not Set"}</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-3 flex justify-end">
+                <button className="text-purple-600 hover:text-purple-800 font-semibold text-xs underline">
+                  Reset to Default
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Safety and Ambient Listen - Side by Side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Safety Section */}
+            <div className="bg-white rounded-lg shadow-md p-5 border border-gray-200 hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-gray-800 text-base font-bold flex items-center gap-2">
+                  <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                    <i className="fas fa-shield-alt text-red-600 text-sm"></i>
+                  </div>
+                  Safety
+                </h3>
+                {!editingSafety ? (
+                  <button 
+                    onClick={() => setEditingSafety(true)}
+                    className="text-gray-500 hover:text-red-600 transition-colors"
+                  >
+                    <i className="fas fa-edit"></i>
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={async () => {
+                        // Validate before sending
+                        if (!validateSafety()) {
+                          setNotification({
+                            type: 'error',
+                            message: 'Please fix validation errors before saving'
+                          });
+                          setTimeout(() => setNotification(null), 5000);
+                          return;
+                        }
+                        
+                        try {
+                          setCommandLoading(true);
+                          
+                          // Send DEVICE_SETTINGS command with safety settings
+                          console.log('📤 Sending DEVICE_SETTINGS command with safety settings:', safetySettings);
+                          await sendDeviceCommand(imei, 'DEVICE_SETTINGS', safetySettings);
+                          
+                          console.log('✅ DEVICE_SETTINGS command sent successfully');
+                          
+                          // Wait 2 seconds then send QUERY_DEVICE_SETTINGS
+                          setTimeout(async () => {
+                            try {
+                              await sendDeviceCommand(imei, 'QUERY_DEVICE_SETTINGS', {});
+                              console.log('✅ QUERY_DEVICE_SETTINGS command sent successfully after 2s delay');
+                            } catch (queryError) {
+                              console.warn('⚠️ Failed to send QUERY_DEVICE_SETTINGS:', queryError);
+                            }
+                          }, 2000);
+                          
+                          setNotification({
+                            type: 'success',
+                            message: 'Safety settings updated successfully'
+                          });
+                          
+                          setEditingSafety(false);
+                          
+                          // Refresh config data with longer delays
+                          const refreshAttempts = [3000, 6000, 10000];
+                          
+                          refreshAttempts.forEach((delay, index) => {
+                            setTimeout(async () => {
+                              try {
+                                console.log(`🔄 Refresh attempt ${index + 1}/${refreshAttempts.length} after ${delay}ms`);
+                                const configPackets = await getAnalyticsByFilter(imei, "config_or_misc");
+                                
+                                if (configPackets && configPackets.length > 0) {
+                                  const latestData = configPackets[0];
+                                  
+                                  console.log('📊 Latest safety data from backend:', {
+                                    TemperatureLimit: latestData.rawTemperature,
+                                    SpeedLimit: latestData.rawSpeedLimit
+                                  });
+                                  
+                                  // Always update with latest data
+                                  setConfigData(latestData);
+                                  setSafetySettings({
+                                    TemperatureLimit: latestData.rawTemperature || '',
+                                    SpeedLimit: latestData.rawSpeedLimit || ''
+                                  });
+                                  
+                                  console.log(`✅ Config data refreshed (attempt ${index + 1})`);
+                                }
+                              } catch (err) {
+                                console.warn(`Failed refresh attempt ${index + 1}:`, err);
+                              }
+                            }, delay);
+                          });
+                          
+                          setTimeout(() => setNotification(null), 5000);
+                        } catch (error) {
+                          setNotification({
+                            type: 'error',
+                            message: 'Failed to update safety settings'
+                          });
+                        } finally {
+                          setCommandLoading(false);
+                        }
+                      }}
+                      disabled={commandLoading}
+                      className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-semibold transition-colors disabled:opacity-50"
+                    >
+                      {commandLoading ? 'Saving...' : 'Save'}
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setEditingSafety(false);
+                        setSafetySettings({
+                          TemperatureLimit: configData?.rawTemperature || '',
+                          SpeedLimit: configData?.rawSpeedLimit || ''
+                        });
+                        setSafetyErrors({});
+                      }}
+                      className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded text-xs font-semibold transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
+                  <i className="fas fa-thermometer-half text-orange-600 text-xl mb-1 block text-center"></i>
+                  <div className="text-gray-600 text-xs text-center">Temperature Limit</div>
+                  {editingSafety ? (
+                    <div>
+                      <input
+                        type="text"
+                        value={safetySettings.TemperatureLimit}
+                        onChange={(e) => {
+                          setSafetySettings({...safetySettings, TemperatureLimit: e.target.value});
+                          if (safetyErrors.TemperatureLimit) {
+                            setSafetyErrors({...safetyErrors, TemperatureLimit: ''});
+                          }
+                        }}
+                        className={`text-orange-600 font-bold text-lg text-center border rounded px-2 py-1 w-full ${
+                          safetyErrors.TemperatureLimit ? 'border-red-500 bg-red-50' : 'border-orange-300'
+                        }`}
+                        placeholder="50"
+                      />
+                      {safetyErrors.TemperatureLimit && (
+                        <p className="text-red-600 text-xs mt-1">{safetyErrors.TemperatureLimit}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-orange-600 font-bold text-lg text-center">{configData?.rawTemperature || 'Not Set'}°C</div>
+                  )}
+                </div>
+                <div className="bg-red-50 p-3 rounded-lg border border-red-200">
+                  <i className="fas fa-tachometer-alt text-red-600 text-xl mb-1 block text-center"></i>
+                  <div className="text-gray-600 text-xs text-center">Speed Limit</div>
+                  {editingSafety ? (
+                    <div>
+                      <input
+                        type="text"
+                        value={safetySettings.SpeedLimit}
+                        onChange={(e) => {
+                          setSafetySettings({...safetySettings, SpeedLimit: e.target.value});
+                          if (safetyErrors.SpeedLimit) {
+                            setSafetyErrors({...safetyErrors, SpeedLimit: ''});
+                          }
+                        }}
+                        className={`text-red-600 font-bold text-lg text-center border rounded px-2 py-1 w-full ${
+                          safetyErrors.SpeedLimit ? 'border-red-500 bg-red-50' : 'border-red-300'
+                        }`}
+                        placeholder="80"
+                      />
+                      {safetyErrors.SpeedLimit && (
+                        <p className="text-red-600 text-xs mt-1">{safetyErrors.SpeedLimit}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-red-600 font-bold text-lg text-center">{configData?.rawSpeedLimit || 'Not Set'} Km/h</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Ambient Listen Section */}
+            <div className="bg-white rounded-lg shadow-md p-5 border border-gray-200 hover:shadow-lg transition-shadow">
+              <h3 className="text-gray-800 text-base font-bold mb-4 flex items-center gap-2">
+                <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center">
+                  <i className="fas fa-microphone text-teal-600 text-sm"></i>
+                </div>
+                Ambient Listen
+              </h3>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between bg-teal-50 p-3 rounded-lg border border-teal-100">
+                  <span className="text-gray-700 font-medium text-sm">Listening Mode</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={isAmbientListenOn}
+                      onChange={handleAmbientToggle}
+                    />
+                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-500"></div>
+                  </label>
+                </div>
+                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <span className="text-gray-700 font-medium text-sm">Ambient Status</span>
+                  <span className={`text-sm font-bold ${isAmbientListenOn ? 'text-green-600' : 'text-red-600'}`}>
+                    {isAmbientListenOn ? 'Enabled' : 'Disabled'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <span className="text-gray-700 font-medium text-sm">Audio Files</span>
+                  <button className="w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center justify-center transition-colors">
+                    <i className="fas fa-download text-xs"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Modes Section - Compact Grid */}
+          <div className="bg-white rounded-lg shadow-md p-5 border border-gray-200 hover:shadow-lg transition-shadow">
+            <h3 className="text-gray-800 text-base font-bold mb-4 flex items-center gap-2">
+              <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                <i className="fas fa-sliders-h text-indigo-600 text-sm"></i>
+              </div>
+              Device Modes
+            </h3>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-700 font-medium text-sm">Privacy</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" defaultChecked />
+                    <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                  </label>
+                </div>
+              </div>
+              <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-700 font-medium text-sm">Aeroplane</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" defaultChecked />
+                    <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                  </label>
+                </div>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-700 font-medium text-sm">DNT</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" defaultChecked />
+                    <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                  </label>
+                </div>
+              </div>
+              <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-700 font-medium text-sm">Safe Mode</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" defaultChecked />
+                    <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                  </label>
+                </div>
+              </div>
+              <div className="bg-pink-50 p-3 rounded-lg border border-pink-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-700 font-medium text-sm">Incognito</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" defaultChecked />
+                    <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                  </label>
+                </div>
+              </div>
+              <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-700 font-medium text-sm">School</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" defaultChecked />
+                    <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                  </label>
+                </div>
+              </div>
+              <div className="bg-cyan-50 p-3 rounded-lg border border-cyan-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-700 font-medium text-sm">LED</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={isLedOn}
+                      onChange={handleLedToggle}
+                    />
+                    <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Advance Settings Section */}
+          <div className="bg-white rounded-lg shadow-md p-5 border border-gray-200 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-gray-800 text-base font-bold flex items-center gap-2">
+                <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <i className="fas fa-cog text-purple-600 text-sm"></i>
+                </div>
+                Advance Settings
+              </h3>
+              <button className="text-gray-500 hover:text-purple-600 transition-colors">
+                <i className="fas fa-edit"></i>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Left Column */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <span className="text-gray-700 font-medium text-sm">Incoq. Sett. Allow</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" defaultChecked />
+                        <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <span className="text-gray-700 font-medium text-sm">I/c Call Enable</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" defaultChecked />
+                        <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <span className="text-gray-700 font-medium text-sm">Call esc. matrix</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" defaultChecked />
+                        <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <span className="text-gray-700 font-medium text-sm">Extended GEO-F</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" defaultChecked />
+                        <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <span className="text-gray-700 font-medium text-sm">Accl Enabled</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" defaultChecked />
+                        <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <span className="text-gray-700 font-medium text-sm">AI Power Save</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" defaultChecked />
+                        <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <span className="text-gray-700 font-medium text-sm">Battery Reserve</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" defaultChecked />
+                        <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <span className="text-gray-700 font-medium text-sm">Low Battery @ %</span>
+                      <input 
+                        type="text" 
+                        defaultValue="30" 
+                        className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-gray-900 font-semibold text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <span className="text-gray-700 font-medium text-sm">Acess to Police</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" defaultChecked />
+                        <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <span className="text-gray-700 font-medium text-sm">Calling Enable</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" defaultChecked />
+                        <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <span className="text-gray-700 font-medium text-sm">O/g call Enable</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" defaultChecked />
+                        <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <span className="text-gray-700 font-medium text-sm">Extended History</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" defaultChecked />
+                        <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <span className="text-gray-700 font-medium text-sm">Temp Comp.</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" defaultChecked />
+                        <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <span className="text-gray-700 font-medium text-sm">Ble Enabled</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" defaultChecked />
+                        <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <span className="text-gray-700 font-medium text-sm">AI Anomaly</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" defaultChecked />
+                        <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <span className="text-gray-700 font-medium text-sm">Battery Reserved %</span>
+                      <input 
+                        type="text" 
+                        defaultValue="10" 
+                        className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-gray-900 font-semibold text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+            {/* Check for Firmware Updates Button - Bottom Right */}
+            <div className="mt-4 flex justify-end">
+              <button className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold shadow-md transition-colors">
+                Check for Firmware Updates
+              </button>
             </div>
           </div>
         </div>

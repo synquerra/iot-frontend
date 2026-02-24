@@ -576,6 +576,102 @@ export async function getAnalyticsByImei(imei, retryOptions = {}) {
 }
 
 /* ---------------------------------------------------------
+   6.1 Get by IMEI and Type Filter (NEW - For Config Data)
+   Backend already filters to return only packets where phone numbers are not null/blank
+--------------------------------------------------------- */
+export async function getAnalyticsByFilter(imei, type = "config_or_misc", retryOptions = {}) {
+  // Validate IMEI format
+  if (!imei || typeof imei !== 'string') {
+    throw new ValidationError("Valid IMEI is required", "imei");
+  }
+  
+  // Basic IMEI format validation (15 digits)
+  const imeiRegex = /^\d{15}$/;
+  if (!imeiRegex.test(imei)) {
+    throw new ValidationError(`Invalid IMEI format: ${imei}. IMEI must be 15 digits.`, "imei");
+  }
+
+  const q = `
+  {
+    analyticsDataByFilter(imei: "${imei}", type: "${type}") {
+      id
+      topic
+      imei
+      interval
+      geoid
+      packet
+      latitude
+      longitude
+      speed
+      battery
+      signal
+      alert
+      type
+      timestamp
+      deviceTimestamp
+      deviceRawTimestamp
+      rawPacket
+      rawImei
+      rawAlert
+      rawTemperature
+      rawPhone1
+      rawPhone2
+      rawControlPhone
+      rawNormalSendingInterval
+      rawSOSSendingInterval
+      rawNormalScanningInterval
+      rawAirplaneInterval
+      rawSpeedLimit
+      rawLowbatLimit
+    }
+  }`;
+
+  try {
+    const result = await sendQuery(q, retryOptions);
+    const rawData = result.analyticsDataByFilter || [];
+    
+    // Handle empty results gracefully
+    if (rawData.length === 0) {
+      console.info(`No analytics data found for IMEI: ${imei} with type: ${type}`);
+      return [];
+    }
+    
+    console.log(`✅ Found ${rawData.length} ${type} packets for IMEI: ${imei}`);
+    
+    // Backend already filters for non-null phone numbers, so just sort by timestamp (newest first)
+    const sortedData = rawData.sort((a, b) => {
+      const timeA = new Date(a.timestamp || a.deviceTimestamp).getTime();
+      const timeB = new Date(b.timestamp || b.deviceTimestamp).getTime();
+      return timeB - timeA; // Descending order (newest first)
+    });
+    
+    if (sortedData.length > 0) {
+      console.log('📞 Latest config with phone numbers and intervals:', {
+        timestamp: sortedData[0].timestamp,
+        rawPhone1: sortedData[0].rawPhone1,
+        rawPhone2: sortedData[0].rawPhone2,
+        rawControlPhone: sortedData[0].rawControlPhone,
+        rawNormalSendingInterval: sortedData[0].rawNormalSendingInterval,
+        rawSOSSendingInterval: sortedData[0].rawSOSSendingInterval,
+        rawNormalScanningInterval: sortedData[0].rawNormalScanningInterval,
+        rawAirplaneInterval: sortedData[0].rawAirplaneInterval,
+        rawSpeedLimit: sortedData[0].rawSpeedLimit,
+        rawLowbatLimit: sortedData[0].rawLowbatLimit
+      });
+    }
+    
+    // Return sorted data (backend already filtered for non-null phone numbers)
+    return sortedData;
+  } catch (error) {
+    console.error(`Failed to fetch analytics by filter for IMEI ${imei}:`, error);
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+    throw new ApiError(`Failed to fetch analytics for device ${imei}: ${error.message}`, error.statusCode, error.retryable);
+  }
+}
+
+/* ---------------------------------------------------------
    7. DEVICE HEALTH (Enhanced with validation)
 --------------------------------------------------------- */
 export async function getAnalyticsHealth(imei, retryOptions = {}) {

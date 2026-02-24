@@ -209,3 +209,42 @@ export async function refreshAccessToken() {
     throw error;
   }
 }
+
+
+/**
+ * 🔹 Get user details by IMEI
+ * Fetches the parent/user information who is associated with the given IMEI
+ */
+export async function getUserByIMEI(imei) {
+  const API_URL = `${API_BASE_URL}/auth/user-by-imei-query`;
+
+  const query = `
+    query {
+      userByImei(imei: "${imei}") {
+        uniqueId
+        firstName
+        lastName
+        email
+        mobile
+        userType
+      }
+    }
+  `;
+
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ query }),
+  });
+
+  const data = await res.json();
+
+  if (res.ok && data.status === "success" && data.data?.userByImei) {
+    return data.data.userByImei;
+  } else {
+    throw new Error(data.error_description || data.message || "Failed to fetch user by IMEI");
+  }
+}
