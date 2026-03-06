@@ -1,56 +1,24 @@
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-
-# builds
-/dist
-/build
-
-# production
-/.cache
-/.parcel-cache
-
-# misc
-.DS_Store
-.env.*.local
-*.local
-
-# logs
+# Logs
+logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
-# editor
-.vscode/
-.idea/
-*.swp
+node_modules
+dist
+dist-ssr
+*.local
 
-# coverage
-/coverage
-
-# lock files (optional if you don’t want to commit them)
-# package-lock.json
-# yarn.lock
-# pnpm-lock.yaml
-
-# testing
-/.jest/
-jest-cache/
-jest-test-results.json
-
-# storybook
-/.storybook-out
-
-# firebase / amplify / other tooling
-.firebase/
-.amplify/
-
-# typescript
-*.tsbuildinfo
-
-# ignore ALL env files
-.env
-.env.*
-*.env
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
