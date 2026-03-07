@@ -7,10 +7,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
-import { Eye } from "lucide-react"
-
-
+import { Eye, EyeOff, AlertCircle } from "lucide-react"
 
 import { useUserContext } from "@/contexts/UserContext"
 
@@ -26,6 +25,8 @@ export default function LoginPage() {
     const [password, setPassword] = useState("")
     const [rememberMe, setRememberMe] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+    const [showPassword, setShowPassword] = useState(false)
 
     // Handle success message from signup
     useEffect(() => {
@@ -51,20 +52,27 @@ export default function LoginPage() {
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
+        setError(null) // Clear previous errors
 
         // Basic validation
         if (!email) {
-            toast.error("Email is required")
+            const errorMsg = "Email is required"
+            setError(errorMsg)
+            toast.error(errorMsg)
             return
         }
 
         if (!/\S+@\S+\.\S+/.test(email)) {
-            toast.error("Please enter a valid email address")
+            const errorMsg = "Please enter a valid email address"
+            setError(errorMsg)
+            toast.error(errorMsg)
             return
         }
 
         if (!password) {
-            toast.error("Password is required")
+            const errorMsg = "Password is required"
+            setError(errorMsg)
+            toast.error(errorMsg)
             return
         }
 
@@ -72,7 +80,6 @@ export default function LoginPage() {
             setLoading(true)
 
             const parsedContext = await authenticateUser(email, password)
-            console.log(parsedContext);
 
             setUserContext(parsedContext)
 
@@ -95,17 +102,17 @@ export default function LoginPage() {
 
             toast.success("Login successful 🎉")
 
-            navigate("/")
-
             // Persist in background
             setTimeout(() => {
                 persistUserContext(parsedContext)
             }, 0)
 
+            navigate("/", { replace: true })
+
         } catch (err: any) {
-            toast.error(
-                err?.message || "Login failed. Please check your credentials."
-            )
+            const errorMessage = err?.message || "Login failed. Please check your credentials."
+            setError(errorMessage)
+            toast.error(errorMessage)
         } finally {
             setLoading(false)
         }
@@ -142,6 +149,14 @@ export default function LoginPage() {
                         onSubmit={handleLogin}
                         className="space-y-6 max-w-md mx-auto"
                     >
+                        {/* Error Alert */}
+                        {error && (
+                            <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertDescription>{error}</AlertDescription>
+                            </Alert>
+                        )}
+
                         {/* Email */}
                         <div className="space-y-2">
                             <Label>Email Address</Label>
@@ -149,7 +164,11 @@ export default function LoginPage() {
                                 type="email"
                                 placeholder="you@company.com"
                                 value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                onChange={(e) => {
+                                    setEmail(e.target.value)
+                                    setError(null) // Clear error on input change
+                                }}
+                                disabled={loading}
                             />
                         </div>
 
@@ -158,12 +177,27 @@ export default function LoginPage() {
                             <Label>Password</Label>
                             <div className="relative">
                                 <Input
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     placeholder="••••••••"
                                     value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
+                                    onChange={(e) => {
+                                        setPassword(e.target.value)
+                                        setError(null) // Clear error on input change
+                                    }}
+                                    disabled={loading}
                                 />
-                                <Eye className="absolute right-3 top-3.5 h-4 w-4 text-muted-foreground cursor-pointer" />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-3.5 text-muted-foreground hover:text-foreground transition-colors"
+                                    disabled={loading}
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                        <Eye className="h-4 w-4" />
+                                    )}
+                                </button>
                             </div>
                         </div>
 
@@ -173,6 +207,7 @@ export default function LoginPage() {
                                 id="remember"
                                 checked={rememberMe}
                                 onCheckedChange={(v) => setRememberMe(Boolean(v))}
+                                disabled={loading}
                             />
                             <Label htmlFor="remember" className="text-sm">
                                 Keep me signed in

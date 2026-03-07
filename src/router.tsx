@@ -6,9 +6,9 @@ import GuestMiddleware from "./middleware/GuestMiddleware";
 import RequireAuth from "./middleware/RequireAuth";
 import LoginPage from "./Pages/Auth/login";
 
+import DeviceSettings from "./features/device-settings";
 import DeviceTelemetryPage from "./features/device-telemetry";
-import DevicesPage from "./features/devices/pages/DevicePage";
-import DeviceSettings from "./features/devices/pages/DeviceSettings";
+import DevicesPage from "./features/devices";
 
 export const router = createBrowserRouter([
   {
@@ -35,7 +35,7 @@ export const router = createBrowserRouter([
                 element: <DeviceTelemetryPage />, // /devices/:imei
               },
               {
-                path: "settings",
+                path: "settings/:imei?",
                 element: <DeviceSettings />, // /devices/settings
               },
             ],

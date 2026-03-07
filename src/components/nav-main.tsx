@@ -1,14 +1,11 @@
-import { type LucideIcon } from "lucide-react"
+import { type LucideIcon } from "lucide-react";
 
 import {
   SidebarGroup,
-
   SidebarMenu,
-
   SidebarMenuButton,
   SidebarMenuItem,
-
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 import { NavLink, useLocation } from "react-router-dom";
 
 export function NavMain({
@@ -19,7 +16,7 @@ export function NavMain({
     path: string;
     end: string;
     icon: LucideIcon;
-  }[]
+  }[];
 }) {
   const location = useLocation();
   console.log("current location", location.pathname);
@@ -31,7 +28,11 @@ export function NavMain({
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton
               asChild
-              isActive={location.pathname == item.path}
+              isActive={
+                item.path != "/"
+                  ? location.pathname.includes(item.path)
+                  : location.pathname == item.path
+              }
             >
               <NavLink to={item.path}>
                 <item.icon />
@@ -42,5 +43,5 @@ export function NavMain({
         ))}
       </SidebarMenu>
     </SidebarGroup>
-  )
+  );
 }

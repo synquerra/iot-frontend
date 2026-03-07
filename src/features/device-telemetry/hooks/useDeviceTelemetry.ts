@@ -1,6 +1,7 @@
 import api from "@/lib/axios";
 import type { Device, DeviceTelemetry } from "@/types";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 function useDeviceTelemetry(imei: string) {
   const [deviceStatus, setDeviceTelemetry] = useState<DeviceTelemetry | null>(
@@ -8,33 +9,45 @@ function useDeviceTelemetry(imei: string) {
   );
   const [device, setDevice] = useState<Device | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isInitialLoad = useRef<boolean>(true);
 
   useEffect(() => {
     if (!imei) return;
 
     const fetchDeviceData = async () => {
-      const res = await api.post("device/device-master-query", {
-        query: `{
-          deviceByTopic(topic: "${imei}/pub") {
-            topic
-            imei
-            interval
-            geoid
-            createdAt
-            studentName
-            studentId
-          }
-        }`,
-      });
+      try {
+        const res = await api.post("device/device-master-query", {
+          query: `{
+            deviceByTopic(topic: "${imei}/pub") {
+              topic
+              imei
+              interval
+              geoid
+              createdAt
+              studentName
+              studentId
+            }
+          }`,
+        });
 
-      if (res.data?.data?.deviceByTopic) {
-        setDevice(res.data.data.deviceByTopic);
-        return res.data.data.deviceByTopic;
+        if (res.data?.data?.deviceByTopic) {
+          setDevice(res.data.data.deviceByTopic);
+          return res.data.data.deviceByTopic;
+        }
+
+        throw new Error("Device not found");
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to fetch device data";
+        setError(errorMessage);
+        if (isInitialLoad.current) {
+          toast.error(errorMessage);
+        }
+        throw err;
       }
-
-      return null;
     };
 
     const fetchTelemetry = async () => {
@@ -77,15 +90,23 @@ function useDeviceTelemetry(imei: string) {
 
         if (res.data?.data?.latestAnalyticsData) {
           setDeviceTelemetry(res.data.data.latestAnalyticsData);
+          setError(null);
         }
       } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to fetch telemetry data";
         console.error("Telemetry fetch failed", err);
+        setError(errorMessage);
+        if (isInitialLoad.current) {
+          toast.error(errorMessage);
+        }
       }
     };
 
     const init = async () => {
       try {
         setIsLoading(true);
+        setError(null);
 
         // 1️⃣ fetch device
         const deviceData = await fetchDeviceData();
@@ -101,8 +122,18 @@ function useDeviceTelemetry(imei: string) {
 
         // 4️⃣ start polling
         pollingRef.current = setInterval(fetchTelemetry, interval);
+
+        if (isInitialLoad.current) {
+          toast.success("Device telemetry loaded successfully");
+          isInitialLoad.current = false;
+        }
       } catch (err) {
         console.error("Device telemetry init failed", err);
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Failed to initialize device telemetry";
+        setError(errorMessage);
       } finally {
         setIsLoading(false);
       }
@@ -117,7 +148,7 @@ function useDeviceTelemetry(imei: string) {
     };
   }, [imei]);
 
-  return { deviceStatus, device, isLoading };
+  return { deviceStatus, device, isLoading, error };
 }
 
 export default useDeviceTelemetry;

@@ -19,6 +19,9 @@ export function AlertBanner({ alert }: AlertBannerProps) {
           <p className="text-sm text-destructive/80">
             Device is in {alert} mode. Immediate attention required.
           </p>
+          <p className="text-xs text-green-600/80 font-bold">
+            This is an example alert.
+          </p>
         </div>
         <Button
           variant="outline"

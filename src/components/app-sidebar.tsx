@@ -1,19 +1,16 @@
-"use client"
+"use client";
 
-import * as React from "react"
 import {
   BellIcon,
-
   BrainCogIcon,
-
   PhoneIcon,
   PieChart,
   PinIcon,
+} from "lucide-react";
+import * as React from "react";
 
-} from "lucide-react"
-
-import { NavMain } from "@/components/nav-main"
-import { NavUser } from "@/components/nav-user"
+import { NavMain } from "@/components/nav-main";
+import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -22,13 +19,10 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
-import { NavLink } from "react-router-dom"
-
-
+} from "@/components/ui/sidebar";
+import { NavLink } from "react-router-dom";
 
 const data = {
-
   topNavItems: [
     {
       name: "Overview",
@@ -43,7 +37,7 @@ const data = {
       icon: PhoneIcon,
     },
     {
-      name: "Device Settings",
+      name: "Device Settings Demo",
       path: "/devices/settings",
       end: "/devices/settings",
       icon: BrainCogIcon,
@@ -61,11 +55,8 @@ const data = {
       end: "/alerts",
       icon: BellIcon,
     },
-
   ],
 };
-
-
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
@@ -78,7 +69,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <NavLink to="/">
-
                 <img src="/images/favicon.png" className="size-8" />
 
                 <div className="grid flex-1 text-left text-sm leading-tight">
@@ -92,11 +82,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.topNavItems} />
-
       </SidebarContent>
       <SidebarFooter>
         <NavUser />
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

@@ -1,8 +1,4 @@
-import api from "@/lib/axios"; // adjust path if needed
-
-/* ================================
-   Types
-================================ */
+import api from "@/lib/axios";
 
 export type RawDevice = {
   topic: string;
@@ -25,18 +21,8 @@ export type Device = {
   createdAt?: string | null;
 };
 
-/* ================================
-   GraphQL Helper
-================================ */
-
-async function graphqlRequest<T>(
-  query: string,
-  variables?: Record<string, unknown>,
-): Promise<T> {
-  const { data } = await api.post("/device/device-master-query", {
-    query,
-    variables,
-  });
+async function graphqlRequest<T>(query: string): Promise<T> {
+  const { data } = await api.post("/device/device-master-query", { query });
 
   if (!data || data.status !== "success") {
     throw new Error(data?.error_description || "GraphQL request failed");
@@ -44,10 +30,6 @@ async function graphqlRequest<T>(
 
   return data.data;
 }
-
-/* ================================
-   Normalizer
-================================ */
 
 function normalizeDevice(device: RawDevice): Device {
   const status =
@@ -65,10 +47,6 @@ function normalizeDevice(device: RawDevice): Device {
   };
 }
 
-/* ================================
-   Service Methods
-================================ */
-
 export async function listDevices(): Promise<Device[]> {
   const query = `
     query GetDevices {
@@ -84,46 +62,28 @@ export async function listDevices(): Promise<Device[]> {
     }
   `;
 
-  const data = await graphqlRequest<{
-    devices: RawDevice[];
-  }>(query);
-
+  const data = await graphqlRequest<{ devices: RawDevice[] }>(query);
   const devices = Array.isArray(data.devices) ? data.devices : [];
 
   return devices.map(normalizeDevice);
 }
 
 export async function getDeviceByTopic(topic: string): Promise<Device | null> {
-  const query = `{deviceByTopic(topic: "${topic}") { topic imei interval geoid createdAt studentName studentId} }`;
-  const data = await graphqlRequest<{
-    deviceByTopic: RawDevice | null;
-  }>(query, { topic });
+  const query = `{
+    deviceByTopic(topic: "${topic}") {
+      topic
+      imei
+      interval
+      geoid
+      createdAt
+      studentName
+      studentId
+    }
+  }`;
+
+  const data = await graphqlRequest<{ deviceByTopic: RawDevice | null }>(query);
 
   if (!data.deviceByTopic) return null;
 
   return normalizeDevice(data.deviceByTopic);
-}
-
-export async function getDeviceByImei(imei: string): Promise<Device | null> {
-  const query = `
-    query GetDeviceByImei($imei: String!) {
-      deviceByImei(imei: $imei) {
-        topic
-        imei
-        interval
-        geoid
-        createdAt
-        studentName
-        studentId
-      }
-    }
-  `;
-
-  const data = await graphqlRequest<{
-    deviceByImei: RawDevice | null;
-  }>(query, { imei });
-
-  if (!data.deviceByImei) return null;
-
-  return normalizeDevice(data.deviceByImei);
 }

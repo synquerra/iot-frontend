@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Clock, Radio, RefreshCcw, Settings, Shield } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 
 interface DeviceHeaderProps {
   name: string;
@@ -25,6 +26,8 @@ export function DeviceHeader({
   onRefresh,
   refreshing,
 }: DeviceHeaderProps) {
+  const { imei } = useParams();
+  const navigate = useNavigate();
   const formatDateTime = (dateString: string) => {
     try {
       return new Date(dateString).toLocaleString("en-US", {
@@ -103,7 +106,12 @@ export function DeviceHeader({
               <TooltipContent>Refresh data</TooltipContent>
             </Tooltip>
 
-            <Button className="gap-2 bg-gradient-to-r from-primary to-primary/90">
+            <Button
+              className="gap-2 bg-gradient-to-r from-primary to-primary/90"
+              onClick={() => {
+                navigate(`/devices/settings/${imei}`);
+              }}
+            >
               <Settings className="h-4 w-4" />
               <span className="hidden sm:inline">Configure</span>
             </Button>

@@ -1,13 +1,12 @@
-// src/utils/auth.js
+import api from "@/lib/axios";
+import {
+  parseAuthResponse,
+  clearPersistedContext,
+} from "@/helpers/authResponseParser";
+import axios from "axios";
 
-import { parseAuthResponse, clearPersistedContext } from '@/helpers/authResponseParser';
-import axios from 'axios';
 const API_BASE_URL = import.meta.env.VITE_BACKEND_API_BASE_URL;
 
-/**
- * 🔹 Decode a JWT token without verifying it.
- * Only used client-side to read `exp`.
- */
 export function decodeJWT(token: string) {
   try {
     const payload = token.split(".")[1];
@@ -18,9 +17,6 @@ export function decodeJWT(token: string) {
   }
 }
 
-/**
- * 🔹 Check if token is expired.
- */
 export function isTokenExpired(token: string) {
   if (!token) return true;
   const decoded = decodeJWT(token);
@@ -29,16 +25,9 @@ export function isTokenExpired(token: string) {
   return decoded.exp < currentTime;
 }
 
-/**
- * 🔹 Check if session has expired based on Remember Me setting
- * Returns true if session is still valid, false if expired
- */
 export function isSessionValid() {
-  const sessionExpiry = localStorage.getItem('sessionExpiry');
-
-  if (!sessionExpiry) {
-    return false;
-  }
+  const sessionExpiry = localStorage.getItem("sessionExpiry");
+  if (!sessionExpiry) return false;
 
   const expiryDate = new Date(sessionExpiry);
   const now = new Date();
@@ -46,42 +35,22 @@ export function isSessionValid() {
   return now < expiryDate;
 }
 
-/**
- * 🔹 Clear Remember Me data
- */
 export function clearRememberMe() {
-  localStorage.removeItem('rememberedEmail');
-  localStorage.removeItem('rememberMe');
-  localStorage.removeItem('sessionExpiry');
+  localStorage.removeItem("rememberedEmail");
+  localStorage.removeItem("rememberMe");
+  localStorage.removeItem("sessionExpiry");
 }
 
-/**
- * 🔹 Auto logout user if token expired.
- */
 export function checkAuthAndLogout() {
   const token = localStorage.getItem("accessToken");
 
-  // Check if session is still valid based on Remember Me setting
-  if (!isSessionValid()) {
+  if (!isSessionValid() || !token || isTokenExpired(token)) {
     logoutUser();
-
     return false;
   }
 
-  if (!token || isTokenExpired(token)) {
-    logoutUser();
-
-    return false;
-  }
   return true;
 }
-
-/**
- * 🔹 Login via GraphQL (FastAPI backend)
- * Returns parsed user context including userType and IMEIs for device filtering
- */
-import api from "@/lib/axios";
-
 
 export async function authenticateUser(email: string, password: string) {
   const query = `
@@ -106,8 +75,6 @@ export async function authenticateUser(email: string, password: string) {
 
   try {
     const res = await api.post("/auth/signin-query", { query });
-    console.log(res);
-
     const data = res.data;
 
     if (data.status === "success" && data.data?.tokens) {
@@ -123,53 +90,41 @@ export async function authenticateUser(email: string, password: string) {
     throw new Error(data.error_description || data.message || "Login failed");
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
-      throw error.response?.data?.message ?? error.message;
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error_description ||
+        error.message;
+      throw new Error(message);
     }
 
-    throw error instanceof Error
-      ? error.message
-      : "Something went wrong";
+    throw new Error(
+      error instanceof Error ? error.message : "Something went wrong",
+    );
   }
 }
 
-/**
- * 🔹 Return whether the user is currently authenticated
- */
 export function isAuthenticated() {
   const token = localStorage.getItem("accessToken");
   if (!token) return false;
   return !isTokenExpired(token);
 }
 
-/**
- * 🔹 Logout the user
- * Clears all authentication state and persisted user context
- */
 export function logoutUser() {
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
   localStorage.removeItem("userEmail");
   sessionStorage.clear();
 
-  // Clear persisted user context
   clearPersistedContext();
 
-  // Clear Remember Me data (but keep email if Remember Me was enabled)
-  const rememberMe = localStorage.getItem('rememberMe') === 'true';
+  const rememberMe = localStorage.getItem("rememberMe") === "true";
   if (!rememberMe) {
     clearRememberMe();
   } else {
-    // Only clear session expiry, keep email saved
-    localStorage.removeItem('sessionExpiry');
+    localStorage.removeItem("sessionExpiry");
   }
 }
 
-/**
- * 🔹 Refresh access token using refresh token
- * Preserves user context (userType and IMEIs) during token refresh
- * @returns {Object} - New tokens { accessToken, refreshToken }
- * @throws {Error} - If refresh fails
- */
 export async function refreshAccessToken() {
   const refreshToken = localStorage.getItem("refreshToken");
 
@@ -197,57 +152,17 @@ export async function refreshAccessToken() {
         refreshToken: data.data.tokens.refreshToken,
       };
 
-      // ✅ Update tokens in localStorage
       localStorage.setItem("accessToken", newTokens.accessToken);
       localStorage.setItem("refreshToken", newTokens.refreshToken);
 
       return newTokens;
-    } else {
-      throw new Error(data.error_description || data.message || "Token refresh failed");
     }
+
+    throw new Error(
+      data.error_description || data.message || "Token refresh failed",
+    );
   } catch (error) {
-    // If refresh fails, clear everything and force re-login
     console.error("Token refresh failed:", error);
     throw error;
-  }
-}
-
-
-/**
- * 🔹 Get user details by IMEI
- * Fetches the parent/user information who is associated with the given IMEI
- */
-export async function getUserByIMEI(imei: string) {
-  const query = `
-    query {
-      userByImei(imei: "${imei}") {
-        uniqueId
-        firstName
-        lastName
-        email
-        mobile
-        userType
-      }
-    }
-  `;
-
-  try {
-    const res = await api.post("/auth/user-by-imei-query", { query });
-
-    const data = res.data;
-
-    if (data.status === "success" && data.data?.userByImei) {
-      return data.data.userByImei;
-    }
-
-    throw new Error(data.error_description || data.message);
-  } catch (error: unknown) {
-    if (axios.isAxiosError(error)) {
-      throw error.response?.data?.message ?? error.message;
-    }
-
-    throw error instanceof Error
-      ? error.message
-      : "Something went wrong";
   }
 }

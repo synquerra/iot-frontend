@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react"
+import { toast } from "sonner"
 import { listDevices, type Device } from "../services/deviceService"
 
 export function useDevices() {
@@ -9,10 +10,14 @@ export function useDevices() {
     const fetchDevices = useCallback(async () => {
         try {
             setLoading(true)
+            setError(null)
             const data = await listDevices()
             setDevices(data)
+            toast.success(`Successfully loaded ${data.length} device${data.length !== 1 ? 's' : ''}`)
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : "Failed to fetch devices")
+            const errorMessage = err instanceof Error ? err.message : "Failed to fetch devices"
+            setError(errorMessage)
+            toast.error(errorMessage)
         } finally {
             setLoading(false)
         }
