@@ -1,0 +1,42 @@
+"use client"
+
+import { MenuIcon } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { useSidebar } from "@/components/ui/sidebar"
+
+export function SiteHeader() {
+  const { toggleSidebar } = useSidebar()
+
+  return (
+    <header className="flex sticky top-0 z-50 w-full items-center border-b bg-background">
+      <div className="flex h-[--header-height] w-full items-center gap-4 px-4">
+        <Button
+          className="sm:hidden"
+          variant="ghost"
+          size="icon"
+          onClick={toggleSidebar}
+        >
+          <MenuIcon size={32} className="size-6" />
+        </Button>
+        <div className="inline-flex items-center justify-center bg-slate-900/40 backdrop-blur-lg rounded-xl ">
+          <img
+            src="/images/logo.png"
+            alt="Company Logo"
+            className="max-h-12"
+          />
+        </div>
+
+        <Button
+          className="hidden sm:flex"
+          variant="ghost"
+          size="icon"
+          onClick={toggleSidebar}
+        >
+          <MenuIcon size={32} className="size-6" />
+        </Button>
+
+        {/* <SearchForm className="w-full sm:ml-auto sm:w-auto" /> */}
+      </div>
+    </header>
+  )
+}
