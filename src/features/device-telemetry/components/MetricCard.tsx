@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { MetricCardProps } from "@/types/device";
+import type { MetricCardProps } from "@/types";
 
 export function MetricCard({
   icon: Icon,

@@ -49,7 +49,15 @@ export interface Device {
   studentName?: string;
   studentId?: string;
 }
-
+export interface MetricCardProps {
+  icon: React.ElementType;
+  label: string;
+  value: string | number;
+  unit?: string;
+  trend?: string;
+  color?: string;
+  children?: React.ReactNode;
+}
 export interface DeviceData {
   name: string;
   imei: string;

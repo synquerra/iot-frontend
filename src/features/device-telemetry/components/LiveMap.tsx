@@ -76,7 +76,7 @@ const MapController = ({ center }: { center: [number, number] }) => {
 const ZoomControls = ({
   onZoomIn,
   onZoomOut,
-  onReset,
+  // onReset,
 }: {
   onZoomIn: () => void;
   onZoomOut: () => void;

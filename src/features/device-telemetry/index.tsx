@@ -64,7 +64,7 @@ export default function DeviceTelemetryPage() {
 
   // Safely extract primitive values
   const data: DeviceData = {
-    name: device?.studentName ?? dummyData + "*".name,
+    name: device?.studentName ?? dummyData.name + "*",
     imei: device?.imei ?? dummyData.imei + "*",
     status: dummyData.status + "*",
     temperature: Number(

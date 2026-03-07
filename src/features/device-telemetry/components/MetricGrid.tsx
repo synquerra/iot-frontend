@@ -42,6 +42,13 @@ export function MetricsGrid({
     return 0;
   };
 
+  // Determine battery color based on level
+  // const getBatteryColorClass = (level: number) => {
+  //   if (level > 60) return "bg-green-500";
+  //   if (level > 20) return "bg-yellow-500";
+  //   return "bg-red-500";
+  // };
+
   return (
     <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
       <MetricCard
@@ -69,14 +76,15 @@ export function MetricsGrid({
         <div className="mt-4 space-y-2">
           <Progress
             value={battery}
-            className="h-2"
-            indicatorClassName={cn(
+            className={cn(
+              "h-2",
               battery > 60
-                ? "bg-green-500"
+                ? "text-green-500"
                 : battery > 20
-                  ? "bg-yellow-500"
-                  : "bg-red-500",
+                  ? "text-yellow-500"
+                  : "text-red-500",
             )}
+            // The color is applied via the className above, which styles the progress bar
           />
           <p className="text-xs text-muted-foreground flex justify-between">
             <span>≈ 3 hours remaining</span>
