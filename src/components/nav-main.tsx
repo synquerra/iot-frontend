@@ -19,7 +19,7 @@ export function NavMain({
   }[];
 }) {
   const location = useLocation();
-  console.log("current location", location.pathname);
+
 
   return (
     <SidebarGroup>

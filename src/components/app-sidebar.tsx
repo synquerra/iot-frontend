@@ -45,8 +45,8 @@ const data = {
 
     {
       name: "Geofence",
-      path: "/geofence",
-      end: "/geofence",
+      path: "/devices/geofencing",
+      end: "/devices/geofencing",
       icon: PinIcon,
     },
     {

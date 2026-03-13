@@ -14,6 +14,7 @@ import {
   CalendarIcon,
   Cpu,
   Eye,
+  MapPinned,
   MoreVertical,
   Settings,
   Trash2,
@@ -32,6 +33,7 @@ type Props = {
   };
   onClick?: () => void;
   onView?: () => void;
+  onGeofencing?: () => void;
   onSettings?: () => void;
   onRemove?: () => void;
 };
@@ -40,6 +42,7 @@ export function DeviceCard({
   device,
   onClick,
   onView,
+  onGeofencing,
   onSettings,
   onRemove,
 }: Props) {
@@ -120,6 +123,22 @@ export function DeviceCard({
                   <span>Settings</span>
                   <span className="text-xs text-muted-foreground">
                     Configure device
+                  </span>
+                </div>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onGeofencing?.();
+                }}
+                className="cursor-pointer"
+              >
+                <MapPinned className="h-4 w-4 mr-2" />
+                <div className="flex flex-col">
+                  <span>Geofencing</span>
+                  <span className="text-xs text-muted-foreground">
+                    Manage map boundaries
                   </span>
                 </div>
               </DropdownMenuItem>
