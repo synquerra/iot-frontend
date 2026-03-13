@@ -325,12 +325,12 @@ export default function AlertsPage() {
         {/* Mode Toggle */}
         <div className="mb-6">
           <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)} className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-2 bg-slate-100 dark:bg-slate-800 p-1">
-              <TabsTrigger value="errors" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 gap-2">
+            <TabsList className="grid w-full max-w-md grid-cols-2  p-1">
+              <TabsTrigger value="errors" className=" gap-2">
                 <AlertOctagon className="h-4 w-4" />
                 Errors
               </TabsTrigger>
-              <TabsTrigger value="alerts" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 gap-2">
+              <TabsTrigger value="alerts" className=" gap-2">
                 <AlertCircle className="h-4 w-4" />
                 Alerts
               </TabsTrigger>

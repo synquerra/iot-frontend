@@ -1,7 +1,6 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { Toaster } from "@/components/ui/sonner";
 import { Outlet } from "react-router-dom";
 
 export default function AppLayout() {
@@ -18,7 +17,7 @@ export default function AppLayout() {
                     </SidebarInset>
                 </div>
             </SidebarProvider>
-            <Toaster />
+
         </div>
     );
 }

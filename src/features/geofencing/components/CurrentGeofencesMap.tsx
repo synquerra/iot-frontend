@@ -70,7 +70,7 @@ export function CurrentGeofencesMap({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 p-0">
-        <div className="h-[720px] w-full bg-slate-100">
+        <div className="h-[720px] w-full bg-slate-100 dark:bg-slate-900">
           <MapContainer
             center={DEFAULT_CENTER as LatLngTuple}
             zoom={13}

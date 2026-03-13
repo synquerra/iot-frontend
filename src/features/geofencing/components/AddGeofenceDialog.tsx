@@ -295,7 +295,7 @@ export function AddGeofenceDialog({
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="h-[55vh] min-h-[420px] w-full bg-slate-100">
+                <div className="h-[55vh] min-h-[420px] w-full bg-slate-100 dark:bg-slate-900">
                   <MapContainer
                     center={DEFAULT_CENTER}
                     zoom={13}
