@@ -1,4 +1,4 @@
-export const API_ENDPOINT = `${import.meta.env.VITE_BACKEND_API_BASE_URL}/send`;
+export const API_ENDPOINT = `${import.meta.env.VITE_API_BASE_URL}/send`;
 
 export const COMMANDS = {
   STOP_SOS: "STOP_SOS",
@@ -59,6 +59,10 @@ export interface DeviceCommandError extends Error {
 export interface GeofenceCoordinate {
   latitude: number;
   longitude: number;
+}
+export interface GeofencePayloadCoordinate {
+  lat: number;
+  lng: number;
 }
 
 export interface DeviceCommandRequest {

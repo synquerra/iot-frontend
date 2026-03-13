@@ -103,3 +103,18 @@ export interface MetricCardProps {
   color?: string;
   children?: React.ReactNode;
 }
+
+
+export interface Coordinate {
+  latitude: number;
+  longitude: number;
+}
+
+export interface Geofence {
+  id?: string;
+  imei: string;
+  geofence_number: string;
+  geofence_id: string;
+  coordinates: Coordinate[];
+  created_at: string;
+}

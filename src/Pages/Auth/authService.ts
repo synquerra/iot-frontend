@@ -5,7 +5,7 @@ import {
 } from "@/helpers/authResponseParser";
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export function decodeJWT(token: string) {
   try {

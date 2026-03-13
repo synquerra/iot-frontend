@@ -5,6 +5,6 @@ export type ActiveGeofence = {
   label: string;
   imei: string;
   color: string;
-  vertices: LatLngTuple[];
+  coordinates: LatLngTuple[];
   createdAt: string;
 };

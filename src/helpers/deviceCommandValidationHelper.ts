@@ -3,7 +3,7 @@ import {
   PARAM_SCHEMAS,
   type DeviceCommand,
   type DeviceCommandParams,
-  type GeofenceCoordinate,
+  type GeofencePayloadCoordinate,
   type ValidationResult,
 } from "./deviceCommandConstants";
 
@@ -152,12 +152,19 @@ function validateSetGeofenceParams(params: DeviceCommandParams): ValidationResul
     };
   }
 
-  const coordinates = params.coordinates as GeofenceCoordinate[];
+  const coordinates = params.coordinates as GeofencePayloadCoordinate[];
 
   if (coordinates.length < 3) {
     return {
       valid: false,
       error: "coordinates must contain at least 3 points",
+    };
+  }
+
+  if (coordinates.length > 5) {
+    return {
+      valid: false,
+      error: "coordinates can contain at most 5 points",
     };
   }
 
@@ -171,9 +178,9 @@ function validateSetGeofenceParams(params: DeviceCommandParams): ValidationResul
     }
 
     if (
-      typeof coord.latitude !== "number" ||
-      Number.isNaN(coord.latitude) ||
-      !Number.isFinite(coord.latitude)
+      typeof coord.lat !== "number" ||
+      Number.isNaN(coord.lat) ||
+      !Number.isFinite(coord.lat)
     ) {
       return {
         valid: false,
@@ -182,24 +189,15 @@ function validateSetGeofenceParams(params: DeviceCommandParams): ValidationResul
     }
 
     if (
-      typeof coord.longitude !== "number" ||
-      Number.isNaN(coord.longitude) ||
-      !Number.isFinite(coord.longitude)
+      typeof coord.lng !== "number" ||
+      Number.isNaN(coord.lng) ||
+      !Number.isFinite(coord.lng)
     ) {
       return {
         valid: false,
         error: `coordinate at index ${i} must have a valid longitude`,
       };
     }
-  }
-
-  const first = coordinates[0];
-  const last = coordinates[coordinates.length - 1];
-  if (first.latitude !== last.latitude || first.longitude !== last.longitude) {
-    return {
-      valid: false,
-      error: "coordinates must form a closed polygon (first and last coordinates must match)",
-    };
   }
 
   return { valid: true };
