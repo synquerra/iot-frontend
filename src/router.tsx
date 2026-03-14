@@ -7,8 +7,10 @@ import RequireAuth from "./middleware/RequireAuth";
 import LoginPage from "./Pages/Auth/login";
 
 import DeviceSettings from "./features/device-settings";
+import GeofencingPage from "./features/geofencing";
 import DeviceTelemetryPage from "./features/device-telemetry";
 import DevicesPage from "./features/devices";
+import AlertsPage from "./features/alerts";
 
 export const router = createBrowserRouter([
   {
@@ -31,6 +33,10 @@ export const router = createBrowserRouter([
                 element: <DevicesPage />, // /devices/list
               },
               {
+                path: "geofencing/:imei?",
+                element: <GeofencingPage />, // /devices/geofencing/:imei?
+              },
+              {
                 path: ":imei",
                 element: <DeviceTelemetryPage />, // /devices/:imei
               },
@@ -39,6 +45,10 @@ export const router = createBrowserRouter([
                 element: <DeviceSettings />, // /devices/settings
               },
             ],
+          },
+          {
+            path: "alerts",
+            element: <AlertsPage />,
           },
         ],
       },

@@ -113,7 +113,7 @@ export default function DeviceTelemetryPage() {
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800/50">
+      <div className="min-h-screen ">
         <DeviceHeader
           name={data.name}
           status={data.status}
@@ -141,22 +141,22 @@ export default function DeviceTelemetryPage() {
             {/* Left Column - Main Content */}
             <div className="lg:col-span-8 space-y-6">
               <Tabs defaultValue="overview" className="space-y-4">
-                <TabsList className="grid grid-cols-3 w-full max-w-md bg-slate-100 dark:bg-slate-800 p-1">
+                <TabsList className="grid grid-cols-3 w-full max-w-md p-1">
                   <TabsTrigger
                     value="overview"
-                    className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900"
+                    className=""
                   >
                     Overview
                   </TabsTrigger>
                   <TabsTrigger
                     value="activity"
-                    className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900"
+                    className=""
                   >
                     Activity
                   </TabsTrigger>
                   <TabsTrigger
                     value="network"
-                    className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900"
+                    className=""
                   >
                     Network
                   </TabsTrigger>
@@ -206,6 +206,12 @@ export default function DeviceTelemetryPage() {
                   />
                 </TabsContent>
               </Tabs>
+              <DeviceSettings
+                audioRecording={data.audioRecording}
+                aeroplaneMode={data.aeroplaneMode}
+                ble={data.ble}
+                ledStatus={data.ledStatus}
+              />
             </div>
 
             {/* Right Column - Sidebar */}
@@ -217,12 +223,7 @@ export default function DeviceTelemetryPage() {
                 guardian2={data.guardian2}
                 guardian2Phone={data.guardian2Phone}
               />
-              <DeviceSettings
-                audioRecording={data.audioRecording}
-                aeroplaneMode={data.aeroplaneMode}
-                ble={data.ble}
-                ledStatus={data.ledStatus}
-              />
+
               <DeviceInfoSummary imei={data.imei} firmware={data.firmware} />
             </div>
           </div>

@@ -1,4 +1,5 @@
 import api from "@/lib/axios";
+import type { Geofence } from "@/types";
 
 export type RawDevice = {
   topic: string;
@@ -66,6 +67,31 @@ export async function listDevices(): Promise<Device[]> {
   const devices = Array.isArray(data.devices) ? data.devices : [];
 
   return devices.map(normalizeDevice);
+}
+export async function listDeviceGeofences(imei: string): Promise<Geofence[]> {
+  const response = await api.get(`/list/${imei}`);
+
+
+  const deviceGeofences = Array.isArray(response.data.data) ? response.data.data : [];
+
+
+  const geofences: Geofence[] = deviceGeofences.map((g: any) => {
+
+
+    return ({
+      id: g.id,
+      imei: g.imei,
+      geofence_number: g.geofence_number,
+      geofence_id: g.geofence_id,
+      created_at: g.created_at,
+      coordinates: (g.coordinates || []).map((c: any) => ({
+        latitude: c.lat,
+        longitude: c.lng,
+      })),
+    })
+  });
+
+  return geofences;
 }
 
 export async function getDeviceByTopic(topic: string): Promise<Device | null> {

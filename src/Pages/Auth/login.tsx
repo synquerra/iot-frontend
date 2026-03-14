@@ -119,17 +119,17 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-background to-blue-50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 flex items-center justify-center p-4">
 
 
-            <Card className="w-full flex flex-row max-w-7xl overflow-hidden rounded-3xl shadow-2xl bg-white/90 backdrop-blur border border-white/20">
+            <Card className="w-full flex flex-row max-w-7xl overflow-hidden rounded-3xl border-border/60 bg-card/90 shadow-2xl backdrop-blur">
 
                 {/* LEFT PANEL */}
                 <CardContent className="w-full sm:w-1/3 p-4 lg:p-6">
 
                     {/* Logo */}
                     <div className="text-center mb-10">
-                        <div className="inline-flex items-center justify-center bg-slate-900/40 backdrop-blur-lg rounded-xl p-2 mb-6">
+                        <div className="mb-6 inline-flex items-center justify-center rounded-xl border border-border/60 bg-card/80 p-2 backdrop-blur-lg shadow-sm">
                             <img
                                 src="/images/logo.png"
                                 alt="Company Logo"
@@ -137,10 +137,10 @@ export default function LoginPage() {
                             />
                         </div>
 
-                        <h1 className="text-3xl font-bold text-gray-900 mb-1">
+                        <h1 className="mb-1 text-3xl font-bold text-foreground">
                             Welcome Back
                         </h1>
-                        <p className="text-gray-600 text-sm">
+                        <p className="text-sm text-muted-foreground">
                             Sign in to your account
                         </p>
                     </div>
@@ -218,7 +218,7 @@ export default function LoginPage() {
                         <Button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-[#1e3c6e] hover:bg-[#1e3b6edf]"
+                            className="w-full"
                         >
                             {loading ? "Signing in..." : "Sign In"}
                         </Button>
@@ -237,7 +237,7 @@ export default function LoginPage() {
                 </CardContent>
 
                 {/* RIGHT PANEL */}
-                <div className="hidden sm:block sm:w-2/3 items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+                <div className="hidden sm:block sm:w-2/3 items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800">
                     <img
                         src="/images/loginbg.png"
                         alt="Login Illustration"
