@@ -27,6 +27,11 @@ import { Label } from "@/components/ui/label";
 import { DEFAULT_CENTER } from "../constants";
 import type { ActiveGeofence } from "../types";
 import type { GeofencePayload } from "../hooks/useGeofenceCommand";
+import { getDeviceCommandToastContent } from "@/helpers/deviceCommandHelper";
+import type {
+  DeviceCommandResponse,
+  PublishedDeviceCommandResult,
+} from "@/helpers/deviceCommandConstants";
 import {
   Select,
   SelectContent,
@@ -55,7 +60,10 @@ type AddGeofenceDialogProps = {
   isSaving: boolean;
   maxGeofences: number;
   maxVertices: number;
-  onSaveGeofence: (imei: string, payload: GeofencePayload) => Promise<unknown>;
+  onSaveGeofence: (
+    imei: string,
+    payload: GeofencePayload,
+  ) => Promise<DeviceCommandResponse<PublishedDeviceCommandResult>>;
 };
 
 function MapClickHandler({
@@ -169,7 +177,7 @@ export function AddGeofenceDialog({
     const nextIndex = activeDeviceGeofences.length;
 
     try {
-      await onSaveGeofence(selectedImei, {
+      const response = await onSaveGeofence(selectedImei, {
         geofence_number: draftNumber || `GEO${nextIndex + 1}`,
         geofence_id: draftName.trim(),
         coordinates: draftVertices.map(([lat, lng]) => ({
@@ -179,7 +187,10 @@ export function AddGeofenceDialog({
       });
 
       onOpenChange(false);
-      toast.success(`Geofence ${nextIndex + 1} saved for device ${selectedImei}.`);
+      const toastContent = getDeviceCommandToastContent(response);
+      toast.success(toastContent.title, {
+        description: toastContent.description,
+      });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to save geofence";
@@ -189,7 +200,7 @@ export function AddGeofenceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} >
-      <DialogContent className="max-h-[90vh] overflow-hidden p-0 sm:max-w-6xl z-[999]">
+      <DialogContent className="max-h-[90vh] overflow-hidden p-0 sm:max-w-6xl ">
         <div className="flex h-full max-h-[90vh] flex-col">
           <DialogHeader className="border-b px-6 py-4">
             <DialogTitle>Add Geofencing</DialogTitle>

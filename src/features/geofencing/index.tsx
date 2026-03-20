@@ -3,6 +3,10 @@ import { useParams } from "react-router-dom";
 import "leaflet/dist/leaflet.css";
 import { toast } from "sonner";
 import { listDevices, type Device } from "@/features/devices/services/deviceService";
+import type {
+  DeviceCommandResponse,
+  PublishedDeviceCommandResult,
+} from "@/helpers/deviceCommandConstants";
 import { AddGeofenceDialog } from "./components/AddGeofenceDialog";
 import { CurrentGeofencesMap } from "./components/CurrentGeofencesMap";
 import { GeofencingHeader } from "./components/GeofencingHeader";
@@ -115,8 +119,11 @@ export default function GeofencingPage() {
     setIsAddGeofenceOpen(true);
   };
 
-  const saveGeofence = async (imei: string, payload: GeofencePayload) => {
-    await setGeofence(imei, payload);
+  const saveGeofence = async (
+    imei: string,
+    payload: GeofencePayload,
+  ): Promise<DeviceCommandResponse<PublishedDeviceCommandResult>> => {
+    return setGeofence(imei, payload);
   };
 
   return (
