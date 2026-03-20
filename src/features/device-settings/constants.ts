@@ -117,7 +117,6 @@ export const stats: DeviceSettingsStat[] = [
 export const tabs: DeviceSettingsTab[] = [
   { value: "communication", label: "Communication", icon: Phone },
   { value: "intervals", label: "Intervals", icon: Clock },
-  { value: "safety", label: "Safety", icon: Shield },
   { value: "modes", label: "Modes", icon: Gauge },
   { value: "advanced", label: "Advanced", icon: Settings2 },
 ];

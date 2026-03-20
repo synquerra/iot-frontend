@@ -11,11 +11,11 @@ import {
   COMMANDS,
   type PublishedDeviceCommandResult,
 } from "@/helpers/deviceCommandConstants";
+import type { LatestDeviceSettingsRecord } from "@/features/device-settings/services/deviceSettingsService";
 import {
   getDeviceCommandToastContent,
   sendDeviceCommand,
 } from "@/helpers/deviceCommandHelper";
-import useDeviceTelemetry from "@/features/device-telemetry/hooks/useDeviceTelemetry";
 import { Clock, RotateCcw, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -100,49 +100,48 @@ function toStringValue(value: string | number | undefined, fallback: string) {
 
 type IntervalsSettingsProps = {
   selectedImei: string;
+  latestSettings: LatestDeviceSettingsRecord | null;
 };
 
-export function IntervalsSettings({ selectedImei }: IntervalsSettingsProps) {
-  const { deviceStatus } = useDeviceTelemetry(selectedImei);
+export function IntervalsSettings({
+  selectedImei,
+  latestSettings,
+}: IntervalsSettingsProps) {
   const [values, setValues] = useState<DeviceSettingsFormState>(DEFAULT_VALUES);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (!deviceStatus) {
-      return;
-    }
-
     setValues({
       NormalSendingInterval: toStringValue(
-        deviceStatus.rawNormalSendingInterval,
+        latestSettings?.raw_NormalSendingInterval ?? undefined,
         DEFAULT_VALUES.NormalSendingInterval,
       ),
       SOSSendingInterval: toStringValue(
-        deviceStatus.rawSOSSendingInterval,
+        latestSettings?.raw_SOSSendingInterval ?? undefined,
         DEFAULT_VALUES.SOSSendingInterval,
       ),
       NormalScanningInterval: toStringValue(
-        deviceStatus.rawNormalScanningInterval,
+        latestSettings?.raw_NormalScanningInterval ?? undefined,
         DEFAULT_VALUES.NormalScanningInterval,
       ),
       AirplaneInterval: toStringValue(
-        deviceStatus.rawAirplaneInterval,
+        latestSettings?.raw_AirplaneInterval ?? undefined,
         DEFAULT_VALUES.AirplaneInterval,
       ),
       TemperatureLimit: toStringValue(
-        deviceStatus.rawTemperature,
+        latestSettings?.raw_temperature ?? undefined,
         DEFAULT_VALUES.TemperatureLimit,
       ),
       SpeedLimit: toStringValue(
-        deviceStatus.rawSpeedLimit,
+        latestSettings?.raw_SpeedLimit ?? undefined,
         DEFAULT_VALUES.SpeedLimit,
       ),
       LowbatLimit: toStringValue(
-        deviceStatus.rawLowbatLimit,
+        latestSettings?.raw_LowbatLimit ?? undefined,
         DEFAULT_VALUES.LowbatLimit,
       ),
     });
-  }, [deviceStatus]);
+  }, [latestSettings]);
 
   const handleChange = (
     key: keyof DeviceSettingsFormState,

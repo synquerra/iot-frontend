@@ -1,9 +1,12 @@
 import { listDevices, type Device } from "@/features/devices/services/deviceService";
+import {
+  getLatestDeviceSettings,
+  type LatestDeviceSettingsRecord,
+} from "@/features/device-settings/services/deviceSettingsService";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { DeviceSettingsHeader } from "./components/DeviceSettingsHeader";
-import { DeviceSettingsStats } from "./components/DeviceSettingsStats";
 import { DeviceSettingsTargetDeviceCard } from "./components/DeviceSettingsTargetDeviceCard";
 import { DeviceSettingsTabs } from "./components/DeviceSettingsTabs";
 
@@ -12,6 +15,9 @@ export default function DeviceSettings() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [isLoadingDevices, setIsLoadingDevices] = useState(true);
   const [selectedImei, setSelectedImei] = useState(routeImei ?? "");
+  const [latestSettings, setLatestSettings] =
+    useState<LatestDeviceSettingsRecord | null>(null);
+  const [isLoadingLatestSettings, setIsLoadingLatestSettings] = useState(false);
 
   useEffect(() => {
     setSelectedImei(routeImei ?? "");
@@ -46,6 +52,42 @@ export default function DeviceSettings() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!selectedImei) {
+      setLatestSettings(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadLatestSettings = async () => {
+      try {
+        setIsLoadingLatestSettings(true);
+        const response = await getLatestDeviceSettings(selectedImei);
+        if (!isMounted) {
+          return;
+        }
+        setLatestSettings(response);
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to load latest device settings";
+        toast.error(message);
+      } finally {
+        if (isMounted) {
+          setIsLoadingLatestSettings(false);
+        }
+      }
+    };
+
+    loadLatestSettings();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedImei]);
+
   const selectedDevice = useMemo(
     () => devices.find((device) => device.imei === selectedImei) ?? null,
     [devices, selectedImei],
@@ -63,8 +105,11 @@ export default function DeviceSettings() {
           isLoadingDevices={isLoadingDevices}
           onSelectImei={setSelectedImei}
         />
-        <DeviceSettingsStats />
-        <DeviceSettingsTabs selectedImei={selectedImei} />
+        <DeviceSettingsTabs
+          selectedImei={selectedImei}
+          latestSettings={latestSettings}
+          isLoadingLatestSettings={isLoadingLatestSettings}
+        />
       </div>
     </div>
   );
