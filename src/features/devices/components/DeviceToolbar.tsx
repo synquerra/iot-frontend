@@ -1,28 +1,16 @@
 import { Input } from "@/components/ui/input"
-import {
-    Select,
-    SelectTrigger,
-    SelectValue,
-    SelectContent,
-    SelectItem,
-} from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { useDeviceTable } from "../context/DeviceTableContext"
-import { Search, X, RefreshCw, Filter } from "lucide-react"
-import { useState } from "react"
+import { Search, X, RefreshCw } from "lucide-react"
 
 export function DeviceToolbar() {
     const {
         search,
         setSearch,
-        statusFilter,
-        setStatusFilter,
         refresh,
         selected,
         clearSelection,
     } = useDeviceTable()
-
-    const [showFilters, setShowFilters] = useState(false)
 
     return (
         <div className="space-y-3">
@@ -47,16 +35,7 @@ export function DeviceToolbar() {
                     )}
                 </div>
 
-                {/* Filter toggle button (mobile) + refresh (all screens) */}
-                <Button
-                    variant="outline"
-                    size="icon"
-                    className="sm:hidden"
-                    onClick={() => setShowFilters(!showFilters)}
-                >
-                    <Filter className="h-4 w-4" />
-                </Button>
-
+                {/* Refresh (all screens) */}
                 <Button
                     variant="outline"
                     size="icon"
@@ -68,45 +47,12 @@ export function DeviceToolbar() {
 
                 {/* Desktop buttons */}
                 <div className="hidden sm:flex gap-2">
-                    <Select
-                        value={statusFilter}
-                        onValueChange={setStatusFilter}
-                    >
-                        <SelectTrigger className="w-[140px]">
-                            <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="inactive">Inactive</SelectItem>
-                        </SelectContent>
-                    </Select>
-
                     <Button variant="outline" onClick={refresh}>
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Refresh
                     </Button>
                 </div>
             </div>
-
-            {/* Collapsible filter section (mobile) */}
-            {showFilters && (
-                <div className="sm:hidden">
-                    <Select
-                        value={statusFilter}
-                        onValueChange={setStatusFilter}
-                    >
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Filter by status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All devices</SelectItem>
-                            <SelectItem value="active">Active only</SelectItem>
-                            <SelectItem value="inactive">Inactive only</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            )}
 
             {/* Selection bar */}
             {selected.length > 0 && (

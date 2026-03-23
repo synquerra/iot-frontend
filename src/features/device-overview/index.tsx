@@ -1,4 +1,3 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
@@ -7,12 +6,12 @@ import { ActivityBreakdown } from "./components/ActivityBreakdown";
 import { DeviceHeader } from "./components/DeviceHeader";
 import { DeviceHealthCard } from "./components/DeviceHealthCard";
 import { DeviceInfoSummary } from "./components/DeviceInfoSummary";
+import { DeviceSettingsSummaryCard } from "./components/DeviceSettingsSummaryCard";
 import { GuardiansList } from "./components/GuardiansList";
 import { LiveMap } from "./components/LiveMap";
 
 import { NetworkPerformanceCard } from "./components/NetworkPerformanceCard";
 import { QuickActions } from "./components/QuickActions";
-import { SafetyStatusCard } from "./components/SafetyStatusCard";
 
 
 import { MetricsGrid } from "./components/MetricGrid";
@@ -22,7 +21,7 @@ import useDeviceOverview from "./hooks/useDeviceOverview";
 export default function DeviceOverviewPage() {
   const { imei } = useParams();
   const [refreshing, setRefreshing] = useState(false);
-  const { device, deviceStatus, analyticsHealth, isLoading } = useDeviceOverview(imei ?? "");
+  const { device, deviceStatus, analyticsHealth, deviceSettings, isLoading } = useDeviceOverview(imei ?? "");
 
   const getStat = (stats: string[] | undefined, key: string) => {
     if (!stats) return 0;
@@ -52,6 +51,11 @@ export default function DeviceOverviewPage() {
     crawling: analyticsHealth ? getStat(analyticsHealth.movementStats, 'crawling') : 0,
     stationary: analyticsHealth ? getStat(analyticsHealth.movementStats, 'stationary') : 0,
     overspeeding: analyticsHealth ? getStat(analyticsHealth.movementStats, 'overspeed') : 0,
+    settingsNormalInterval: deviceSettings?.raw_NormalSendingInterval ?? "N/A",
+    settingsSosInterval: deviceSettings?.raw_SOSSendingInterval ?? "N/A",
+    settingsSpeedLimit: deviceSettings?.raw_SpeedLimit ?? "N/A",
+    settingsLowBattery: deviceSettings?.raw_LowbatLimit ?? "N/A",
+    settingsAirplaneInterval: deviceSettings?.raw_AirplaneInterval ?? "N/A",
   };
 
   const handleRefresh = () => {
@@ -66,7 +70,7 @@ export default function DeviceOverviewPage() {
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen ">
+      <div className="min-h-screen pb-12 bg-background">
         <DeviceHeader
           name={data.name}
           status={data.status}
@@ -75,8 +79,7 @@ export default function DeviceOverviewPage() {
           refreshing={refreshing}
         />
 
-        <main className="container mx-auto px-4 py-6 space-y-6">
-
+        <main className="space-y-6">
           <MetricsGrid
             speed={data.speed}
             latitude={data.latitude}
@@ -88,71 +91,46 @@ export default function DeviceOverviewPage() {
           <div className="grid gap-6 lg:grid-cols-12">
             {/* Left Column - Main Content */}
             <div className="lg:col-span-8 space-y-6">
-              <Tabs defaultValue="overview" className="space-y-4">
-                <TabsList className="grid grid-cols-3 w-full max-w-md p-1">
-                  <TabsTrigger
-                    value="overview"
-                    className=""
-                  >
-                    Overview
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="activity"
-                    className=""
-                  >
-                    Activity
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="network"
-                    className=""
-                  >
-                    Network
-                  </TabsTrigger>
-                </TabsList>
+              <div className="grid gap-4 md:grid-cols-1">
+                <DeviceHealthCard
+                  temperature={data.temperature}
+                  performance={data.performance}
+                  dataInterval={data.dataInterval}
+                />
+              </div>
 
-                <TabsContent value="overview" className="space-y-6">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <DeviceHealthCard
-                      temperature={data.temperature}
-                      performance={data.performance}
-                      dataInterval={data.dataInterval}
-                    />
-                    <SafetyStatusCard
-                      alert={data.alert}
-                    />
-                  </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <ActivityBreakdown
+                  crawling={data.crawling}
+                  stationary={data.stationary}
+                  overspeeding={data.overspeeding}
+                />
+                <NetworkPerformanceCard
+                  gpsSignal={data.gpsSignal}
+                  signal={data.signal}
+                />
+              </div>
 
-                  <LiveMap
-                    latitude={data.latitude}
-                    longitude={data.longitude}
-                    speed={data.speed}
-                    name={data.name}
-                    battery={data.battery}
-                    lastUpdate={data.lastUpdate}
-                  />
-                </TabsContent>
-
-                <TabsContent value="activity" className="space-y-4">
-                  <ActivityBreakdown
-                    crawling={data.crawling}
-                    stationary={data.stationary}
-                    overspeeding={data.overspeeding}
-                  />
-                </TabsContent>
-
-                <TabsContent value="network" className="space-y-4">
-                  <NetworkPerformanceCard
-                    gpsSignal={data.gpsSignal}
-                    signal={data.signal}
-                  />
-                </TabsContent>
-              </Tabs>
-
+              <LiveMap
+                latitude={data.latitude}
+                longitude={data.longitude}
+                speed={data.speed}
+                name={data.name}
+                battery={data.battery}
+                lastUpdate={data.lastUpdate}
+              />
             </div>
 
             {/* Right Column - Sidebar */}
             <div className="lg:col-span-4 space-y-6">
               <QuickActions />
+              <DeviceSettingsSummaryCard
+                normalInterval={data.settingsNormalInterval}
+                sosInterval={data.settingsSosInterval}
+                speedLimit={data.settingsSpeedLimit}
+                lowBattery={data.settingsLowBattery}
+                airplaneInterval={data.settingsAirplaneInterval}
+              />
               <GuardiansList
                 guardian1Phone={data.guardian1Phone}
                 guardian2Phone={data.guardian2Phone}

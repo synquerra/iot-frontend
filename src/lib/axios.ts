@@ -25,7 +25,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => {
     if (response.data?.note) {
-      toast(response.data.note);
+      toast(response.data.note, { id: response.data.note });
     }
     return response;
   },

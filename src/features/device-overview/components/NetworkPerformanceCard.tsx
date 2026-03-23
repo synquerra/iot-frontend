@@ -18,9 +18,12 @@ export function NetworkPerformanceCard({
   signal,
 }: NetworkPerformanceCardProps) {
   return (
-    <Card>
+    <Card className="relative opacity-60 grayscale-[0.5] transition-all hover:grayscale-0 pointer-events-none">
       <CardHeader>
-        <CardTitle>Network Performance</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Network Performance</CardTitle>
+          <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded border border-border/50">Dummy</span>
+        </div>
         <CardDescription>Signal strength and connectivity</CardDescription>
       </CardHeader>
       <CardContent>

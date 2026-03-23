@@ -1,5 +1,15 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import {
     Cpu,
@@ -20,6 +30,9 @@ import {
     Activity,
     TrendingUp,
     TrendingDown,
+    ChevronDown,
+    ChevronUp,
+    Filter,
 } from "lucide-react";
 
 // Solid color variants that pop on black background
@@ -90,6 +103,13 @@ const getTrend = (value: number, trend?: string) => {
 };
 
 export default function DeviceStatusGrid() {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [visibleWidgetTitles, setVisibleWidgetTitles] = useState<string[]>([
+        "Total Devices", "Active", "Inactive", "Hanged", "Tampered", "High Temp",
+        "SOS", "Overspeed", "Anomaly", "Restricted Entry", "SIM Issues",
+        "Low Data", "GPS Issues", "Battery Health", "BLE"
+    ]);
+
     const cards = [
         {
             title: "Total Devices",
@@ -204,29 +224,78 @@ export default function DeviceStatusGrid() {
         <div className="space-y-6">
             {/* Header with glow effect */}
             <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-transparent to-transparent blur-2xl" />
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-transparent to-transparent blur-2xl pointer-events-none" />
                 <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="space-y-1">
+                    <div 
+                        className="space-y-1 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => setIsExpanded(!isExpanded)}
+                    >
                         <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
                             Device Status
-                            <Badge variant="outline" className="ml-2 border-border text-muted-foreground">
+                            <Badge variant="outline" className="ml-2 border-border text-muted-foreground mr-2">
                                 Overview
                             </Badge>
+                            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded border border-border/50">Dummy</span>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                className="h-7 px-3 text-xs font-semibold rounded-full bg-secondary/80 hover:bg-secondary transition-colors"
+                            >
+                                {isExpanded ? (
+                                    <><ChevronUp className="h-4 w-4 mr-1" /> Collapse Cards</>
+                                ) : (
+                                    <><ChevronDown className="h-4 w-4 mr-1" /> Expand Cards</>
+                                )}
+                            </Button>
                         </h2>
                         <p className="text-sm text-muted-foreground">
                             Real-time monitoring of all connected devices
                         </p>
                     </div>
-                    <Badge variant="outline" className="gap-1.5 py-1.5 border-primary/30 bg-primary/10 text-primary">
-                        <Activity className="h-3.5 w-3.5 animate-pulse" />
-                        <span>Live • {new Date().toLocaleTimeString()}</span>
-                    </Badge>
+                    
+                    <div className="flex items-center gap-3">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="gap-2">
+                                    <Filter className="h-4 w-4" />
+                                    Widgets
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56 max-h-[400px] overflow-y-auto">
+                                <DropdownMenuLabel>Toggle Status Cards</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {cards.map((w) => (
+                                    <DropdownMenuCheckboxItem
+                                        key={w.title}
+                                        checked={visibleWidgetTitles.includes(w.title)}
+                                        onCheckedChange={(checked) => {
+                                            setVisibleWidgetTitles((prev) => 
+                                                checked 
+                                                    ? [...prev, w.title]
+                                                    : prev.filter((t) => t !== w.title)
+                                            )
+                                        }}
+                                        onSelect={(e) => e.preventDefault()}
+                                    >
+                                        {w.title}
+                                    </DropdownMenuCheckboxItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <Badge variant="outline" className="gap-1.5 py-1.5 border-primary/30 bg-primary/10 text-primary">
+                            <Activity className="h-3.5 w-3.5 animate-pulse" />
+                            <span>Live • {new Date().toLocaleTimeString()}</span>
+                        </Badge>
+                    </div>
                 </div>
             </div>
 
-            {/* Cards Grid */}
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-                {cards.map((card, index) => {
+            {isExpanded && (
+                <>
+                {/* Cards Grid */}
+                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+                    {cards.filter(c => visibleWidgetTitles.includes(c.title)).map((card, index) => {
                     const Icon = card.icon;
                     const colorKey = cardColorMap[card.title];
 
@@ -343,6 +412,8 @@ export default function DeviceStatusGrid() {
                     </div>
                 </div>
             </div>
+            </>
+            )}
         </div>
     );
 }

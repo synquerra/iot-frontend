@@ -1,8 +1,6 @@
 import {
   Card,
-  CardContent,
   CardDescription,
-  CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import {
@@ -32,16 +30,17 @@ export function DeviceSettingsTargetDeviceCard({
   onSelectImei,
 }: DeviceSettingsTargetDeviceCardProps) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Target Device</CardTitle>
-        <CardDescription>
-          {routeImei
-            ? "This page was opened for a specific device."
-            : "Pick a device before updating settings."}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <Card className="overflow-hidden border-primary/10 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between p-6 gap-6">
+        <div className="space-y-1.5 flex-1">
+          <CardTitle className="text-xl">Target Device</CardTitle>
+          <CardDescription>
+            {routeImei
+              ? "This page was opened for a specific device."
+              : "Pick a device before updating settings."}
+          </CardDescription>
+        </div>
+        <div className="w-full md:w-[350px] space-y-4">
         {routeImei ? (
           <div className="rounded-lg border bg-muted/30 p-3">
             <div className="text-sm font-medium">
@@ -81,7 +80,8 @@ export function DeviceSettingsTargetDeviceCard({
             </div>
           </div>
         )}
-      </CardContent>
+        </div>
+      </div>
     </Card>
   );
 }

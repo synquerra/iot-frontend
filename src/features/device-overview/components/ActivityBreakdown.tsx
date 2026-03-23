@@ -31,10 +31,16 @@ export function ActivityBreakdown({
     },
   ];
 
+  const colorStyles: Record<string, { bg: string; text: string }> = {
+    blue: { bg: "bg-blue-500/10", text: "text-blue-500" },
+    orange: { bg: "bg-orange-500/10", text: "text-orange-500" },
+    red: { bg: "bg-red-500/10", text: "text-red-500" },
+  };
+
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <CardTitle>Activity Breakdown</CardTitle>
             <CardDescription>Last 24 hours monitoring</CardDescription>
@@ -60,10 +66,10 @@ export function ActivityBreakdown({
                   </p>
                 </div>
                 <div
-                  className={cn("rounded-full p-2", `bg-${item.color}-500/10`)}
+                  className={cn("rounded-full p-2", colorStyles[item.color].bg)}
                 >
                   <item.icon
-                    className={cn("h-4 w-4", `text-${item.color}-500`)}
+                    className={cn("h-4 w-4", colorStyles[item.color].text)}
                   />
                 </div>
               </div>

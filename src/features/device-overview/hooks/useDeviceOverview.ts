@@ -2,6 +2,7 @@ import api from "@/lib/axios";
 import type { Device, DeviceOverview, AnalyticsHealth } from "@/types";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { getLatestDeviceSettings, type LatestDeviceSettingsRecord } from "@/features/device-settings/services/deviceSettingsService";
 
 function useDeviceOverview(imei: string) {
   const [deviceStatus, setDeviceOverview] = useState<DeviceOverview | null>(
@@ -10,6 +11,7 @@ function useDeviceOverview(imei: string) {
   const [analyticsHealth, setAnalyticsHealth] = useState<AnalyticsHealth | null>(null);
 
   const [device, setDevice] = useState<Device | null>(null);
+  const [deviceSettings, setDeviceSettings] = useState<LatestDeviceSettingsRecord | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -126,6 +128,14 @@ function useDeviceOverview(imei: string) {
         // 2️⃣ fetch overview once immediately
         await fetchOverview();
 
+        // fetch device settings
+        try {
+          const settings = await getLatestDeviceSettings(imei);
+          setDeviceSettings(settings);
+        } catch (settingsErr) {
+          console.error("Failed to fetch device settings", settingsErr);
+        }
+
         // 3️⃣ determine polling interval
         const interval =
           deviceData?.interval != null
@@ -160,7 +170,7 @@ function useDeviceOverview(imei: string) {
     };
   }, [imei]);
 
-  return { deviceStatus, device, analyticsHealth, isLoading, error };
+  return { deviceStatus, device, analyticsHealth, deviceSettings, isLoading, error };
 }
 
 export default useDeviceOverview;

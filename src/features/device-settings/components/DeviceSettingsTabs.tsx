@@ -18,42 +18,44 @@ export function DeviceSettingsTabs({
   isLoadingLatestSettings,
 }: DeviceSettingsTabsProps) {
   return (
-    <Tabs defaultValue="communication" className="space-y-6">
-      <TabsList className="grid h-auto grid-cols-2 gap-2 bg-transparent p-0 md:grid-cols-4">
+    <Tabs defaultValue="communication" className="flex flex-col md:flex-row gap-8">
+      <TabsList className="flex flex-col h-auto justify-start bg-transparent p-0 w-full md:w-64 space-y-1">
         {tabs.map((tab) => (
           <TabsTrigger
             key={tab.value}
             value={tab.value}
-            className="gap-2 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            className="w-full justify-start gap-3 px-4 py-2.5 text-left text-muted-foreground hover:bg-muted/50 data-[state=active]:bg-muted data-[state=active]:text-foreground data-[state=active]:shadow-none transition-colors rounded-lg"
           >
-            <tab.icon size={16} />
-            <span className="hidden md:inline">{tab.label}</span>
+            <tab.icon size={18} />
+            <span className="font-medium">{tab.label}</span>
           </TabsTrigger>
         ))}
       </TabsList>
 
-      <TabsContent value="communication" className="space-y-6">
+      <div className="flex-1 min-w-0">
+        <TabsContent value="communication" className="m-0 space-y-6">
         <CommunicationSettings
           selectedImei={selectedImei}
           latestSettings={latestSettings}
           isLoadingLatestSettings={isLoadingLatestSettings}
         />
-      </TabsContent>
+        </TabsContent>
 
-      <TabsContent value="intervals" className="space-y-6">
+        <TabsContent value="intervals" className="m-0 space-y-6">
         <IntervalsSettings
           selectedImei={selectedImei}
           latestSettings={latestSettings}
         />
-      </TabsContent>
+        </TabsContent>
 
-      <TabsContent value="modes" className="space-y-6">
+        <TabsContent value="modes" className="m-0 space-y-6">
         <ModesSettings selectedImei={selectedImei} />
-      </TabsContent>
+        </TabsContent>
 
-      <TabsContent value="advanced" className="space-y-6">
+        <TabsContent value="advanced" className="m-0 space-y-6">
         <AdvancedSettings />
-      </TabsContent>
+        </TabsContent>
+      </div>
     </Tabs>
   );
 }

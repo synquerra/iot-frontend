@@ -94,8 +94,8 @@ export default function DeviceSettings() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto space-y-8">
+    <div className="w-full bg-background">
+      <div className="space-y-8">
         <DeviceSettingsHeader />
         <DeviceSettingsTargetDeviceCard
           routeImei={routeImei}
