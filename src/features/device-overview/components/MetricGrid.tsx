@@ -1,14 +1,13 @@
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { MapContainer, Marker, TileLayer } from "react-leaflet";
 import {
-  Activity,
   Battery,
   MapPin,
   Move,
-  Navigation,
-  Satellite,
-  TrendingUp,
   Wifi,
 } from "lucide-react";
 import { MetricCard } from "./MetricCard";
@@ -19,10 +18,24 @@ interface MetricsGridProps {
   longitude: number;
   battery: number;
   signal: number;
-  satellites: number;
-  steps: number;
-  distance: string;
 }
+
+// Custom pulse marker for the minimap
+const createMinimapMarker = () => {
+  return L.divIcon({
+    className: "custom-minimap-marker",
+    html: `<div style="
+      width: 14px;
+      height: 14px;
+      background: #22c55e;
+      border: 2px solid white;
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(0,0,0,0.4);
+    "></div>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+  });
+};
 
 export function MetricsGrid({
   speed,
@@ -30,9 +43,6 @@ export function MetricsGrid({
   longitude,
   battery,
   signal,
-  satellites,
-  steps,
-  distance,
 }: MetricsGridProps) {
   const getSignalStrength = (signal: number) => {
     if (signal >= 80) return 4;
@@ -112,30 +122,34 @@ export function MetricsGrid({
               />
             ))}
           </div>
-          <div className="flex items-center gap-2 text-xs">
-            <Satellite className="h-3.5 w-3.5" />
-            <span>{satellites} SAT</span>
-          </div>
         </div>
       </MetricCard>
 
-      <MetricCard
-        icon={Activity}
-        label="Activity"
-        value={steps.toLocaleString()}
-        unit="steps"
-        color="green"
-      >
-        <div className="mt-4 flex items-center justify-between border-t pt-3">
-          <div className="flex items-center gap-2 text-xs">
-            <Navigation className="h-3.5 w-3.5" />
-            <span>{distance} km today</span>
+      <Card className="group hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col h-full min-h-[160px]">
+        <CardContent className="p-0 flex-1 relative">
+          <MapContainer
+            center={[latitude, longitude]}
+            zoom={14}
+            zoomControl={false}
+            dragging={false}
+            scrollWheelZoom={false}
+            doubleClickZoom={false}
+            style={{ height: "100%", width: "100%", position: "absolute", top: 0, left: 0, zIndex: 0 }}
+          >
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <Marker position={[latitude, longitude]} icon={createMinimapMarker()} />
+          </MapContainer>
+          <div className="absolute bottom-3 left-3 right-3 bg-background/95 backdrop-blur rounded-lg p-2.5 shadow-sm z-[1000] flex flex-col gap-1 border border-border/50">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+              <MapPin className="h-3.5 w-3.5 text-green-500" />
+              Live Location
+            </div>
+            <div className="text-[10px] font-mono text-muted-foreground pl-5 tracking-tighter">
+              {latitude.toFixed(5)}°, {longitude.toFixed(5)}°
+            </div>
           </div>
-          <Badge variant="outline" className="text-xs">
-            +12% <TrendingUp className="h-3 w-3 ml-1 inline" />
-          </Badge>
-        </div>
-      </MetricCard>
+        </CardContent>
+      </Card>
     </div>
   );
 }

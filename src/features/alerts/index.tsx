@@ -397,7 +397,7 @@ export default function AlertsPage() {
 
         {/* History Section */}
         <Card className="overflow-hidden">
-          <CardHeader className="border-b bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
+          <CardHeader className="border-b bg-background/50 backdrop-blur-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <CardTitle className="text-xl">Event History</CardTitle>
@@ -460,7 +460,7 @@ export default function AlertsPage() {
                     className={cn(
                       "group relative rounded-xl border p-5 transition-all duration-200",
                       "hover:shadow-md hover:border-primary/20",
-                      "bg-white dark:bg-slate-900"
+                      "bg-background"
                     )}
                   >
                     {/* Status Indicator Line */}

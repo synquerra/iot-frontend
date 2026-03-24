@@ -1,4 +1,5 @@
 import axios from "axios";
+import { toast } from "sonner";
 
 const baseUrl: string = import.meta.env.VITE_API_BASE_URL;
 
@@ -22,7 +23,12 @@ api.interceptors.request.use((config) => {
 
 // Handle 401 responses
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (response.data?.note) {
+      toast(response.data.note, { id: response.data.note });
+    }
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem("accessToken"); // ✅ match key

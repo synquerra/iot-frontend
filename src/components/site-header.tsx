@@ -19,7 +19,7 @@ export function SiteHeader() {
         >
           <MenuIcon size={32} className="size-6" />
         </Button>
-        <div className="inline-flex items-center justify-center rounded-xl border border-border/60 bg-card/80 backdrop-blur-lg shadow-sm">
+        <div className="inline-flex items-center justify-center rounded-xl border border-border/60 bg-slate-900 p-1 backdrop-blur-lg shadow-sm">
           <img
             src="/images/logo.png"
             alt="Company Logo"

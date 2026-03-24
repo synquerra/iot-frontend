@@ -1,5 +1,15 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import {
     Cpu,
@@ -20,6 +30,9 @@ import {
     Activity,
     TrendingUp,
     TrendingDown,
+    ChevronDown,
+    ChevronUp,
+    Filter,
 } from "lucide-react";
 
 // Solid color variants that pop on black background
@@ -90,6 +103,13 @@ const getTrend = (value: number, trend?: string) => {
 };
 
 export default function DeviceStatusGrid() {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [visibleWidgetTitles, setVisibleWidgetTitles] = useState<string[]>([
+        "Total Devices", "Active", "Inactive", "Hanged", "Tampered", "High Temp",
+        "SOS", "Overspeed", "Anomaly", "Restricted Entry", "SIM Issues",
+        "Low Data", "GPS Issues", "Battery Health", "BLE"
+    ]);
+
     const cards = [
         {
             title: "Total Devices",
@@ -204,29 +224,78 @@ export default function DeviceStatusGrid() {
         <div className="space-y-6">
             {/* Header with glow effect */}
             <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-transparent to-transparent blur-2xl" />
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-transparent to-transparent blur-2xl pointer-events-none" />
                 <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="space-y-1">
-                        <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                    <div 
+                        className="space-y-1 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => setIsExpanded(!isExpanded)}
+                    >
+                        <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
                             Device Status
-                            <Badge variant="outline" className="ml-2 border-white/20 text-white/80">
+                            <Badge variant="outline" className="ml-2 border-border text-muted-foreground mr-2">
                                 Overview
                             </Badge>
+                            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded border border-border/50">Dummy</span>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                className="h-7 px-3 text-xs font-semibold rounded-full bg-secondary/80 hover:bg-secondary transition-colors"
+                            >
+                                {isExpanded ? (
+                                    <><ChevronUp className="h-4 w-4 mr-1" /> Collapse Cards</>
+                                ) : (
+                                    <><ChevronDown className="h-4 w-4 mr-1" /> Expand Cards</>
+                                )}
+                            </Button>
                         </h2>
-                        <p className="text-sm text-gray-400">
+                        <p className="text-sm text-muted-foreground">
                             Real-time monitoring of all connected devices
                         </p>
                     </div>
-                    <Badge variant="outline" className="gap-1.5 py-1.5 border-primary/30 bg-primary/10 text-primary">
-                        <Activity className="h-3.5 w-3.5 animate-pulse" />
-                        <span>Live • {new Date().toLocaleTimeString()}</span>
-                    </Badge>
+                    
+                    <div className="flex items-center gap-3">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="gap-2">
+                                    <Filter className="h-4 w-4" />
+                                    Widgets
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56 max-h-[400px] overflow-y-auto">
+                                <DropdownMenuLabel>Toggle Status Cards</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {cards.map((w) => (
+                                    <DropdownMenuCheckboxItem
+                                        key={w.title}
+                                        checked={visibleWidgetTitles.includes(w.title)}
+                                        onCheckedChange={(checked) => {
+                                            setVisibleWidgetTitles((prev) => 
+                                                checked 
+                                                    ? [...prev, w.title]
+                                                    : prev.filter((t) => t !== w.title)
+                                            )
+                                        }}
+                                        onSelect={(e) => e.preventDefault()}
+                                    >
+                                        {w.title}
+                                    </DropdownMenuCheckboxItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <Badge variant="outline" className="gap-1.5 py-1.5 border-primary/30 bg-primary/10 text-primary">
+                            <Activity className="h-3.5 w-3.5 animate-pulse" />
+                            <span>Live • {new Date().toLocaleTimeString()}</span>
+                        </Badge>
+                    </div>
                 </div>
             </div>
 
-            {/* Cards Grid */}
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-                {cards.map((card, index) => {
+            {isExpanded && (
+                <>
+                {/* Cards Grid */}
+                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+                    {cards.filter(c => visibleWidgetTitles.includes(c.title)).map((card, index) => {
                     const Icon = card.icon;
                     const colorKey = cardColorMap[card.title];
 
@@ -288,33 +357,33 @@ export default function DeviceStatusGrid() {
 
             {/* Quick Stats Summary */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl border border-gray-800 p-4">
-                    <p className="text-xs text-gray-400">Total Incidents</p>
-                    <p className="text-2xl font-bold text-white mt-1">229</p>
+                <div className="bg-card backdrop-blur-sm rounded-xl border border-border p-4">
+                    <p className="text-xs text-muted-foreground">Total Incidents</p>
+                    <p className="text-2xl font-bold text-foreground mt-1">229</p>
                     <div className="flex items-center gap-1 mt-2">
                         <TrendingUp className="h-3 w-3 text-red-400" />
                         <span className="text-xs text-red-400">+12% from yesterday</span>
                     </div>
                 </div>
-                <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl border border-gray-800 p-4">
-                    <p className="text-xs text-gray-400">Devices Online</p>
+                <div className="bg-card backdrop-blur-sm rounded-xl border border-border p-4">
+                    <p className="text-xs text-muted-foreground">Devices Online</p>
                     <p className="text-2xl font-bold text-green-400 mt-1">2/15</p>
                     <div className="flex items-center gap-1 mt-2">
                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                        <span className="text-xs text-gray-400">13% online</span>
+                        <span className="text-xs text-muted-foreground">13% online</span>
                     </div>
                 </div>
-                <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl border border-gray-800 p-4">
-                    <p className="text-xs text-gray-400">Critical Issues</p>
+                <div className="bg-card backdrop-blur-sm rounded-xl border border-border p-4">
+                    <p className="text-xs text-muted-foreground">Critical Issues</p>
                     <p className="text-2xl font-bold text-red-400 mt-1">3</p>
                     <div className="flex items-center gap-1 mt-2">
                         <AlertTriangle className="h-3 w-3 text-red-400" />
                         <span className="text-xs text-red-400">Need attention</span>
                     </div>
                 </div>
-                <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl border border-gray-800 p-4">
-                    <p className="text-xs text-gray-400">Last Updated</p>
-                    <p className="text-lg font-bold text-white mt-1">Just now</p>
+                <div className="bg-card backdrop-blur-sm rounded-xl border border-border p-4">
+                    <p className="text-xs text-muted-foreground">Last Updated</p>
+                    <p className="text-lg font-bold text-foreground mt-1">Just now</p>
                     <div className="flex items-center gap-1 mt-2">
                         <Activity className="h-3 w-3 text-green-400" />
                         <span className="text-xs text-green-400">Live sync</span>
@@ -323,9 +392,9 @@ export default function DeviceStatusGrid() {
             </div>
 
             {/* Legend with color coding */}
-            <div className="bg-gray-900/30 backdrop-blur-sm rounded-xl border border-gray-800 p-4">
+            <div className="bg-muted backdrop-blur-sm rounded-xl border border-border p-4">
                 <div className="flex flex-wrap items-center gap-4 text-sm">
-                    <span className="text-gray-400 font-medium">Status Legend:</span>
+                    <span className="text-muted-foreground font-medium">Status Legend:</span>
                     <div className="flex flex-wrap gap-4">
                         {[
                             { label: "Active", color: "bg-green-500" },
@@ -337,12 +406,14 @@ export default function DeviceStatusGrid() {
                         ].map((item) => (
                             <div key={item.label} className="flex items-center gap-1.5">
                                 <div className={cn("w-3 h-3 rounded-full", item.color)} />
-                                <span className="text-xs text-gray-300">{item.label}</span>
+                                <span className="text-xs text-muted-foreground">{item.label}</span>
                             </div>
                         ))}
                     </div>
                 </div>
             </div>
+            </>
+            )}
         </div>
     );
 }

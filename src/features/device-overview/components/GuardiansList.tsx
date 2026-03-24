@@ -15,22 +15,20 @@ import {
 import { Phone } from "lucide-react";
 
 interface GuardiansListProps {
-  guardian1: string;
   guardian1Phone: string;
-  guardian2: string;
   guardian2Phone: string;
 }
 
 export function GuardiansList({
-  guardian1,
   guardian1Phone,
-  guardian2,
   guardian2Phone,
 }: GuardiansListProps) {
   const guardians = [
-    { name: guardian1, phone: guardian1Phone, initials: "RK" },
-    { name: guardian2, phone: guardian2Phone, initials: "AS" },
+    ...(guardian1Phone ? [{ name: "Emergency Contact 1", phone: guardian1Phone, initials: "C1" }] : []),
+    ...(guardian2Phone ? [{ name: "Emergency Contact 2", phone: guardian2Phone, initials: "C2" }] : []),
   ];
+
+  if (guardians.length === 0) return null;
 
   return (
     <Card>

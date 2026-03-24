@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import Dashboard from "@/Pages/Dashboard";
 import AppLayout from "./layouts/AppLayout";
@@ -8,7 +8,7 @@ import LoginPage from "./Pages/Auth/login";
 
 import DeviceSettings from "./features/device-settings";
 import GeofencingPage from "./features/geofencing";
-import DeviceTelemetryPage from "./features/device-telemetry";
+import DeviceOverviewPage from "./features/device-overview";
 import DevicesPage from "./features/devices";
 import AlertsPage from "./features/alerts";
 
@@ -38,7 +38,7 @@ export const router = createBrowserRouter([
               },
               {
                 path: ":imei",
-                element: <DeviceTelemetryPage />, // /devices/:imei
+                element: <DeviceOverviewPage />, // /devices/:imei
               },
               {
                 path: "settings/:imei?",
@@ -64,4 +64,8 @@ export const router = createBrowserRouter([
       },
     ],
   },
+  {
+    path: "*",
+    element: <Navigate to="/" replace />
+  }
 ]);

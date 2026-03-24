@@ -247,7 +247,7 @@ export default function Dashboard() {
             </div>
             <div className="flex flex-wrap gap-3">
               <Select value={selectedDevice} onValueChange={setSelectedDevice}>
-                <SelectTrigger className="w-[180px] bg-white dark:bg-gray-900">
+                <SelectTrigger className="w-[180px] bg-background">
                   <SelectValue placeholder="Select Device" />
                 </SelectTrigger>
                 <SelectContent>
@@ -266,7 +266,7 @@ export default function Dashboard() {
               </Select>
 
               <Select value={timeRange} onValueChange={setTimeRange}>
-                <SelectTrigger className="w-[180px] bg-white dark:bg-gray-900">
+                <SelectTrigger className="w-[180px] bg-background">
                   <SelectValue placeholder="Time Range" />
                 </SelectTrigger>
                 <SelectContent>
@@ -304,7 +304,7 @@ export default function Dashboard() {
                   <MapPin className="h-5 w-5 text-blue-600" />
                   Device Location Map
                 </CardTitle>
-                <Badge variant="outline" className="bg-white dark:bg-gray-900">
+                <Badge variant="outline" className="bg-background">
                   Live Tracking
                 </Badge>
               </div>
@@ -418,7 +418,7 @@ export default function Dashboard() {
                   return (
                     <div
                       key={index}
-                      className="flex items-center justify-between p-3 bg-white/5 rounded-lg backdrop-blur-sm"
+                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg backdrop-blur-sm"
                     >
                       <div className="flex items-center gap-3">
                         <Icon className={`h-4 w-4 ${item.color}`} />
@@ -462,7 +462,7 @@ export default function Dashboard() {
               {recentAlerts.map((alert) => (
                 <div
                   key={alert.id}
-                  className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg"
+                  className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg"
                 >
                   {getSeverityIcon(alert.severity)}
                   <div className="flex-1">
@@ -497,7 +497,7 @@ export default function Dashboard() {
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50 dark:bg-gray-900">
+              <TableRow className="bg-muted/50">
                 <TableHead className="font-semibold">Status</TableHead>
                 <TableHead className="font-semibold">IMEI</TableHead>
                 <TableHead className="font-semibold">Location</TableHead>
@@ -512,7 +512,7 @@ export default function Dashboard() {
               {devices.map((device) => (
                 <TableRow
                   key={device.imei}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-900/50"
+                  className="hover:bg-muted/50"
                 >
                   <TableCell>
                     <div className="flex items-center gap-2">

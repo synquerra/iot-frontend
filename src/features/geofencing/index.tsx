@@ -3,6 +3,10 @@ import { useParams } from "react-router-dom";
 import "leaflet/dist/leaflet.css";
 import { toast } from "sonner";
 import { listDevices, type Device } from "@/features/devices/services/deviceService";
+import type {
+  DeviceCommandResponse,
+  PublishedDeviceCommandResult,
+} from "@/helpers/deviceCommandConstants";
 import { AddGeofenceDialog } from "./components/AddGeofenceDialog";
 import { CurrentGeofencesMap } from "./components/CurrentGeofencesMap";
 import { GeofencingHeader } from "./components/GeofencingHeader";
@@ -22,6 +26,7 @@ export default function GeofencingPage() {
   const [isLoadingDevices, setIsLoadingDevices] = useState(true);
   const [selectedImei, setSelectedImei] = useState(routeImei ?? "");
   const [isAddGeofenceOpen, setIsAddGeofenceOpen] = useState(false);
+  const [focusedGeofenceId, setFocusedGeofenceId] = useState<string | null>(null);
   const {
     geofences: remoteGeofences,
     loading: geofenceCommandLoading,
@@ -33,6 +38,7 @@ export default function GeofencingPage() {
   useEffect(() => {
     setSelectedImei(routeImei ?? "");
     setIsAddGeofenceOpen(false);
+    setFocusedGeofenceId(null);
   }, [routeImei]);
 
   useEffect(() => {
@@ -72,7 +78,7 @@ export default function GeofencingPage() {
   const activeDeviceGeofences = useMemo(
     () =>
       remoteGeofences.map((geofence, index) => ({
-        id: geofence.id ?? geofence.geofence_number,
+        id: String(geofence.id ?? geofence.geofence_number),
         label: geofence.geofence_id,
         imei: selectedImei,
         color: GEOFENCE_COLORS[index % GEOFENCE_COLORS.length],
@@ -115,8 +121,11 @@ export default function GeofencingPage() {
     setIsAddGeofenceOpen(true);
   };
 
-  const saveGeofence = async (imei: string, payload: GeofencePayload) => {
-    await setGeofence(imei, payload);
+  const saveGeofence = async (
+    imei: string,
+    payload: GeofencePayload,
+  ): Promise<DeviceCommandResponse<PublishedDeviceCommandResult>> => {
+    return setGeofence(imei, payload);
   };
 
   return (
@@ -148,12 +157,15 @@ export default function GeofencingPage() {
             isAddingDisabled={!selectedImei || !canAddMoreGeofences}
             onAddGeofence={openAddGeofenceModal}
             onRemoveGeofence={removeGeofence}
+            focusedGeofenceId={focusedGeofenceId}
+            onGeofenceClick={(id: string) => setFocusedGeofenceId(id)}
           />
         </div>
 
         <CurrentGeofencesMap
           selectedImei={selectedImei}
           geofences={activeDeviceGeofences}
+          focusedGeofenceId={focusedGeofenceId}
         />
       </div>
 

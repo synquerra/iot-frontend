@@ -1,4 +1,4 @@
-interface DeviceTelemetry {
+interface DeviceOverview {
   id?: string;
   topic?: string;
 
@@ -58,41 +58,7 @@ export interface MetricCardProps {
   color?: string;
   children?: React.ReactNode;
 }
-export interface DeviceData {
-  name: string;
-  imei: string;
-  status: string;
-  temperature: number;
-  battery: number;
-  speed: number;
-  latitude: number;
-  longitude: number;
-  signal: number;
-  gpsSignal: number;
-  satellites: number;
-  distance: string;
-  steps: number;
-  performance: number;
-  lastUpdate: string;
-  guardian1: string;
-  guardian1Phone: string;
-  guardian2: string;
-  guardian2Phone: string;
-  dataInterval: string;
-  audioRecording: boolean;
-  aeroplaneMode: boolean;
-  ble: boolean;
-  ledStatus: boolean;
-  currentMode: string;
-  alert: string;
-  safetyEvents: number;
-  crawling: number;
-  stationary: number;
-  overspeeding: number;
-  firmware: string;
-  storage: number;
-  ram: number;
-}
+
 
 export interface MetricCardProps {
   icon: React.ElementType;
@@ -108,6 +74,14 @@ export interface MetricCardProps {
 export interface Coordinate {
   latitude: number;
   longitude: number;
+}
+
+export interface AnalyticsHealth {
+  gpsScore: number;
+  movement: string[];
+  movementStats: string[];
+  temperatureHealthIndex: number;
+  temperatureStatus: string;
 }
 
 export interface Geofence {

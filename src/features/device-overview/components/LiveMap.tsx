@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/tooltip";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Compass, Navigation, Satellite, ZoomIn, ZoomOut } from "lucide-react";
+import { Compass, Navigation, ZoomIn, ZoomOut } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   MapContainer,
@@ -95,7 +95,7 @@ const ZoomControls = ({
           <Button
             size="icon"
             variant="secondary"
-            className="h-8 w-8 bg-white/90 backdrop-blur shadow-lg hover:bg-white"
+            className="h-8 w-8 bg-background/90 backdrop-blur shadow-lg hover:bg-accent"
             onClick={() => {
               map.zoomIn();
               onZoomIn();
@@ -111,7 +111,7 @@ const ZoomControls = ({
           <Button
             size="icon"
             variant="secondary"
-            className="h-8 w-8 bg-white/90 backdrop-blur shadow-lg hover:bg-white"
+            className="h-8 w-8 bg-background/90 backdrop-blur shadow-lg hover:bg-accent"
             onClick={() => {
               map.zoomOut();
               onZoomOut();
@@ -127,7 +127,7 @@ const ZoomControls = ({
           <Button
             size="icon"
             variant="secondary"
-            className="h-8 w-8 bg-white/90 backdrop-blur shadow-lg hover:bg-white"
+            className="h-8 w-8 bg-background/90 backdrop-blur shadow-lg hover:bg-accent"
             onClick={() => {
               map.setView(map.getCenter(), map.getZoom());
             }}
@@ -163,7 +163,6 @@ interface LiveMapProps {
   latitude: number;
   longitude: number;
   speed: number;
-  satellites: number;
   name: string;
   battery: number;
   lastUpdate: string;
@@ -173,7 +172,6 @@ export function LiveMap({
   latitude,
   longitude,
   speed,
-  satellites,
   name,
   battery,
   lastUpdate,
@@ -217,10 +215,7 @@ export function LiveMap({
             <CardDescription>Real-time device position on map</CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="gap-1">
-              <Satellite className="h-3 w-3" />
-              {satellites} satellites
-            </Badge>
+
             <Badge variant="outline" className="gap-1">
               <Navigation className="h-3 w-3" />
               {speed} km/h
@@ -265,10 +260,7 @@ export function LiveMap({
                     <p>
                       <span className="font-medium">Battery:</span> {battery}%
                     </p>
-                    <p>
-                      <span className="font-medium">Satellites:</span>{" "}
-                      {satellites}
-                    </p>
+
                     <p>
                       <span className="font-medium">Last update:</span>{" "}
                       {formatDateTime(lastUpdate)}
@@ -298,7 +290,7 @@ export function LiveMap({
 
         {/* Location Info Overlay */}
         <div className="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:bottom-4 md:w-80 z-[1000]">
-          <Card className="bg-white/95 backdrop-blur shadow-lg border-0">
+          <Card className="bg-background/95 backdrop-blur shadow-lg border-0">
             <CardContent className="p-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">

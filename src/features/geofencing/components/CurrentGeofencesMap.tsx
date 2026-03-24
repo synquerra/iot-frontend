@@ -15,12 +15,21 @@ import type { ActiveGeofence } from "../types";
 type CurrentGeofencesMapProps = {
   selectedImei: string;
   geofences: ActiveGeofence[];
+  focusedGeofenceId?: string | null;
 };
 
-function FitGeofences({ geofences }: { geofences: ActiveGeofence[] }) {
+function FitGeofences({ geofences, focusedGeofenceId }: { geofences: ActiveGeofence[], focusedGeofenceId?: string | null }) {
   const map = useMap();
 
   useEffect(() => {
+    if (focusedGeofenceId) {
+      const focusedGeofence = geofences.find((g) => g.id === focusedGeofenceId);
+      if (focusedGeofence && focusedGeofence.coordinates.length > 0) {
+        map.fitBounds(focusedGeofence.coordinates, { padding: [32, 32] });
+        return;
+      }
+    }
+
     const allPoints = geofences.flatMap((geofence) => geofence.coordinates);
 
     if (allPoints.length === 0) {
@@ -31,7 +40,7 @@ function FitGeofences({ geofences }: { geofences: ActiveGeofence[] }) {
     map.fitBounds(allPoints, {
       padding: [32, 32],
     });
-  }, [geofences, map]);
+  }, [geofences, map, focusedGeofenceId]);
 
   return null;
 }
@@ -58,6 +67,7 @@ function GeofenceLabels({ geofences }: { geofences: ActiveGeofence[] }) {
 export function CurrentGeofencesMap({
   selectedImei,
   geofences,
+  focusedGeofenceId,
 }: CurrentGeofencesMapProps) {
   return (
     <Card className="overflow-hidden">
@@ -69,8 +79,8 @@ export function CurrentGeofencesMap({
             : "Select a device to preview its saved geofences on the map."}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4 p-0">
-        <div className="h-[720px] w-full bg-slate-100 dark:bg-slate-900">
+      <CardContent className="space-y-4 p-0 z-0">
+        <div className="h-[720px] w-full bg-muted">
           <MapContainer
             center={DEFAULT_CENTER as LatLngTuple}
             zoom={13}
@@ -81,7 +91,7 @@ export function CurrentGeofencesMap({
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            <FitGeofences geofences={geofences} />
+            <FitGeofences geofences={geofences} focusedGeofenceId={focusedGeofenceId} />
 
             {geofences.map((geofence) => (
               <Polygon

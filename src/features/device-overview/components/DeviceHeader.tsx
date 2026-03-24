@@ -6,13 +6,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { Clock, Radio, RefreshCcw, Settings, Shield } from "lucide-react";
+import { Clock, Radio, RefreshCcw, Settings } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 interface DeviceHeaderProps {
   name: string;
   status: string;
-  currentMode: string;
   lastUpdate: string;
   onRefresh: () => void;
   refreshing: boolean;
@@ -21,7 +20,6 @@ interface DeviceHeaderProps {
 export function DeviceHeader({
   name,
   status,
-  currentMode,
   lastUpdate,
   onRefresh,
   refreshing,
@@ -43,9 +41,9 @@ export function DeviceHeader({
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-white/95 dark:bg-slate-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-      <div className="container mx-auto px-4 py-3">
-        <div className="flex items-center justify-between">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-4">
+        <div className="flex items-center justify-between w-full md:w-auto">
           <div className="flex items-center gap-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 ring-1 ring-primary/20">
               <Radio className="h-5 w-5 text-primary" />
@@ -53,7 +51,7 @@ export function DeviceHeader({
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-xl font-bold tracking-tight md:text-2xl bg-gradient-to-r from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
-                  Device Telemetry
+                  Device Overview
                 </h1>
                 <Badge
                   variant="outline"
@@ -72,9 +70,10 @@ export function DeviceHeader({
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800">
               <div
                 className={cn(
                   "h-2.5 w-2.5 rounded-full animate-pulse",
@@ -84,10 +83,7 @@ export function DeviceHeader({
               <span className="text-sm font-medium">{status}</span>
             </div>
 
-            <Badge variant="secondary" className="px-3 py-1.5 gap-1.5">
-              <Shield className="h-3.5 w-3.5" />
-              {currentMode}
-            </Badge>
+
 
             <Tooltip>
               <TooltipTrigger asChild>
@@ -116,7 +112,6 @@ export function DeviceHeader({
               <span className="hidden sm:inline">Configure</span>
             </Button>
           </div>
-        </div>
       </div>
     </header>
   );

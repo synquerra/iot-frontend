@@ -37,7 +37,7 @@ const data = {
       icon: PhoneIcon,
     },
     {
-      name: "Device Settings Demo",
+      name: "Device Settings",
       path: "/devices/settings",
       end: "/devices/settings",
       icon: BrainCogIcon,

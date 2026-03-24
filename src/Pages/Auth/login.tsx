@@ -129,7 +129,7 @@ export default function LoginPage() {
 
                     {/* Logo */}
                     <div className="text-center mb-10">
-                        <div className="mb-6 inline-flex items-center justify-center rounded-xl border border-border/60 bg-card/80 p-2 backdrop-blur-lg shadow-sm">
+                        <div className="mb-6 inline-flex items-center justify-center rounded-xl border border-border/60 bg-slate-900 p-2 backdrop-blur-lg shadow-sm">
                             <img
                                 src="/images/logo.png"
                                 alt="Company Logo"

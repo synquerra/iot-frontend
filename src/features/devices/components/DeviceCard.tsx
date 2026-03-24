@@ -183,7 +183,7 @@ export function DeviceCard({
             </Badge>
           </div>
           {shortStudentId && (
-            <span className="shrink-0 rounded bg-slate-100 px-2 py-0.5 text-xs font-mono dark:bg-slate-800 dark:text-slate-200">
+            <span className="shrink-0 rounded bg-muted text-muted-foreground px-2 py-0.5 text-xs font-mono">
               {shortStudentId}
             </span>
           )}
@@ -193,7 +193,7 @@ export function DeviceCard({
         <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
           {/* IMEI */}
           <div className="min-w-0">
-            <span className="block text-xs uppercase text-slate-500 dark:text-slate-400">IMEI</span>
+            <span className="block text-xs uppercase text-muted-foreground">IMEI</span>
             <span className="font-mono truncate block" title={device.imei}>
               {device.imei}
             </span>
@@ -202,7 +202,7 @@ export function DeviceCard({
           {/* Topic (if exists) */}
           {device.topic && (
             <div className="min-w-0">
-              <span className="block text-xs uppercase text-slate-500 dark:text-slate-400">
+              <span className="block text-xs uppercase text-muted-foreground">
                 Topic
               </span>
               <span className="font-mono truncate block" title={device.topic}>
@@ -216,10 +216,10 @@ export function DeviceCard({
           {/* Student ID (if exists) */}
           {device.studentId && (
             <div className="min-w-0 col-span-2">
-              <span className="block text-xs uppercase text-slate-500 dark:text-slate-400">
+              <span className="block text-xs uppercase text-muted-foreground">
                 Student ID
               </span>
-              <span className="block rounded border border-slate-200 bg-slate-50 p-1 text-xs font-mono break-all dark:border-slate-700 dark:bg-slate-900">
+              <span className="block rounded border border-border bg-muted p-1 text-xs font-mono break-all">
                 {device.studentId}
               </span>
             </div>
@@ -228,13 +228,13 @@ export function DeviceCard({
           {/* Geo ID and fingerprint chips */}
           {(device.geoid || device.imei) && (
             <div className="col-span-2 flex flex-wrap items-center gap-1 mt-1">
-              <Cpu className="h-3 w-3 text-slate-400 dark:text-slate-500" />
+              <Cpu className="h-3 w-3 text-muted-foreground" />
               {device.geoid && (
-                <span className="rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-xs font-mono dark:border-slate-700 dark:bg-slate-800">
+                <span className="rounded border border-border bg-muted text-muted-foreground px-1.5 py-0.5 text-xs font-mono">
                   geo:{device.geoid}
                 </span>
               )}
-              <span className="rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-xs font-mono dark:border-slate-700 dark:bg-slate-800">
+              <span className="rounded border border-border bg-muted text-muted-foreground px-1.5 py-0.5 text-xs font-mono">
                 imei:{device.imei.slice(-6)}
               </span>
             </div>
@@ -243,7 +243,7 @@ export function DeviceCard({
 
         {/* Footer with date */}
         {formattedDate && (
-          <div className="mt-2 flex items-center gap-1 border-t border-slate-100 pt-2 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500">
+          <div className="mt-2 flex items-center gap-1 border-t border-border pt-2 text-xs text-muted-foreground">
             <CalendarIcon className="h-3 w-3" />
             <span>{formattedDate}</span>
           </div>
