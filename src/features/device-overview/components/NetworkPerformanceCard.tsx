@@ -10,19 +10,20 @@ import { Globe, Signal, Wifi } from "lucide-react";
 
 interface NetworkPerformanceCardProps {
   gpsSignal: number;
+  gpsSignalRaw?: string;
   signal: number;
 }
 
 export function NetworkPerformanceCard({
   gpsSignal,
+  gpsSignalRaw,
   signal,
 }: NetworkPerformanceCardProps) {
   return (
-    <Card className="relative opacity-60 grayscale-[0.5] transition-all hover:grayscale-0 pointer-events-none">
+    <Card className="relative">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Network Performance</CardTitle>
-          <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded border border-border/50">Dummy</span>
         </div>
         <CardDescription>Signal strength and connectivity</CardDescription>
       </CardHeader>
@@ -32,9 +33,9 @@ export function NetworkPerformanceCard({
             <div className="flex justify-between text-sm">
               <span className="flex items-center gap-2">
                 <Signal className="h-4 w-4 text-green-500" />
-                GPS Signal
+                GPS Strength
               </span>
-              <span className="font-medium">{gpsSignal}%</span>
+              <span className="font-medium">{gpsSignalRaw || `${gpsSignal}%`}</span>
             </div>
             <Progress value={gpsSignal} className="h-2" />
           </div>
@@ -44,7 +45,7 @@ export function NetworkPerformanceCard({
                 <Wifi className="h-4 w-4 text-blue-500" />
                 Network Signal
               </span>
-              <span className="font-medium">{signal}%</span>
+              <span className="font-medium">{signal}</span>
             </div>
             <Progress value={signal} className="h-2" />
           </div>

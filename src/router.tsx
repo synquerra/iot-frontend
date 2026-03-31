@@ -11,6 +11,7 @@ import GeofencingPage from "./features/geofencing";
 import DeviceOverviewPage from "./features/device-overview";
 import DevicesPage from "./features/devices";
 import AlertsPage from "./features/alerts";
+import TelemetryPage from "./features/telemetry";
 
 export const router = createBrowserRouter([
   {
@@ -39,6 +40,10 @@ export const router = createBrowserRouter([
               {
                 path: ":imei",
                 element: <DeviceOverviewPage />, // /devices/:imei
+              },
+              {
+                path: "telemetry/:imei?",
+                element: <TelemetryPage />, // /devices/telemetry/:imei
               },
               {
                 path: "settings/:imei?",

@@ -20,6 +20,11 @@ export type Device = {
   studentId: string | null;
   geoid?: string | null;
   createdAt?: string | null;
+
+  battery?: string | null;
+  signal?: string | null;
+  gps_strength?: string | null;
+  temperature?: string | null;
 };
 
 async function graphqlRequest<T>(query: string): Promise<T> {
@@ -49,24 +54,30 @@ function normalizeDevice(device: RawDevice): Device {
 }
 
 export async function listDevices(): Promise<Device[]> {
-  const query = `
-    query GetDevices {
-      devices {
-        topic
-        imei
-        interval
-        geoid
-        createdAt
-        studentName
-        studentId
-      }
-    }
-  `;
+  const { data } = await api.get("/device/list");
+  
+  if (!data || data.status !== "success") {
+    throw new Error(data?.message || "Failed to fetch device list");
+  }
 
-  const data = await graphqlRequest<{ devices: RawDevice[] }>(query);
-  const devices = Array.isArray(data.devices) ? data.devices : [];
+  const devices = Array.isArray(data.data) ? data.data : [];
 
-  return devices.map(normalizeDevice);
+  return devices.map((device: any): Device => {
+    return {
+      topic: device.topic,
+      imei: device.imei,
+      displayName: device.student_name || device.topic || device.imei,
+      status: device.is_active ? "active" : "inactive",
+      studentName: device.student_name ?? null,
+      studentId: device.student_id ?? null,
+      geoid: device.geoid ?? null,
+      createdAt: device.createdAt ?? null,
+      battery: device.battery ?? null,
+      signal: device.signal ?? null,
+      gps_strength: device.gps_strength ?? null,
+      temperature: device.temperature ?? null,
+    };
+  });
 }
 export async function listDeviceGeofences(imei: string): Promise<Geofence[]> {
   const response = await api.get(`/list/${imei}`);

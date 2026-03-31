@@ -17,29 +17,48 @@ function useDeviceOverview(imei: string) {
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isInitialLoad = useRef<boolean>(true);
+  const manualRefreshRef = useRef<() => Promise<void>>(async () => {});
 
   useEffect(() => {
     if (!imei) return;
 
     const fetchDeviceData = async () => {
       try {
-        const res = await api.post("device/device-master-query", {
-          query: `{
-            deviceByTopic(topic: "${imei}/pub") {
-              topic
-              imei
-              interval
-              geoid
-              createdAt
-              studentName
-              studentId
-            }
-          }`,
-        });
+        const res = await api.get("/device/list");
+        if (res.data?.status !== "success") throw new Error("Failed to fetch device list");
+        
+        const devices = Array.isArray(res.data.data) ? res.data.data : [];
+        const target = devices.find((d: any) => d.imei === imei);
 
-        if (res.data?.data?.deviceByTopic) {
-          setDevice(res.data.data.deviceByTopic);
-          return res.data.data.deviceByTopic;
+        if (target) {
+          // Normalize Device Object
+          setDevice({
+            topic: target.topic,
+            imei: target.imei,
+            studentName: target.student_name ?? null,
+            studentId: target.student_id ?? null,
+            geoid: target.geoid ?? null,
+            createdAt: target.createdAt ?? null,
+            interval: target.interval,
+          });
+          
+          // Map Telemetry into Device Overview
+          setDeviceOverview({
+            id: target.topic,
+            topic: target.topic,
+            imei: target.imei,
+            latitude: parseFloat(target.latitude),
+            longitude: parseFloat(target.longitude),
+            speed: parseFloat(target.speed) || 0,
+            rawTemperature: parseFloat(target.temperature) || 0,
+            battery: parseInt(target.battery, 10) || 0,
+            signal: parseInt(target.signal, 10) || 0,
+            gps_strength: target.gps_strength,
+            timestamp: target.timestamp,
+            packet: target.packet,
+          });
+
+          return target;
         }
 
         throw new Error("Device not found");
@@ -56,39 +75,13 @@ function useDeviceOverview(imei: string) {
 
     const fetchOverview = async () => {
       try {
+        // Poll telemetry concurrently
+        if (!isInitialLoad.current) {
+          await fetchDeviceData();
+        }
+
         const res = await api.post("analytics/analytics-query", {
           query: `{
-            latestAnalyticsData(imei: "${imei}") {
-              id
-              topic
-              imei
-              interval
-              geoid
-              packet
-              latitude
-              longitude
-              speed
-              battery
-              signal
-              alert
-              timestamp
-              deviceTimestamp
-              deviceRawTimestamp
-              rawPacket
-              rawImei
-              rawAlert
-              rawTemperature
-              rawPhone1
-              rawPhone2
-              rawControlPhone
-              rawNormalSendingInterval
-              rawSOSSendingInterval
-              rawNormalScanningInterval
-              rawAirplaneInterval
-              rawSpeedLimit
-              rawLowbatLimit
-              type
-            }
             analyticsHealth(imei: "${imei}") {
               gpsScore
               movement
@@ -99,12 +92,9 @@ function useDeviceOverview(imei: string) {
           }`,
         });
 
-        if (res.data?.data?.latestAnalyticsData) {
-          setDeviceOverview(res.data.data.latestAnalyticsData);
-          setError(null);
-        }
         if (res.data?.data?.analyticsHealth) {
           setAnalyticsHealth(res.data.data.analyticsHealth);
+          setError(null);
         }
       } catch (err) {
         const errorMessage =
@@ -119,7 +109,9 @@ function useDeviceOverview(imei: string) {
 
     const init = async () => {
       try {
-        setIsLoading(true);
+        if (isInitialLoad.current) {
+          setIsLoading(true);
+        }
         setError(null);
 
         // 1️⃣ fetch device
@@ -157,10 +149,16 @@ function useDeviceOverview(imei: string) {
             : "Failed to initialize device overview";
         setError(errorMessage);
       } finally {
-        setIsLoading(false);
+        if (isInitialLoad.current) {
+          setIsLoading(false);
+        } else {
+          // If we are artificially refreshing silently without skeleton:
+          setIsLoading(false); 
+        }
       }
     };
 
+    manualRefreshRef.current = init;
     init();
 
     return () => {
@@ -170,7 +168,11 @@ function useDeviceOverview(imei: string) {
     };
   }, [imei]);
 
-  return { deviceStatus, device, analyticsHealth, deviceSettings, isLoading, error };
+  const refresh = async () => {
+    await manualRefreshRef.current();
+  };
+
+  return { deviceStatus, device, analyticsHealth, deviceSettings, isLoading, error, refresh };
 }
 
 export default useDeviceOverview;

@@ -48,6 +48,7 @@ export function DeviceGrid() {
           onClick={() => handleCardClick(device.imei)}
           onView={() => navigate(`/devices/${device.imei}`)}
           onGeofencing={() => navigate(`/devices/geofencing/${device.imei}`)}
+          onTelemetry={() => navigate(`/devices/telemetry/${device.imei}`)}
           onSettings={() => navigate(`/devices/settings/${device.imei}`)}
           onRemove={() => console.log("Remove clicked")}
         />

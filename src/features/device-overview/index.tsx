@@ -21,7 +21,7 @@ import useDeviceOverview from "./hooks/useDeviceOverview";
 export default function DeviceOverviewPage() {
   const { imei } = useParams();
   const [refreshing, setRefreshing] = useState(false);
-  const { device, deviceStatus, analyticsHealth, deviceSettings, isLoading } = useDeviceOverview(imei ?? "");
+  const { device, deviceStatus, analyticsHealth, deviceSettings, isLoading, refresh } = useDeviceOverview(imei ?? "");
 
   const getStat = (stats: string[] | undefined, key: string) => {
     if (!stats) return 0;
@@ -41,6 +41,7 @@ export default function DeviceOverviewPage() {
     latitude: deviceStatus?.latitude ? Number(deviceStatus.latitude) : 0,
     longitude: deviceStatus?.longitude ? Number(deviceStatus.longitude) : 0,
     signal: deviceStatus?.signal ? Number(deviceStatus.signal) : 0,
+    gpsSignalRaw: deviceStatus?.gps_strength ?? "Unknown",
     gpsSignal: analyticsHealth?.gpsScore ?? 0,
     performance: analyticsHealth?.temperatureHealthIndex ?? 0,
     lastUpdate: deviceStatus?.timestamp ?? deviceStatus?.deviceTimestamp ?? device?.createdAt ?? new Date().toISOString(),
@@ -58,9 +59,13 @@ export default function DeviceOverviewPage() {
     settingsAirplaneInterval: deviceSettings?.raw_AirplaneInterval ?? "N/A",
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
+    try {
+      await refresh();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // Show skeleton loading state
@@ -107,6 +112,7 @@ export default function DeviceOverviewPage() {
                 />
                 <NetworkPerformanceCard
                   gpsSignal={data.gpsSignal}
+                  gpsSignalRaw={data.gpsSignalRaw}
                   signal={data.signal}
                 />
               </div>

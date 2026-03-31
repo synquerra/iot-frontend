@@ -13,6 +13,7 @@ interface DeviceOverview {
 
   battery?: number | string;
   signal?: number | string;
+  gps_strength?: string;
 
   alert?: string;
 
@@ -48,6 +49,11 @@ export interface Device {
 
   studentName?: string;
   studentId?: string;
+
+  battery?: string;
+  signal?: string;
+  gps_strength?: string;
+  temperature?: string;
 }
 export interface MetricCardProps {
   icon: React.ElementType;

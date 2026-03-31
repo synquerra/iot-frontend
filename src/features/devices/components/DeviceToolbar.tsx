@@ -1,7 +1,8 @@
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useDeviceTable } from "../context/DeviceTableContext"
-import { Search, X, RefreshCw } from "lucide-react"
+import { Search, X, RefreshCw, Plus } from "lucide-react"
+import { AddDeviceModal } from "./AddDeviceModal"
 
 export function DeviceToolbar() {
     const {
@@ -35,15 +36,21 @@ export function DeviceToolbar() {
                     )}
                 </div>
 
-                {/* Refresh (all screens) */}
-                <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={refresh}
-                    className="sm:hidden"
-                >
-                    <RefreshCw className="h-4 w-4" />
-                </Button>
+                {/* Refresh and Add (mobile) */}
+                <div className="flex sm:hidden gap-2">
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={refresh}
+                    >
+                        <RefreshCw className="h-4 w-4" />
+                    </Button>
+                    <AddDeviceModal>
+                        <Button size="icon">
+                            <Plus className="h-4 w-4" />
+                        </Button>
+                    </AddDeviceModal>
+                </div>
 
                 {/* Desktop buttons */}
                 <div className="hidden sm:flex gap-2">
@@ -51,6 +58,12 @@ export function DeviceToolbar() {
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Refresh
                     </Button>
+                    <AddDeviceModal>
+                        <Button>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Device
+                        </Button>
+                    </AddDeviceModal>
                 </div>
             </div>
 

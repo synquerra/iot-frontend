@@ -18,7 +18,14 @@ import {
   MoreVertical,
   Settings,
   Trash2,
+  Battery,
+  Wifi,
+  Signal,
+  Thermometer,
+  Copy,
+  Activity,
 } from "lucide-react";
+import { toast } from "sonner";
 
 type Props = {
   device: {
@@ -30,10 +37,16 @@ type Props = {
     geoid?: string | null;
     createdAt?: string | null;
     topic?: string | null;
+
+    battery?: string | null;
+    signal?: string | null;
+    gps_strength?: string | null;
+    temperature?: string | null;
   };
   onClick?: () => void;
   onView?: () => void;
   onGeofencing?: () => void;
+  onTelemetry?: () => void;
   onSettings?: () => void;
   onRemove?: () => void;
 };
@@ -43,23 +56,20 @@ export function DeviceCard({
   onClick,
   onView,
   onGeofencing,
+  onTelemetry,
   onSettings,
   onRemove,
 }: Props) {
   // Format createdAt if it exists
   const formattedDate = device.createdAt
     ? new Date(device.createdAt).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
-    : null;
-
-  // Shorten IDs for display
-  const shortStudentId = device.studentId
-    ? device.studentId.length > 8
-      ? `${device.studentId.substring(0, 6)}…${device.studentId.substring(device.studentId.length - 4)}`
-      : device.studentId
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    })
     : null;
 
   const handleCardClick = (e: React.MouseEvent) => {
@@ -143,6 +153,22 @@ export function DeviceCard({
                 </div>
               </DropdownMenuItem>
 
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTelemetry?.();
+                }}
+                className="cursor-pointer"
+              >
+                <Activity className="h-4 w-4 mr-2" />
+                <div className="flex flex-col">
+                  <span>Telemetry</span>
+                  <span className="text-xs text-muted-foreground">
+                    View raw data stream
+                  </span>
+                </div>
+              </DropdownMenuItem>
+
               <DropdownMenuSeparator />
 
               {/* Remove Option (Disabled) */}
@@ -182,46 +208,49 @@ export function DeviceCard({
               {device.status}
             </Badge>
           </div>
-          {shortStudentId && (
-            <span className="shrink-0 rounded bg-muted text-muted-foreground px-2 py-0.5 text-xs font-mono">
-              {shortStudentId}
-            </span>
-          )}
         </div>
 
         {/* Compact info grid */}
         <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
           {/* IMEI */}
-          <div className="min-w-0">
+          <div className="min-w-0 group/copy">
             <span className="block text-xs uppercase text-muted-foreground">IMEI</span>
-            <span className="font-mono truncate block" title={device.imei}>
-              {device.imei}
-            </span>
+            <div 
+              className="flex items-center gap-1.5 cursor-pointer hover:text-foreground transition-colors"
+              title="Click to copy IMEI"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(device.imei);
+                toast.success("IMEI copied to clipboard");
+              }}
+            >
+              <span className="font-mono truncate">{device.imei}</span>
+              <Copy className="h-3 w-3 opacity-0 group-hover/copy:opacity-100 transition-opacity" />
+            </div>
           </div>
 
           {/* Topic (if exists) */}
           {device.topic && (
-            <div className="min-w-0">
+            <div className="min-w-0 group/copy">
               <span className="block text-xs uppercase text-muted-foreground">
                 Topic
               </span>
-              <span className="font-mono truncate block" title={device.topic}>
-                {device.topic.length > 20
-                  ? `${device.topic.substring(0, 18)}…`
-                  : device.topic}
-              </span>
-            </div>
-          )}
-
-          {/* Student ID (if exists) */}
-          {device.studentId && (
-            <div className="min-w-0 col-span-2">
-              <span className="block text-xs uppercase text-muted-foreground">
-                Student ID
-              </span>
-              <span className="block rounded border border-border bg-muted p-1 text-xs font-mono break-all">
-                {device.studentId}
-              </span>
+              <div
+                className="flex items-center gap-1.5 cursor-pointer hover:text-foreground transition-colors"
+                title="Click to copy Topic"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(device.topic!);
+                  toast.success("Topic copied to clipboard");
+                }}
+              >
+                <span className="font-mono truncate">
+                  {device.topic.length > 20
+                    ? `${device.topic.substring(0, 18)}…`
+                    : device.topic}
+                </span>
+                <Copy className="h-3 w-3 opacity-0 group-hover/copy:opacity-100 transition-opacity" />
+              </div>
             </div>
           )}
 
@@ -234,11 +263,37 @@ export function DeviceCard({
                   geo:{device.geoid}
                 </span>
               )}
-              <span className="rounded border border-border bg-muted text-muted-foreground px-1.5 py-0.5 text-xs font-mono">
-                imei:{device.imei.slice(-6)}
-              </span>
+
             </div>
           )}
+
+          {/* Telemetry Stats */}
+          <div className="col-span-2 flex flex-wrap items-center gap-3 mt-2 pt-2 border-t border-border/50">
+            {device.battery && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground" title="Battery">
+                <Battery className="h-3.5 w-3.5 text-green-500" />
+                <span className="font-medium">{device.battery}%</span>
+              </div>
+            )}
+            {device.signal && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground" title="Network Signal">
+                <Wifi className="h-3.5 w-3.5 text-blue-500" />
+                <span className="font-medium">{device.signal}</span>
+              </div>
+            )}
+            {device.gps_strength && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground" title="GPS Strength">
+                <Signal className="h-3.5 w-3.5 text-purple-500" />
+                <span className="font-medium">{device.gps_strength}</span>
+              </div>
+            )}
+            {device.temperature && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground" title="Temperature">
+                <Thermometer className="h-3.5 w-3.5 text-orange-500" />
+                <span className="font-medium">{device.temperature}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer with date */}
