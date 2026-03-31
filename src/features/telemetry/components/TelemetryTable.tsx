@@ -43,8 +43,8 @@ export function TelemetryTable({ data, loading }: Props) {
   }
 
   return (
-    <div className="overflow-hidden min-w-0">
-      <Table className="w-full">
+    <div className="w-full overflow-auto">
+      <Table className="min-w-max">
         <TableHeader>
           <TableRow className="bg-muted/50 whitespace-nowrap">
             <TableHead>System Time</TableHead>
@@ -59,7 +59,7 @@ export function TelemetryTable({ data, loading }: Props) {
         </TableHeader>
         <TableBody>
           {data.map((log) => (
-            <TableRow key={log.id} className="whitespace-nowrap text-xs font-mono">
+            <TableRow key={log.id} className="whitespace-nowrap text-md  font-mono">
               {/* System Time */}
               <TableCell>
                 {log.timestamp ? formatDate(log.timestamp) : "-"}

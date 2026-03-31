@@ -10,7 +10,7 @@ export default function TelemetryPage() {
   const { data, isLoading, error, refresh } = useTelemetry(imei);
 
   return (
-    <div className="space-y-6 w-full min-w-0 mx-auto">
+    <div className="space-y-6 w-full min-w-0 mx-auto overflow-x-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="icon" onClick={() => navigate(-1)} className="rounded-full">
@@ -38,9 +38,11 @@ export default function TelemetryPage() {
           Error retrieving telemetry logs payload: {error}
         </div>
       ) : (
-        <div className="rounded-xl border bg-card text-card-foreground shadow overflow">
-          <div className="w-full max-w-full min-w-0 block overflow-scroll">
-            <TelemetryTable data={data} loading={isLoading} />
+        <div className="rounded-xl border bg-card text-card-foreground shadow">
+          <div className="max-h-[80vh] w-full overflow-auto">
+            <div className="min-w-max">
+              <TelemetryTable data={data} loading={isLoading} />
+            </div>
           </div>
         </div>
       )}
