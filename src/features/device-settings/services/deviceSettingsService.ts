@@ -15,6 +15,8 @@ export type LatestDeviceSettingsRecord = {
   raw_temperature?: string | null;
   raw_SpeedLimit?: string | null;
   raw_LowbatLimit?: string | null;
+  current_mode?: string | null;
+  led_status?: string | null;
 };
 
 function extractLatestRecord(payload: unknown): LatestDeviceSettingsRecord | null {
@@ -46,6 +48,8 @@ function extractLatestRecord(payload: unknown): LatestDeviceSettingsRecord | nul
     raw_temperature: target.temperature_limit ?? target.raw_temperature,
     raw_SpeedLimit: target.speed_limit ?? target.raw_SpeedLimit,
     raw_LowbatLimit: target.lowbat_limit ?? target.raw_LowbatLimit,
+    current_mode: target.current_mode,
+    led_status: target.led_status,
   } as LatestDeviceSettingsRecord;
 }
 
@@ -71,5 +75,21 @@ export async function updateDeviceCoreSettings(
   }
 ) {
   const response = await api.put(`/setting/update-core`, payload);
+  return response.data;
+}
+
+export async function updateAirplaneMode(payload: {
+  topic: string;
+  AirplaneMode: "enable" | "disable";
+}) {
+  const response = await api.post(`/setting/airplane-mode`, payload);
+  return response.data;
+}
+
+export async function updateLedStatus(payload: {
+  topic: string;
+  LED: "SwitchOnLed" | "SwitchOffLed";
+}) {
+  const response = await api.post(`/setting/led-status`, payload);
   return response.data;
 }

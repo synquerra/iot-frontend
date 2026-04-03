@@ -100,7 +100,9 @@ export default function DeviceSettings() {
   return (
     <div className="w-full bg-background">
       <div className="space-y-6">
-        <DeviceSettingsHeader />
+        <DeviceSettingsHeader 
+          currentMode={selectedDevice?.currentMode} 
+        />
         <DeviceSettingsTargetDeviceCard
           routeImei={routeImei}
           devices={devices}
@@ -108,9 +110,13 @@ export default function DeviceSettings() {
           selectedDevice={selectedDevice}
           isLoadingDevices={isLoadingDevices}
           onSelectImei={setSelectedImei}
+          currentMode={selectedDevice?.currentMode}
         />
         
-        <GeneralDeviceControls selectedImei={selectedImei} />
+        <GeneralDeviceControls 
+           selectedDevice={selectedDevice} 
+           latestSettings={latestSettings} 
+        />
         
         <div className="grid gap-6 lg:grid-cols-2 lg:items-stretch">
           <CommunicationSettings
