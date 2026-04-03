@@ -176,9 +176,8 @@ export function CommunicationSettings({
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
+    <Card className="border-primary/10 shadow-sm h-full flex flex-col">
+      <CardHeader className="pb-4">
           <div>
             <CardTitle className="flex items-center gap-2">
               <Phone className="h-5 w-5 text-primary" />
@@ -197,8 +196,8 @@ export function CommunicationSettings({
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-6">
-          <div className="space-y-3">
+      <CardContent className="space-y-6 flex-1 flex flex-col">
+        <div className="space-y-3 flex-1">
             {contactFields.map((item) => (
               <div
                 key={item.label}
@@ -243,7 +242,7 @@ export function CommunicationSettings({
             ))}
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-end pt-4 mt-auto border-t border-border">
             <Button
               className="gap-2"
               onClick={handleSaveContacts}
@@ -258,62 +257,6 @@ export function CommunicationSettings({
             </Button>
           </div>
         </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Headphones className="h-5 w-5 text-primary" />
-            Ambient Listening
-          </CardTitle>
-          <CardDescription>
-            Configure `AMBIENT_ENABLE`, `AMBIENT_DISABLE`, and `AMBIENT_STOP`
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between rounded-lg bg-muted p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-primary/10 p-2">
-                <Bell className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium">Ambient Listening</p>
-                <p className="text-sm text-muted-foreground">
-                  Toggle real-time audio monitoring on the device
-                </p>
-              </div>
-            </div>
-
-            <Switch
-              checked={isAmbientEnabled}
-              onCheckedChange={handleAmbientToggle}
-              disabled={isAmbientSubmitting}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Button
-              variant="destructive"
-              className="gap-2"
-              onClick={handleAmbientStop}
-              disabled={isAmbientSubmitting}
-            >
-              {isAmbientSubmitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Square size={16} />
-              )}
-              Stop Ambient Listening
-            </Button>
-
-            <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-              Audio file viewing is still not wired here because this feature
-              only has command-send APIs right now.
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    </Card>
   );
 }

@@ -10,6 +10,7 @@ import { DeviceSettingsHeader } from "./components/DeviceSettingsHeader";
 import { DeviceSettingsTargetDeviceCard } from "./components/DeviceSettingsTargetDeviceCard";
 import { AdvancedSettings } from "./components/AdvancedSettings";
 import { CommunicationSettings } from "./components/CommunicationSettings";
+import { AmbientListeningCard } from "./components/AmbientListeningCard";
 import { IntervalsSettings } from "./components/IntervalsSettings";
 import { GeneralDeviceControls } from "./components/GeneralDeviceControls";
 
@@ -98,7 +99,7 @@ export default function DeviceSettings() {
 
   return (
     <div className="w-full bg-background">
-      <div className="space-y-8">
+      <div className="space-y-6">
         <DeviceSettingsHeader />
         <DeviceSettingsTargetDeviceCard
           routeImei={routeImei}
@@ -108,27 +109,25 @@ export default function DeviceSettings() {
           isLoadingDevices={isLoadingDevices}
           onSelectImei={setSelectedImei}
         />
+        
         <GeneralDeviceControls selectedImei={selectedImei} />
         
-        <div className="grid gap-8 lg:grid-cols-2 items-start">
-          <div className="flex flex-col gap-8 w-full">
-            <CommunicationSettings
-              selectedImei={selectedImei}
-              latestSettings={latestSettings}
-              isLoadingLatestSettings={isLoadingLatestSettings}
-            />
-          </div>
-
-          <div className="flex flex-col gap-8 w-full">
-            <IntervalsSettings
-              selectedImei={selectedImei}
-              latestSettings={latestSettings}
-            />
-          </div>
+        <div className="grid gap-6 lg:grid-cols-2 lg:items-stretch">
+          <CommunicationSettings
+            selectedImei={selectedImei}
+            latestSettings={latestSettings}
+            isLoadingLatestSettings={isLoadingLatestSettings}
+          />
+          <IntervalsSettings
+            selectedImei={selectedImei}
+            latestSettings={latestSettings}
+          />
         </div>
 
-        <div className="pb-8">
-          <AdvancedSettings />
+        <AdvancedSettings />
+
+        <div className="pb-6">
+          <AmbientListeningCard />
         </div>
       </div>
     </div>

@@ -105,7 +105,7 @@ export function GeneralDeviceControls({ selectedImei }: GeneralDeviceControlsPro
   };
 
   return (
-    <Card className="border-primary/10 shadow-sm">
+    <Card className="border-primary/10 shadow-sm h-full flex flex-col">
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2">
           <Settings className="h-5 w-5 text-primary" />

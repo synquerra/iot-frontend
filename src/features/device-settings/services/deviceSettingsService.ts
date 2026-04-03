@@ -58,3 +58,18 @@ export async function getLatestDeviceSettings(
 
   return extractLatestRecord(response.data);
 }
+export async function updateDeviceCoreSettings(
+  payload: {
+    topic: string;
+    NormalSendingInterval: number;
+    SOSSendingInterval: number;
+    NormalScanningInterval: number;
+    AirplaneInterval: number;
+    SpeedLimit: number;
+    LowbatLimit: number;
+    TemperatureLimit: number;
+  }
+) {
+  const response = await api.put(`/setting/update-core`, payload);
+  return response.data;
+}

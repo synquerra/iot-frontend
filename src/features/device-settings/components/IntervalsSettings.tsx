@@ -8,15 +8,11 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-  COMMANDS,
-  type PublishedDeviceCommandResult,
-} from "@/helpers/deviceCommandConstants";
-import type { LatestDeviceSettingsRecord } from "@/features/device-settings/services/deviceSettingsService";
-import {
-  getDeviceCommandToastContent,
-  sendDeviceCommand,
-} from "@/helpers/deviceCommandHelper";
-import { Clock, RotateCcw, Save } from "lucide-react";
+  updateDeviceCoreSettings,
+  type LatestDeviceSettingsRecord,
+} from "@/features/device-settings/services/deviceSettingsService";
+import { useGlobalLoading } from "@/contexts/GlobalLoadingContext";
+import { Clock, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -108,7 +104,7 @@ export function IntervalsSettings({
   latestSettings,
 }: IntervalsSettingsProps) {
   const [values, setValues] = useState<DeviceSettingsFormState>(DEFAULT_VALUES);
-  const [isSaving, setIsSaving] = useState(false);
+  const { setIsLoading } = useGlobalLoading();
 
   useEffect(() => {
     setValues({
@@ -153,29 +149,37 @@ export function IntervalsSettings({
     }));
   };
 
-  const handleReset = () => {
-    setValues(DEFAULT_VALUES);
-  };
+
 
   const handleSave = async () => {
-    if (!selectedImei) {
-      toast.error("Select a device before updating interval settings.");
+    if (!selectedImei || !latestSettings?.topic) {
+      toast.error("Required device identifier (topic/imei) missing.");
       return;
     }
 
     try {
-      setIsSaving(true);
+      setIsLoading(true, "Please wait");
 
-      const response = await sendDeviceCommand<PublishedDeviceCommandResult>(
-        selectedImei,
-        COMMANDS.DEVICE_SETTINGS,
-        values,
-      );
+      const payload = {
+        topic: latestSettings.topic,
+        NormalSendingInterval: Number(values.NormalSendingInterval),
+        SOSSendingInterval: Number(values.SOSSendingInterval),
+        NormalScanningInterval: Number(values.NormalScanningInterval),
+        AirplaneInterval: Number(values.AirplaneInterval),
+        SpeedLimit: Number(values.SpeedLimit),
+        LowbatLimit: Number(values.LowbatLimit),
+        TemperatureLimit: Number(values.TemperatureLimit),
+      };
 
-      const toastContent = getDeviceCommandToastContent(response);
-      toast.success(toastContent.title, {
-        description: toastContent.description,
-      });
+      const response = await updateDeviceCoreSettings(payload);
+
+      if (response.status === "success") {
+        toast.success("Success", {
+           description: response.message || "Device settings updated successfully",
+        });
+      } else {
+        toast.error(response.message || "Failed to update settings");
+      }
     } catch (error) {
       const message =
         error instanceof Error
@@ -183,7 +187,7 @@ export function IntervalsSettings({
           : "Failed to update device settings.";
       toast.error(message);
     } finally {
-      setIsSaving(false);
+      setIsLoading(false);
     }
   };
 
@@ -227,19 +231,11 @@ export function IntervalsSettings({
         </div>
 
         <div className="flex justify-end gap-3">
-          <Button
-            variant="ghost"
-            className="gap-2 text-primary"
-            onClick={handleReset}
-            disabled={isSaving}
-          >
-            <RotateCcw size={16} />
-            Set to Default Values
-          </Button>
 
-          <Button onClick={handleSave} className="gap-2" disabled={isSaving}>
+
+          <Button onClick={handleSave} className="gap-2">
             <Save size={16} />
-            {isSaving ? "Updating..." : "Update Settings"}
+            Update Settings
           </Button>
         </div>
       </CardContent>

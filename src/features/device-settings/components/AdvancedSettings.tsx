@@ -15,8 +15,8 @@ export function AdvancedSettings() {
   const systemSettings = powerItems.filter(i => !i.label.includes("Call"));
 
   return (
-    <Card className="border-primary/10 shadow-sm overflow-hidden bg-background">
-      <CardHeader className="bg-muted/30 pb-6 border-b">
+    <Card className="border-primary/10 shadow-sm">
+      <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2">
           <Settings2 className="h-5 w-5 text-primary" />
           Advanced System Configuration
