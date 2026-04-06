@@ -23,10 +23,20 @@ export function QuickActions() {
     { icon: AlertTriangle, label: "SOS Test", color: "red", destructive: true },
   ];
 
+  const colorStyles: Record<string, string> = {
+    blue: "text-blue-500",
+    green: "text-green-500",
+    purple: "text-purple-500",
+    red: "text-red-500",
+  };
+
   return (
-    <Card>
+    <Card className="relative opacity-60 grayscale-[0.5] pointer-events-none">
       <CardHeader>
-        <CardTitle>Quick Actions</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Quick Actions</CardTitle>
+          <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded border border-border/50">Dummy</span>
+        </div>
         <CardDescription>Remote device controls</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-2">
@@ -43,7 +53,7 @@ export function QuickActions() {
             <action.icon
               className={cn(
                 "h-4 w-4",
-                !action.destructive && `text-${action.color}-500`,
+                !action.destructive && colorStyles[action.color],
               )}
             />
             <span className="flex-1 text-left">{action.label}</span>

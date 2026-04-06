@@ -2,26 +2,18 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { Clock4, Cpu, Thermometer } from "lucide-react";
+import { Clock4, Cpu } from "lucide-react";
 
 interface DeviceHealthCardProps {
-  temperature: number;
   performance: number;
   dataInterval: string;
 }
 
 export function DeviceHealthCard({
-  temperature,
   performance,
   dataInterval,
 }: DeviceHealthCardProps) {
   const items = [
-    {
-      icon: Thermometer,
-      label: "Temperature",
-      value: `${temperature}°C`,
-      color: "blue",
-    },
     {
       icon: Cpu,
       label: "Performance",

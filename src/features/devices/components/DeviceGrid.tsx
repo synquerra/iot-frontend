@@ -3,7 +3,7 @@ import { useDeviceTable } from "../context/DeviceTableContext";
 import { DeviceCard } from "./DeviceCard";
 
 export function DeviceGrid() {
-  const { filteredDevices, loading } = useDeviceTable();
+  const { filteredDevices, loading, refresh } = useDeviceTable();
   const navigate = useNavigate();
 
   if (loading) {
@@ -37,19 +37,16 @@ export function DeviceGrid() {
     "
     >
       {filteredDevices.map((device) => (
-        // <DeviceCard
-        //     key={device.imei}
-        //     device={device}
-        //     onClick={() => handleCardClick(device.imei)}
-        // />
         <DeviceCard
           key={device.imei}
           device={device}
           onClick={() => handleCardClick(device.imei)}
           onView={() => navigate(`/devices/${device.imei}`)}
           onGeofencing={() => navigate(`/devices/geofencing/${device.imei}`)}
+          onTelemetry={() => navigate(`/devices/telemetry/${device.imei}`)}
           onSettings={() => navigate(`/devices/settings/${device.imei}`)}
           onRemove={() => console.log("Remove clicked")}
+          onStatusToggle={refresh}
         />
       ))}
     </div>

@@ -5,13 +5,11 @@ import { ActivityBreakdown } from "./components/ActivityBreakdown";
 
 import { DeviceHeader } from "./components/DeviceHeader";
 import { DeviceHealthCard } from "./components/DeviceHealthCard";
-import { DeviceInfoSummary } from "./components/DeviceInfoSummary";
 import { DeviceSettingsSummaryCard } from "./components/DeviceSettingsSummaryCard";
 import { GuardiansList } from "./components/GuardiansList";
 import { LiveMap } from "./components/LiveMap";
 
 import { NetworkPerformanceCard } from "./components/NetworkPerformanceCard";
-import { QuickActions } from "./components/QuickActions";
 
 
 import { MetricsGrid } from "./components/MetricGrid";
@@ -21,7 +19,7 @@ import useDeviceOverview from "./hooks/useDeviceOverview";
 export default function DeviceOverviewPage() {
   const { imei } = useParams();
   const [refreshing, setRefreshing] = useState(false);
-  const { device, deviceStatus, analyticsHealth, deviceSettings, isLoading } = useDeviceOverview(imei ?? "");
+  const { device, deviceStatus, analyticsHealth, deviceSettings, isLoading, refresh } = useDeviceOverview(imei ?? "");
 
   const getStat = (stats: string[] | undefined, key: string) => {
     if (!stats) return 0;
@@ -41,6 +39,7 @@ export default function DeviceOverviewPage() {
     latitude: deviceStatus?.latitude ? Number(deviceStatus.latitude) : 0,
     longitude: deviceStatus?.longitude ? Number(deviceStatus.longitude) : 0,
     signal: deviceStatus?.signal ? Number(deviceStatus.signal) : 0,
+    gpsSignalRaw: deviceStatus?.gps_strength ?? "Unknown",
     gpsSignal: analyticsHealth?.gpsScore ?? 0,
     performance: analyticsHealth?.temperatureHealthIndex ?? 0,
     lastUpdate: deviceStatus?.timestamp ?? deviceStatus?.deviceTimestamp ?? device?.createdAt ?? new Date().toISOString(),
@@ -51,6 +50,7 @@ export default function DeviceOverviewPage() {
     crawling: analyticsHealth ? getStat(analyticsHealth.movementStats, 'crawling') : 0,
     stationary: analyticsHealth ? getStat(analyticsHealth.movementStats, 'stationary') : 0,
     overspeeding: analyticsHealth ? getStat(analyticsHealth.movementStats, 'overspeed') : 0,
+    geoid: device?.geoid ?? null,
     settingsNormalInterval: deviceSettings?.raw_NormalSendingInterval ?? "N/A",
     settingsSosInterval: deviceSettings?.raw_SOSSendingInterval ?? "N/A",
     settingsSpeedLimit: deviceSettings?.raw_SpeedLimit ?? "N/A",
@@ -58,9 +58,13 @@ export default function DeviceOverviewPage() {
     settingsAirplaneInterval: deviceSettings?.raw_AirplaneInterval ?? "N/A",
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
+    try {
+      await refresh();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // Show skeleton loading state
@@ -70,47 +74,36 @@ export default function DeviceOverviewPage() {
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen pb-12 bg-background">
+      <div className="min-h-screen bg-background transition-colors duration-500 pb-16">
         <DeviceHeader
           name={data.name}
+          imei={data.imei}
           status={data.status}
           lastUpdate={data.lastUpdate}
           onRefresh={handleRefresh}
           refreshing={refreshing}
         />
 
-        <main className="space-y-6">
+        <main className="relative z-20 space-y-6">
           <MetricsGrid
             speed={data.speed}
             latitude={data.latitude}
             longitude={data.longitude}
             battery={data.battery}
             signal={data.signal}
+            temperature={data.temperature}
+            geoid={data.geoid}
           />
 
-          <div className="grid gap-6 lg:grid-cols-12">
-            {/* Left Column - Main Content */}
-            <div className="lg:col-span-8 space-y-6">
-              <div className="grid gap-4 md:grid-cols-1">
-                <DeviceHealthCard
-                  temperature={data.temperature}
-                  performance={data.performance}
-                  dataInterval={data.dataInterval}
-                />
-              </div>
+          <div className="grid gap-8 lg:grid-cols-12 items-start">
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <ActivityBreakdown
-                  crawling={data.crawling}
-                  stationary={data.stationary}
-                  overspeeding={data.overspeeding}
-                />
-                <NetworkPerformanceCard
-                  gpsSignal={data.gpsSignal}
-                  signal={data.signal}
-                />
-              </div>
-
+            {/* Left Column - Tactical Live Map */}
+            <div className="lg:col-span-8 flex flex-col gap-8">
+              <ActivityBreakdown
+                crawling={data.crawling}
+                stationary={data.stationary}
+                overspeeding={data.overspeeding}
+              />
               <LiveMap
                 latitude={data.latitude}
                 longitude={data.longitude}
@@ -118,12 +111,12 @@ export default function DeviceOverviewPage() {
                 name={data.name}
                 battery={data.battery}
                 lastUpdate={data.lastUpdate}
+                geoid={data.geoid}
               />
             </div>
 
-            {/* Right Column - Sidebar */}
-            <div className="lg:col-span-4 space-y-6">
-              <QuickActions />
+            {/* Right Column - System Controls & Intelligence */}
+            <div className="lg:col-span-4 flex flex-col gap-8">
               <DeviceSettingsSummaryCard
                 normalInterval={data.settingsNormalInterval}
                 sosInterval={data.settingsSosInterval}
@@ -131,14 +124,36 @@ export default function DeviceOverviewPage() {
                 lowBattery={data.settingsLowBattery}
                 airplaneInterval={data.settingsAirplaneInterval}
               />
+
+              <div className="grid gap-8 sm:grid-cols-1">
+
+                <NetworkPerformanceCard
+                  gpsSignal={data.gpsSignal}
+                  gpsSignalRaw={data.gpsSignalRaw}
+                  signal={data.signal}
+                />
+                {/* Legacy Maintenance Layer */}
+                <div className="opacity-30 pointer-events-none grayscale hover:opacity-100 transition-opacity duration-700">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground whitespace-nowrap">Legacy Performance Matrix</span>
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
+                  <DeviceHealthCard
+                    performance={data.performance}
+                    dataInterval={data.dataInterval}
+                  />
+                </div>
+              </div>
+
               <GuardiansList
                 guardian1Phone={data.guardian1Phone}
                 guardian2Phone={data.guardian2Phone}
               />
-
-              <DeviceInfoSummary imei={data.imei} />
             </div>
           </div>
+
+
         </main>
       </div>
     </TooltipProvider>

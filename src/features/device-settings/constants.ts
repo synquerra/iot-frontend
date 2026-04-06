@@ -117,7 +117,6 @@ export const stats: DeviceSettingsStat[] = [
 export const tabs: DeviceSettingsTab[] = [
   { value: "communication", label: "Communication", icon: Phone },
   { value: "intervals", label: "Intervals", icon: Clock },
-  { value: "modes", label: "Modes", icon: Gauge },
   { value: "advanced", label: "Advanced", icon: Settings2 },
 ];
 
@@ -247,46 +246,10 @@ export const modeItems: ModeItem[] = [
 
 export const featureToggleItems: ToggleItem[] = [
   {
-    label: "Incog Sett. Allow",
-    description: "Allow incognito settings",
-    icon: Lock,
-    enabled: true,
-  },
-  {
     label: "I/C Call Enable",
     description: "Incoming calls allowed",
     icon: Phone,
     enabled: false,
-  },
-  {
-    label: "Call sec. matrix",
-    description: "Secure call routing",
-    icon: Shield,
-    enabled: true,
-  },
-  {
-    label: "Extended GEO-F",
-    description: "Extended geofencing",
-    icon: MapPin,
-    enabled: false,
-  },
-  {
-    label: "Accel Enabled",
-    description: "Accelerometer active",
-    icon: Gauge,
-    enabled: true,
-  },
-  {
-    label: "AI Power Save",
-    description: "AI power management",
-    icon: Battery,
-    enabled: false,
-  },
-  {
-    label: "Access to Police",
-    description: "Law enforcement access",
-    icon: Users,
-    enabled: true,
   },
 ];
 
@@ -304,22 +267,10 @@ export const powerItems: PowerItem[] = [
     enabled: false,
   },
   {
-    label: "Extended History",
-    description: "Extended data retention",
-    icon: Clock,
-    enabled: true,
-  },
-  {
     label: "Temp Comp.",
     description: "Temperature compensation",
     icon: Thermometer,
     enabled: false,
-  },
-  {
-    label: "Ble Enabled",
-    description: "Bluetooth low energy",
-    icon: Wifi,
-    enabled: true,
   },
   {
     label: "Battery Reserved %",
@@ -334,6 +285,57 @@ export const powerItems: PowerItem[] = [
     icon: Battery,
     input: true,
     value: "30",
+  },
+];
+
+export const deprecatedItems: ToggleItem[] = [
+  {
+    label: "Incog Sett. Allow",
+    description: "Allow incognito settings",
+    icon: Lock,
+    enabled: false,
+  },
+  {
+    label: "Extended History",
+    description: "Extended data retention",
+    icon: Clock,
+    enabled: false,
+  },
+  {
+    label: "Call sec. matrix",
+    description: "Secure call routing",
+    icon: Shield,
+    enabled: false,
+  },
+  {
+    label: "Extended GEO-F",
+    description: "Extended geofencing",
+    icon: MapPin,
+    enabled: false,
+  },
+  {
+    label: "Ble Enabled",
+    description: "Bluetooth low energy",
+    icon: Wifi,
+    enabled: false,
+  },
+  {
+    label: "Accel Enabled",
+    description: "Accelerometer active",
+    icon: Gauge,
+    enabled: false,
+  },
+  {
+    label: "AI Power Save",
+    description: "AI power management",
+    icon: Battery,
+    enabled: false,
+  },
+  {
+    label: "Access to Police",
+    description: "Law enforcement access",
+    icon: Users,
+    enabled: false,
   },
 ];
 

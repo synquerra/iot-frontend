@@ -103,11 +103,10 @@ const getTrend = (value: number, trend?: string) => {
 };
 
 export default function DeviceStatusGrid() {
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(true);
     const [visibleWidgetTitles, setVisibleWidgetTitles] = useState<string[]>([
         "Total Devices", "Active", "Inactive", "Hanged", "Tampered", "High Temp",
-        "SOS", "Overspeed", "Anomaly", "Restricted Entry", "SIM Issues",
-        "Low Data", "GPS Issues", "Battery Health", "BLE"
+        "SOS", "Overspeed"
     ]);
 
     const cards = [
@@ -226,7 +225,7 @@ export default function DeviceStatusGrid() {
             <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-transparent to-transparent blur-2xl pointer-events-none" />
                 <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div 
+                    <div
                         className="space-y-1 cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={() => setIsExpanded(!isExpanded)}
                     >
@@ -252,7 +251,7 @@ export default function DeviceStatusGrid() {
                             Real-time monitoring of all connected devices
                         </p>
                     </div>
-                    
+
                     <div className="flex items-center gap-3">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -269,8 +268,8 @@ export default function DeviceStatusGrid() {
                                         key={w.title}
                                         checked={visibleWidgetTitles.includes(w.title)}
                                         onCheckedChange={(checked) => {
-                                            setVisibleWidgetTitles((prev) => 
-                                                checked 
+                                            setVisibleWidgetTitles((prev) =>
+                                                checked
                                                     ? [...prev, w.title]
                                                     : prev.filter((t) => t !== w.title)
                                             )
@@ -293,126 +292,69 @@ export default function DeviceStatusGrid() {
 
             {isExpanded && (
                 <>
-                {/* Cards Grid */}
-                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-                    {cards.filter(c => visibleWidgetTitles.includes(c.title)).map((card, index) => {
-                    const Icon = card.icon;
-                    const colorKey = cardColorMap[card.title];
+                    {/* Cards Grid */}
+                    <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+                        {cards.filter(c => visibleWidgetTitles.includes(c.title)).map((card, index) => {
+                            const Icon = card.icon;
+                            const colorKey = cardColorMap[card.title];
 
-                    return (
-                        <Card
-                            key={index}
-                            className="relative overflow-hidden border-0 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl group"
-                        >
-                            {/* Background gradient with glow */}
-                            <div className={cn("absolute inset-0", colorVariants[colorKey])} />
+                            return (
+                                <Card
+                                    key={index}
+                                    className="relative overflow-hidden border-0 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl group"
+                                >
+                                    {/* Background gradient with glow */}
+                                    <div className={cn("absolute inset-0", colorVariants[colorKey])} />
 
-                            {/* Animated shine effect */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                                    {/* Animated shine effect */}
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
 
-                            <CardContent className="relative p-0">
-                                {/* Main Content */}
-                                <div className="p-5">
-                                    <div className="flex items-start justify-between">
-                                        <div className="space-y-2">
-                                            <div className="flex items-center gap-2">
-                                                <p className="text-4xl font-bold text-white drop-shadow-lg">
-                                                    {card.value}
-                                                </p>
-                                                {getTrend(card.value, card.trend)}
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-medium text-white/90">
-                                                    {card.title}
-                                                </p>
-                                                <p className="text-xs text-white/70 mt-0.5">
-                                                    {card.subtitle}
-                                                </p>
+                                    <CardContent className="relative p-0">
+                                        {/* Main Content */}
+                                        <div className="p-5">
+                                            <div className="flex items-start justify-between">
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-4xl font-bold text-white drop-shadow-lg">
+                                                            {card.value}
+                                                        </p>
+                                                        {getTrend(card.value, card.trend)}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-medium text-white/90">
+                                                            {card.title}
+                                                        </p>
+                                                        <p className="text-xs text-white/70 mt-0.5">
+                                                            {card.subtitle}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="opacity-40 group-hover:opacity-60 transition-opacity">
+                                                    <Icon size={36} strokeWidth={1.5} className="text-white drop-shadow-lg" />
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div className="opacity-40 group-hover:opacity-60 transition-opacity">
-                                            <Icon size={36} strokeWidth={1.5} className="text-white drop-shadow-lg" />
-                                        </div>
-                                    </div>
-                                </div>
+                                        {/* Footer with status */}
+                                        {card.footer && (
+                                            <div className={cn(
+                                                "px-5 py-3 text-xs font-medium backdrop-blur-sm",
+                                                footerVariants[colorKey]
+                                            )}>
+                                                {card.footer}
+                                            </div>
+                                        )}
+                                    </CardContent>
 
-                                {/* Footer with status */}
-                                {card.footer && (
-                                    <div className={cn(
-                                        "px-5 py-3 text-xs font-medium backdrop-blur-sm",
-                                        footerVariants[colorKey]
-                                    )}>
-                                        {card.footer}
-                                    </div>
-                                )}
-                            </CardContent>
+                                    {/* Corner accent */}
+                                    <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-white/20 to-transparent rounded-bl-3xl" />
+                                </Card>
+                            );
+                        })}
+                    </div>
 
-                            {/* Corner accent */}
-                            <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-white/20 to-transparent rounded-bl-3xl" />
-                        </Card>
-                    );
-                })}
-            </div>
-
-            {/* Quick Stats Summary */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-card backdrop-blur-sm rounded-xl border border-border p-4">
-                    <p className="text-xs text-muted-foreground">Total Incidents</p>
-                    <p className="text-2xl font-bold text-foreground mt-1">229</p>
-                    <div className="flex items-center gap-1 mt-2">
-                        <TrendingUp className="h-3 w-3 text-red-400" />
-                        <span className="text-xs text-red-400">+12% from yesterday</span>
-                    </div>
-                </div>
-                <div className="bg-card backdrop-blur-sm rounded-xl border border-border p-4">
-                    <p className="text-xs text-muted-foreground">Devices Online</p>
-                    <p className="text-2xl font-bold text-green-400 mt-1">2/15</p>
-                    <div className="flex items-center gap-1 mt-2">
-                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                        <span className="text-xs text-muted-foreground">13% online</span>
-                    </div>
-                </div>
-                <div className="bg-card backdrop-blur-sm rounded-xl border border-border p-4">
-                    <p className="text-xs text-muted-foreground">Critical Issues</p>
-                    <p className="text-2xl font-bold text-red-400 mt-1">3</p>
-                    <div className="flex items-center gap-1 mt-2">
-                        <AlertTriangle className="h-3 w-3 text-red-400" />
-                        <span className="text-xs text-red-400">Need attention</span>
-                    </div>
-                </div>
-                <div className="bg-card backdrop-blur-sm rounded-xl border border-border p-4">
-                    <p className="text-xs text-muted-foreground">Last Updated</p>
-                    <p className="text-lg font-bold text-foreground mt-1">Just now</p>
-                    <div className="flex items-center gap-1 mt-2">
-                        <Activity className="h-3 w-3 text-green-400" />
-                        <span className="text-xs text-green-400">Live sync</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Legend with color coding */}
-            <div className="bg-muted backdrop-blur-sm rounded-xl border border-border p-4">
-                <div className="flex flex-wrap items-center gap-4 text-sm">
-                    <span className="text-muted-foreground font-medium">Status Legend:</span>
-                    <div className="flex flex-wrap gap-4">
-                        {[
-                            { label: "Active", color: "bg-green-500" },
-                            { label: "Warning", color: "bg-yellow-500" },
-                            { label: "Critical", color: "bg-red-500" },
-                            { label: "Security", color: "bg-purple-500" },
-                            { label: "Hardware", color: "bg-cyan-500" },
-                            { label: "Emergency", color: "bg-rose-500" },
-                        ].map((item) => (
-                            <div key={item.label} className="flex items-center gap-1.5">
-                                <div className={cn("w-3 h-3 rounded-full", item.color)} />
-                                <span className="text-xs text-muted-foreground">{item.label}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-            </>
+                </>
             )}
         </div>
     );

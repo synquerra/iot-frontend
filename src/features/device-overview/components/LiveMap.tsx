@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -14,7 +15,7 @@ import {
 } from "@/components/ui/tooltip";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Compass, Navigation, ZoomIn, ZoomOut } from "lucide-react";
+import { Clock, Compass, Navigation, Smartphone, ZoomIn, ZoomOut } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   MapContainer,
@@ -166,6 +167,7 @@ interface LiveMapProps {
   name: string;
   battery: number;
   lastUpdate: string;
+  geoid?: string | null;
 }
 
 export function LiveMap({
@@ -175,6 +177,7 @@ export function LiveMap({
   name,
   battery,
   lastUpdate,
+  geoid,
 }: LiveMapProps) {
   const [map, setMap] = useState<L.Map | null>(null);
   const [zoom, setZoom] = useState(14);
@@ -207,24 +210,32 @@ export function LiveMap({
   }, []);
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-2">
+    <Card className="group overflow-hidden border-border/50 shadow-2xl ring-1 ring-border/40 bg-slate-950">
+      <CardHeader className="p-4 md:p-6 bg-background">
         <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Live Location Tracking</CardTitle>
-            <CardDescription>Real-time device position on map</CardDescription>
+          <div className="flex items-center gap-3">
+             <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                <Navigation className="h-5 w-5 text-primary" />
+             </div>
+             <div>
+                <CardTitle className="text-xl font-bold tracking-tight">Geo-Spatial Intel</CardTitle>
+                <CardDescription className="text-xs font-semibold uppercase tracking-widest opacity-70">Active Telemetry Stream</CardDescription>
+             </div>
           </div>
           <div className="flex items-center gap-2">
-
-            <Badge variant="outline" className="gap-1">
-              <Navigation className="h-3 w-3" />
-              {speed} km/h
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+               <span className="text-[10px] font-black uppercase text-emerald-600 tracking-wider">Live Signal</span>
+            </div>
+            <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 rounded-lg font-mono font-bold text-sm bg-muted/60 border-border/50">
+              <Navigation className="h-3.5 w-3.5 rotate-45" />
+              {speed} <span className="text-[10px] opacity-70">km/h</span>
             </Badge>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-0 relative">
-        <div className="w-full h-[500px] bg-slate-200 dark:bg-slate-800 relative">
+      <CardContent className="p-0 relative group/map">
+        <div className="w-full h-[400px] sm:h-[500px] md:h-[600px] lg:h-[650px] relative z-0">
           <MapContainer
             center={position}
             zoom={zoom}
@@ -238,39 +249,53 @@ export function LiveMap({
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
-            {/* Optional: Add satellite view as overlay */}
             <TileLayer
               attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
               url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              opacity={0.5}
+              opacity={0.4}
             />
 
             <Marker
               position={position}
-              icon={createDeviceMarker("#FF0000")}
+              icon={createDeviceMarker("#EF4444")}
               ref={markerRef}
             >
-              <Popup>
-                <div className="p-2 min-w-[200px]">
-                  <h3 className="font-bold text-lg mb-2">{name}</h3>
-                  <div className="space-y-1 text-sm">
-                    <p>
-                      <span className="font-medium">Speed:</span> {speed} km/h
-                    </p>
-                    <p>
-                      <span className="font-medium">Battery:</span> {battery}%
-                    </p>
+              <Popup className="premium-popup">
+                <div className="p-3 min-w-[220px] bg-background">
+                  <div className="flex items-center gap-2 mb-3 border-b pb-2">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                       <Smartphone className="h-4 w-4 text-primary" />
+                    </div>
+                    <h3 className="font-black text-base uppercase tracking-tight">{name}</h3>
+                  </div>
+                  <div className="space-y-2 text-xs font-bold">
+                    <div className="flex justify-between items-center text-muted-foreground">
+                      <span>VELOCITY</span>
+                      <span className="text-foreground">{speed} km/h</span>
+                    </div>
+                    <div className="flex justify-between items-center text-muted-foreground">
+                      <span>ENERGY</span>
+                      <span className={cn(
+                        "text-foreground",
+                        battery < 20 ? "text-red-500" : "text-emerald-500"
+                      )}>{battery}%</span>
+                    </div>
 
-                    <p>
-                      <span className="font-medium">Last update:</span>{" "}
-                      {formatDateTime(lastUpdate)}
-                    </p>
-                    <p>
-                      <span className="font-medium">Coordinates:</span>
-                    </p>
-                    <p className="text-xs font-mono">
-                      {latitude.toFixed(6)}°N, {longitude.toFixed(6)}°E
-                    </p>
+                    <div className="pt-2 border-t mt-2">
+                       <p className="text-[10px] text-muted-foreground uppercase mb-1">Coordinates</p>
+                       <p className="font-mono text-foreground flex justify-between gap-1 items-center bg-muted/30 p-1.5 rounded">
+                         <span>{latitude.toFixed(6)}°N</span>
+                         <span className="opacity-30">/</span>
+                         <span>{longitude.toFixed(6)}°E</span>
+                       </p>
+                    </div>
+
+                    <div className={cn(
+                      "mt-2 p-2 rounded-lg text-center transition-all",
+                      geoid ? "bg-primary/10 text-primary border border-primary/20" : "bg-red-500/10 text-red-500 border border-red-500/20"
+                    )}>
+                       {geoid ? `TARGET ID: ${geoid}` : "LINK FAILURE (GPS ERROR)"}
+                    </div>
                   </div>
                 </div>
               </Popup>
@@ -286,44 +311,74 @@ export function LiveMap({
               />
             )}
           </MapContainer>
+          
+          <div className="absolute inset-0 pointer-events-none border-[12px] border-black/5 z-[1000] rounded-none shadow-[inset_0_0_100px_rgba(0,0,0,0.2)]" />
         </div>
 
-        {/* Location Info Overlay */}
-        <div className="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:bottom-4 md:w-80 z-[1000]">
-          <Card className="bg-background/95 backdrop-blur shadow-lg border-0">
-            <CardContent className="p-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Current Location</span>
-                  <Badge variant="outline" className="text-xs">
-                    Live
-                  </Badge>
+        {/* Cinematic HUD Overlay */}
+        <div className="absolute bottom-6 left-6 right-6 z-[1000] flex flex-col md:flex-row items-end justify-between gap-4 pointer-events-none">
+          <Card className="bg-slate-950/80 backdrop-blur-xl shadow-2xl border-white/10 w-full md:w-96 pointer-events-auto ring-1 ring-white/10">
+            <CardContent className="p-5">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                   <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Live Data Matrix</span>
+                      <span className="text-white text-lg font-bold tracking-tight">Active Link</span>
+                   </div>
+                   <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/50 animate-pulse font-black text-[10px]">
+                     SECURE
+                   </Badge>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <p className="text-muted-foreground">Latitude</p>
-                    <p className="font-mono font-medium">
-                      {latitude.toFixed(6)}°N
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">Latitude</p>
+                    <p className="font-mono text-white text-sm font-bold bg-white/5 py-1 px-2 rounded leading-none">
+                      {latitude.toFixed(6)}°
                     </p>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Longitude</p>
-                    <p className="font-mono font-medium">
-                      {longitude.toFixed(6)}°E
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">Longitude</p>
+                    <p className="font-mono text-white text-sm font-bold bg-white/5 py-1 px-2 rounded leading-none">
+                      {longitude.toFixed(6)}°
                     </p>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Accuracy</p>
-                    <p className="font-medium">±5 meters</p>
+                </div>
+
+                <div className={cn(
+                  "flex items-center justify-between p-3 rounded-xl transition-all",
+                  geoid 
+                    ? "bg-white/5 border border-white/10" 
+                    : "bg-red-500/20 border border-red-500/30"
+                )}>
+                  <div className="flex flex-col">
+                    <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Global Identifier</span>
+                    <span className={cn("font-mono text-sm font-black", !geoid ? "text-red-400" : "text-white")}>
+                      {geoid || "ERROR: NO LOCK"}
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Last Update</p>
-                    <p className="font-medium">{formatDateTime(lastUpdate)}</p>
+                  <div className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-lg border",
+                    geoid ? "bg-primary/20 border-primary/30 text-primary" : "bg-red-500/20 border-red-500/30 text-red-400"
+                  )}>
+                    <Smartphone className="h-4 w-4" />
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          <div className="hidden md:flex flex-col gap-2 pointer-events-auto">
+             <div className="bg-slate-950/80 backdrop-blur-xl border border-white/10 p-3 rounded-2xl flex items-center gap-3 ring-1 ring-white/10">
+                <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
+                   <Clock className="h-5 w-5 text-white/60" />
+                </div>
+                <div className="flex flex-col pr-4">
+                   <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Last Intel</span>
+                   <span className="text-white text-sm font-bold font-mono">{formatDateTime(lastUpdate)}</span>
+                </div>
+             </div>
+          </div>
         </div>
       </CardContent>
     </Card>

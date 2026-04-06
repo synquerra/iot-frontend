@@ -9,6 +9,7 @@ import {
   MapPin,
   Move,
   Wifi,
+  Thermometer,
 } from "lucide-react";
 import { MetricCard } from "./MetricCard";
 
@@ -18,6 +19,8 @@ interface MetricsGridProps {
   longitude: number;
   battery: number;
   signal: number;
+  temperature: number;
+  geoid?: string | null;
 }
 
 // Custom pulse marker for the minimap
@@ -43,6 +46,8 @@ export function MetricsGrid({
   longitude,
   battery,
   signal,
+  temperature,
+  geoid,
 }: MetricsGridProps) {
   const getSignalStrength = (signal: number) => {
     if (signal >= 80) return 4;
@@ -60,7 +65,7 @@ export function MetricsGrid({
   // };
 
   return (
-    <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
       <MetricCard
         icon={Move}
         label="Movement"
@@ -125,7 +130,22 @@ export function MetricsGrid({
         </div>
       </MetricCard>
 
-      <Card className="group hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col h-full min-h-[160px]">
+      <MetricCard
+        icon={Thermometer}
+        label="Temperature"
+        value={temperature}
+        unit="°C"
+        color="orange"
+      >
+        <div className="mt-4 space-y-2 border-t pt-3">
+          <p className="text-xs text-muted-foreground flex justify-between">
+             <span>Sensor Temp</span>
+             <span className="font-mono">{temperature.toFixed(2)} °C</span>
+          </p>
+        </div>
+      </MetricCard>
+
+      <Card className="group hover:shadow-xl transition-all duration-500 overflow-hidden flex flex-col h-full min-h-[160px] border-border/50 ring-1 ring-border/50">
         <CardContent className="p-0 flex-1 relative">
           <MapContainer
             center={[latitude, longitude]}
@@ -139,13 +159,30 @@ export function MetricsGrid({
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
             <Marker position={[latitude, longitude]} icon={createMinimapMarker()} />
           </MapContainer>
-          <div className="absolute bottom-3 left-3 right-3 bg-background/95 backdrop-blur rounded-lg p-2.5 shadow-sm z-[1000] flex flex-col gap-1 border border-border/50">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-              <MapPin className="h-3.5 w-3.5 text-green-500" />
-              Live Location
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+          <div className="absolute bottom-3 left-3 right-3 bg-background/90 backdrop-blur-md rounded-xl p-2.5 shadow-xl z-[1000] flex flex-col gap-1 border border-white/20">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-foreground">
+                <MapPin className="h-3 w-3 text-emerald-500" />
+                Smart HUD
+              </div>
+              <span className="text-[10px] font-mono text-muted-foreground tracking-tighter">
+                {latitude.toFixed(4)}°, {longitude.toFixed(4)}°
+              </span>
             </div>
-            <div className="text-[10px] font-mono text-muted-foreground pl-5 tracking-tighter">
-              {latitude.toFixed(5)}°, {longitude.toFixed(5)}°
+            <div className="flex justify-between items-center w-full">
+              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest py-0.5 px-1.5 bg-muted rounded flex items-center gap-1">
+                 <div className="h-1 w-1 rounded-full bg-emerald-500" />
+                 LIVE
+              </span>
+              <span className={cn(
+                "px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter transition-all duration-500",
+                geoid 
+                  ? "bg-primary/20 text-primary" 
+                  : "bg-red-500/20 text-red-500 border border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.3)]"
+              )}>
+                {geoid ? `ID: ${geoid}` : "GPS error"}
+              </span>
             </div>
           </div>
         </CardContent>

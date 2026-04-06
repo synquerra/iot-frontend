@@ -8,7 +8,12 @@ import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { DeviceSettingsHeader } from "./components/DeviceSettingsHeader";
 import { DeviceSettingsTargetDeviceCard } from "./components/DeviceSettingsTargetDeviceCard";
-import { DeviceSettingsTabs } from "./components/DeviceSettingsTabs";
+import { AdvancedSettings } from "./components/AdvancedSettings";
+import { CommunicationSettings } from "./components/CommunicationSettings";
+import { AmbientListeningCard } from "./components/AmbientListeningCard";
+import { IntervalsSettings } from "./components/IntervalsSettings";
+import { GeneralDeviceControls } from "./components/GeneralDeviceControls";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function DeviceSettings() {
   const { imei: routeImei } = useParams();
@@ -52,8 +57,13 @@ export default function DeviceSettings() {
     };
   }, []);
 
+  const selectedDevice = useMemo(
+    () => devices.find((device) => device.imei === selectedImei) ?? null,
+    [devices, selectedImei],
+  );
+
   useEffect(() => {
-    if (!selectedImei) {
+    if (!selectedDevice?.topic) {
       setLatestSettings(null);
       return;
     }
@@ -63,7 +73,7 @@ export default function DeviceSettings() {
     const loadLatestSettings = async () => {
       try {
         setIsLoadingLatestSettings(true);
-        const response = await getLatestDeviceSettings(selectedImei);
+        const response = await getLatestDeviceSettings(selectedDevice.topic!);
         if (!isMounted) {
           return;
         }
@@ -86,17 +96,14 @@ export default function DeviceSettings() {
     return () => {
       isMounted = false;
     };
-  }, [selectedImei]);
-
-  const selectedDevice = useMemo(
-    () => devices.find((device) => device.imei === selectedImei) ?? null,
-    [devices, selectedImei],
-  );
+  }, [selectedDevice?.topic]);
 
   return (
     <div className="w-full bg-background">
-      <div className="space-y-8">
-        <DeviceSettingsHeader />
+      <div className="space-y-6">
+        <DeviceSettingsHeader 
+          currentMode={selectedDevice?.currentMode} 
+        />
         <DeviceSettingsTargetDeviceCard
           routeImei={routeImei}
           devices={devices}
@@ -104,12 +111,45 @@ export default function DeviceSettings() {
           selectedDevice={selectedDevice}
           isLoadingDevices={isLoadingDevices}
           onSelectImei={setSelectedImei}
+          currentMode={selectedDevice?.currentMode}
         />
-        <DeviceSettingsTabs
-          selectedImei={selectedImei}
-          latestSettings={latestSettings}
-          isLoadingLatestSettings={isLoadingLatestSettings}
+        
+        <GeneralDeviceControls 
+           selectedDevice={selectedDevice} 
+           latestSettings={latestSettings} 
         />
+        
+        <Tabs defaultValue="intervals" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 bg-muted/50 h-auto p-1 gap-1">
+            <TabsTrigger value="intervals" className="py-2.5 font-bold data-[state=active]:shadow-md">Time & Alerts</TabsTrigger>
+            <TabsTrigger value="communication" className="py-2.5 font-bold data-[state=active]:shadow-md">Contacts</TabsTrigger>
+            <TabsTrigger value="ambient" className="py-2.5 font-bold data-[state=active]:shadow-md">Ambient Listening</TabsTrigger>
+            <TabsTrigger value="advanced" className="py-2.5 font-bold data-[state=active]:shadow-md">Advanced</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="communication" className="mt-6">
+            <CommunicationSettings
+              selectedImei={selectedImei}
+              latestSettings={latestSettings}
+              isLoadingLatestSettings={isLoadingLatestSettings}
+            />
+          </TabsContent>
+          
+          <TabsContent value="intervals" className="mt-6">
+            <IntervalsSettings
+              selectedImei={selectedImei}
+              latestSettings={latestSettings}
+            />
+          </TabsContent>
+
+          <TabsContent value="ambient" className="mt-6">
+            <AmbientListeningCard />
+          </TabsContent>
+
+          <TabsContent value="advanced" className="mt-6">
+            <AdvancedSettings />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

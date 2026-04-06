@@ -15,42 +15,91 @@ export type LatestDeviceSettingsRecord = {
   raw_temperature?: string | null;
   raw_SpeedLimit?: string | null;
   raw_LowbatLimit?: string | null;
+  current_mode?: string | null;
+  led_status?: string | null;
 };
 
 function extractLatestRecord(payload: unknown): LatestDeviceSettingsRecord | null {
-  if (Array.isArray(payload)) {
-    const first = payload[0];
-    return first && typeof first === "object"
-      ? (first as LatestDeviceSettingsRecord)
-      : null;
-  }
-
   if (!payload || typeof payload !== "object") {
     return null;
   }
 
-  const maybeWrapped = payload as { data?: unknown };
+  const maybeWrapped = payload as { data?: any };
+  const rawData = maybeWrapped.data || payload;
+  const target = Array.isArray(rawData) ? rawData[0] : rawData;
 
-  if (Array.isArray(maybeWrapped.data)) {
-    const first = maybeWrapped.data[0];
-    return first && typeof first === "object"
-      ? (first as LatestDeviceSettingsRecord)
-      : null;
+  if (!target || typeof target !== "object") {
+    return null;
   }
 
-  if (maybeWrapped.data && typeof maybeWrapped.data === "object") {
-    return maybeWrapped.data as LatestDeviceSettingsRecord;
-  }
-
-  return payload as LatestDeviceSettingsRecord;
+  // Safely map the new REST schema onto the legacy frontend struct.
+  return {
+    topic: target.topic,
+    imei: target.imei,
+    type: target.type || target.current_profile, 
+    device_timestamp: target.updated_at || target.created_at || target.device_timestamp,
+    raw_phonenum1: target.phone_num1 ?? target.raw_phonenum1,
+    raw_phonenum2: target.phone_num2 ?? target.raw_phonenum2,
+    raw_controlroomnum: target.control_room_num ?? target.raw_controlroomnum,
+    raw_NormalSendingInterval: target.normal_sending_interval ?? target.raw_NormalSendingInterval,
+    raw_SOSSendingInterval: target.sos_sending_interval ?? target.raw_SOSSendingInterval,
+    raw_NormalScanningInterval: target.normal_scanning_interval ?? target.raw_NormalScanningInterval,
+    raw_AirplaneInterval: target.airplane_interval ?? target.raw_AirplaneInterval,
+    raw_temperature: target.temperature_limit ?? target.raw_temperature,
+    raw_SpeedLimit: target.speed_limit ?? target.raw_SpeedLimit,
+    raw_LowbatLimit: target.lowbat_limit ?? target.raw_LowbatLimit,
+    current_mode: target.current_mode,
+    led_status: target.led_status,
+  } as LatestDeviceSettingsRecord;
 }
 
 export async function getLatestDeviceSettings(
-  imei: string,
+  topicStr: string,
 ): Promise<LatestDeviceSettingsRecord | null> {
-  const response = await api.get(`/${imei}/config-or-misc`, {
-    params: { limit: 1 },
+  const response = await api.get(`/setting/get`, {
+    params: { topic: topicStr },
   });
 
   return extractLatestRecord(response.data);
+}
+export async function updateDeviceCoreSettings(
+  payload: {
+    topic: string;
+    NormalSendingInterval: number;
+    SOSSendingInterval: number;
+    NormalScanningInterval: number;
+    AirplaneInterval: number;
+    SpeedLimit: number;
+    LowbatLimit: number;
+    TemperatureLimit: number;
+  }
+) {
+  const response = await api.put(`/setting/update-core`, payload);
+  return response.data;
+}
+
+export async function updateAirplaneMode(payload: {
+  topic: string;
+  AirplaneMode: "enable" | "disable";
+}) {
+  const response = await api.post(`/setting/airplane-mode`, payload);
+  return response.data;
+}
+
+export async function updateLedStatus(payload: {
+  topic: string;
+  LED: "SwitchOnLed" | "SwitchOffLed";
+}) {
+  const response = await api.post(`/setting/led-status`, payload);
+  return response.data;
+}
+
+export async function updateDevicePhoneNumbers(payload: {
+  topic: string;
+  phonenum1: string;
+  phonenum2: string;
+  controlroomnum: string;
+}) {
+  const response = await api.post(`/setting/update-phones`, payload);
+  return response.data;
 }

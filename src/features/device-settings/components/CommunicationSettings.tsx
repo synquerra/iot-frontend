@@ -8,18 +8,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import type { LatestDeviceSettingsRecord } from "@/features/device-settings/services/deviceSettingsService";
 import {
-  COMMANDS,
-  type PublishedDeviceCommandResult,
-} from "@/helpers/deviceCommandConstants";
-import {
-  getDeviceCommandToastContent,
-  sendDeviceCommand,
-} from "@/helpers/deviceCommandHelper";
-import { Bell, Headphones, Loader2, Phone, Save, Square } from "lucide-react";
+  updateDevicePhoneNumbers,
+  type LatestDeviceSettingsRecord,
+} from "@/features/device-settings/services/deviceSettingsService";
+import { useGlobalLoading } from "@/contexts/GlobalLoadingContext";
+import { Phone, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -75,7 +69,7 @@ const contactFields: Array<{
     badge: "Emergency",
     badgeVariant: "destructive",
     indicatorClassName: "bg-red-500",
-    editable: false,
+    editable: true,
   },
 ];
 
@@ -85,9 +79,7 @@ export function CommunicationSettings({
   isLoadingLatestSettings,
 }: CommunicationSettingsProps) {
   const [contacts, setContacts] = useState<ContactsFormState>(DEFAULT_CONTACTS);
-  const [isSavingContacts, setIsSavingContacts] = useState(false);
-  const [isAmbientEnabled, setIsAmbientEnabled] = useState(false);
-  const [isAmbientSubmitting, setIsAmbientSubmitting] = useState(false);
+  const { setIsLoading } = useGlobalLoading();
 
   useEffect(() => {
     setContacts({
@@ -101,26 +93,6 @@ export function CommunicationSettings({
     latestSettings?.raw_phonenum2,
   ]);
 
-  const runCommand = async (command: string, params: Record<string, unknown> = {}) => {
-    if (!selectedImei) {
-      toast.error("Select a device before sending a command.");
-      return null;
-    }
-
-    const response = await sendDeviceCommand<PublishedDeviceCommandResult>(
-      selectedImei,
-      command,
-      params,
-    );
-
-    const toastContent = getDeviceCommandToastContent(response);
-    toast.success(toastContent.title, {
-      description: toastContent.description,
-    });
-
-    return response;
-  };
-
   const handleContactChange = (key: keyof ContactsFormState, value: string) => {
     setContacts((current) => ({
       ...current,
@@ -129,79 +101,66 @@ export function CommunicationSettings({
   };
 
   const handleSaveContacts = async () => {
-    try {
-      setIsSavingContacts(true);
-      await runCommand(COMMANDS.SET_CONTACTS, contacts);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to update contacts.";
-      toast.error(message);
-    } finally {
-      setIsSavingContacts(false);
+    if (!latestSettings?.topic) {
+      toast.error("Device topic is missing.");
+      return;
     }
-  };
 
-  const handleAmbientToggle = async (checked: boolean) => {
     try {
-      setIsAmbientSubmitting(true);
-      await runCommand(
-        checked ? COMMANDS.AMBIENT_ENABLE : COMMANDS.AMBIENT_DISABLE,
-      );
-      setIsAmbientEnabled(checked);
+      setIsLoading(true, "Updating device contacts...");
+      const response = await updateDevicePhoneNumbers({
+        topic: latestSettings.topic,
+        phonenum1: contacts.phonenum1,
+        phonenum2: contacts.phonenum2,
+        controlroomnum: contacts.controlroomnum,
+      });
+
+      if (response.status === "success") {
+        toast.success(response.message || "Device contacts updated successfully");
+      } else {
+        toast.error(response.message || "Failed to update contacts");
+      }
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to update ambient listening.";
+        error instanceof Error ? error.message : "An error occurred while updating contacts.";
       toast.error(message);
     } finally {
-      setIsAmbientSubmitting(false);
-    }
-  };
-
-  const handleAmbientStop = async () => {
-    try {
-      setIsAmbientSubmitting(true);
-      await runCommand(COMMANDS.AMBIENT_STOP);
-      setIsAmbientEnabled(false);
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to stop ambient listening.";
-      toast.error(message);
-    } finally {
-      setIsAmbientSubmitting(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div>
+    <Card className="border-primary/10 shadow-sm">
+      <CardHeader className="pb-4 border-b border-primary/5 flex flex-row items-center justify-between space-y-0">
+          <div className="flex-1">
             <CardTitle className="flex items-center gap-2">
               <Phone className="h-5 w-5 text-primary" />
               Registered Mobile Numbers
             </CardTitle>
             <CardDescription>
-              Manage emergency and registered contacts through the `SET_CONTACTS`
-              command
+              Direct contact management through dedicated synchronization API
             </CardDescription>
             {latestSettings?.device_timestamp ? (
-              <p className="mt-2 text-xs text-muted-foreground">
-                Last config snapshot:{" "}
-                {new Date(latestSettings.device_timestamp).toLocaleString("en-IN")}
+              <p className="mt-2 text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
+                Snapshot: {new Date(latestSettings.device_timestamp).toLocaleString("en-IN")}
               </p>
             ) : null}
           </div>
+          <Button
+            className="gap-2 font-bold shadow-lg shadow-primary/10"
+            onClick={handleSaveContacts}
+            size="sm"
+          >
+            <Save size={14} />
+            Save Contacts
+          </Button>
         </CardHeader>
 
-        <CardContent className="space-y-6">
-          <div className="space-y-3">
+      <CardContent className="space-y-6 flex-1 flex flex-col pt-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 flex-1">
             {contactFields.map((item) => (
               <div
-                key={item.label}
+                key={item.key}
                 className="space-y-3 rounded-lg bg-muted p-4 transition-colors hover:bg-muted/80"
               >
                 <div className="flex items-center justify-between gap-3">
@@ -212,13 +171,6 @@ export function CommunicationSettings({
 
                     <div>
                       <span className="font-medium">{item.label}</span>
-                      <p className="text-sm text-muted-foreground">
-                        {isLoadingLatestSettings
-                          ? "Loading latest value from device settings..."
-                          : item.editable
-                            ? "Enter the number exactly as expected by the device API"
-                            : "Shown from latest device settings and locked from editing"}
-                      </p>
                     </div>
                   </div>
 
@@ -226,7 +178,6 @@ export function CommunicationSettings({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor={item.key}>{item.label}</Label>
                   <Input
                     id={item.key}
                     inputMode="numeric"
@@ -243,77 +194,8 @@ export function CommunicationSettings({
             ))}
           </div>
 
-          <div className="flex justify-end">
-            <Button
-              className="gap-2"
-              onClick={handleSaveContacts}
-              disabled={isSavingContacts}
-            >
-              {isSavingContacts ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save size={16} />
-              )}
-              {isSavingContacts ? "Saving..." : "Save Contacts"}
-            </Button>
-          </div>
         </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Headphones className="h-5 w-5 text-primary" />
-            Ambient Listening
-          </CardTitle>
-          <CardDescription>
-            Configure `AMBIENT_ENABLE`, `AMBIENT_DISABLE`, and `AMBIENT_STOP`
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between rounded-lg bg-muted p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-primary/10 p-2">
-                <Bell className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium">Ambient Listening</p>
-                <p className="text-sm text-muted-foreground">
-                  Toggle real-time audio monitoring on the device
-                </p>
-              </div>
-            </div>
-
-            <Switch
-              checked={isAmbientEnabled}
-              onCheckedChange={handleAmbientToggle}
-              disabled={isAmbientSubmitting}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Button
-              variant="destructive"
-              className="gap-2"
-              onClick={handleAmbientStop}
-              disabled={isAmbientSubmitting}
-            >
-              {isAmbientSubmitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Square size={16} />
-              )}
-              Stop Ambient Listening
-            </Button>
-
-            <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-              Audio file viewing is still not wired here because this feature
-              only has command-send APIs right now.
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    </Card>
   );
 }
+

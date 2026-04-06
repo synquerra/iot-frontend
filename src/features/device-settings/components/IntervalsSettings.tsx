@@ -8,15 +8,11 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-  COMMANDS,
-  type PublishedDeviceCommandResult,
-} from "@/helpers/deviceCommandConstants";
-import type { LatestDeviceSettingsRecord } from "@/features/device-settings/services/deviceSettingsService";
-import {
-  getDeviceCommandToastContent,
-  sendDeviceCommand,
-} from "@/helpers/deviceCommandHelper";
-import { Clock, RotateCcw, Save } from "lucide-react";
+  updateDeviceCoreSettings,
+  type LatestDeviceSettingsRecord,
+} from "@/features/device-settings/services/deviceSettingsService";
+import { useGlobalLoading } from "@/contexts/GlobalLoadingContext";
+import { Clock, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -108,7 +104,7 @@ export function IntervalsSettings({
   latestSettings,
 }: IntervalsSettingsProps) {
   const [values, setValues] = useState<DeviceSettingsFormState>(DEFAULT_VALUES);
-  const [isSaving, setIsSaving] = useState(false);
+  const { setIsLoading } = useGlobalLoading();
 
   useEffect(() => {
     setValues({
@@ -153,29 +149,37 @@ export function IntervalsSettings({
     }));
   };
 
-  const handleReset = () => {
-    setValues(DEFAULT_VALUES);
-  };
+
 
   const handleSave = async () => {
-    if (!selectedImei) {
-      toast.error("Select a device before updating interval settings.");
+    if (!selectedImei || !latestSettings?.topic) {
+      toast.error("Required device identifier (topic/imei) missing.");
       return;
     }
 
     try {
-      setIsSaving(true);
+      setIsLoading(true, "Please wait");
 
-      const response = await sendDeviceCommand<PublishedDeviceCommandResult>(
-        selectedImei,
-        COMMANDS.DEVICE_SETTINGS,
-        values,
-      );
+      const payload = {
+        topic: latestSettings.topic,
+        NormalSendingInterval: Number(values.NormalSendingInterval),
+        SOSSendingInterval: Number(values.SOSSendingInterval),
+        NormalScanningInterval: Number(values.NormalScanningInterval),
+        AirplaneInterval: Number(values.AirplaneInterval),
+        SpeedLimit: Number(values.SpeedLimit),
+        LowbatLimit: Number(values.LowbatLimit),
+        TemperatureLimit: Number(values.TemperatureLimit),
+      };
 
-      const toastContent = getDeviceCommandToastContent(response);
-      toast.success(toastContent.title, {
-        description: toastContent.description,
-      });
+      const response = await updateDeviceCoreSettings(payload);
+
+      if (response.status === "success") {
+        toast.success("Success", {
+           description: response.message || "Device settings updated successfully",
+        });
+      } else {
+        toast.error(response.message || "Failed to update settings");
+      }
     } catch (error) {
       const message =
         error instanceof Error
@@ -183,42 +187,58 @@ export function IntervalsSettings({
           : "Failed to update device settings.";
       toast.error(message);
     } finally {
-      setIsSaving(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-primary" />
-          Time Intervals
-        </CardTitle>
-        <CardDescription>
-          Update interval and threshold values pushed through the device command
-          API
-        </CardDescription>
+    <Card className="border-primary/10 shadow-sm">
+      <CardHeader className="pb-4 border-b border-primary/5 flex flex-row items-center justify-between space-y-0 text-left">
+        <div className="flex-1">
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-primary" />
+            Time & Alert Intervals
+          </CardTitle>
+          <CardDescription>
+            Configure operational cadences and safety threshold limits
+          </CardDescription>
+          {latestSettings?.device_timestamp ? (
+            <p className="mt-2 text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
+              Snapshot: {new Date(latestSettings.device_timestamp).toLocaleString("en-IN")}
+            </p>
+          ) : null}
+        </div>
+        <Button onClick={handleSave} className="gap-2 font-bold shadow-lg shadow-primary/10" size="sm">
+          <Save size={14} />
+          Update Intervals
+        </Button>
       </CardHeader>
 
-      <CardContent className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-2">
+      <CardContent className="space-y-6 flex-1 flex flex-col pt-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {intervalFields.map((field) => (
-            <div key={field.key} className="space-y-3 rounded-lg border bg-card p-4">
-              <div>
-                <p className="font-medium">{field.label}</p>
-                <p className="text-sm text-muted-foreground">
-                  {field.description}
-                </p>
+            <div key={field.key} className="space-y-3 rounded-lg bg-muted p-4 transition-colors hover:bg-muted/80 border border-transparent hover:border-primary/10">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-2 w-2 rounded-full bg-primary/40" />
+                  <div>
+                    <p className="font-medium text-sm">{field.label}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {field.description}
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 bg-background/50 p-2 rounded-md border border-input focus-within:ring-1 focus-within:ring-primary/30 transition-all">
                 <Input
                   type="number"
                   min="0"
                   value={values[field.key]}
                   onChange={(event) => handleChange(field.key, event.target.value)}
+                  className="border-0 focus-visible:ring-0 h-8 text-sm"
                 />
-                <span className="min-w-12 text-sm text-muted-foreground">
+                <span className="min-w-10 text-[10px] uppercase font-bold text-muted-foreground px-2 py-1 bg-muted rounded border">
                   {field.suffix}
                 </span>
               </div>
@@ -226,23 +246,7 @@ export function IntervalsSettings({
           ))}
         </div>
 
-        <div className="flex justify-end gap-3">
-          <Button
-            variant="ghost"
-            className="gap-2 text-primary"
-            onClick={handleReset}
-            disabled={isSaving}
-          >
-            <RotateCcw size={16} />
-            Set to Default Values
-          </Button>
-
-          <Button onClick={handleSave} className="gap-2" disabled={isSaving}>
-            <Save size={16} />
-            {isSaving ? "Updating..." : "Update Settings"}
-          </Button>
-        </div>
-      </CardContent>
+        </CardContent>
     </Card>
   );
 }

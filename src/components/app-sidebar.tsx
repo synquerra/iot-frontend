@@ -3,6 +3,7 @@
 import {
   BellIcon,
   BrainCogIcon,
+  FlaskConical,
   PhoneIcon,
   PieChart,
   PinIcon,
@@ -48,6 +49,12 @@ const data = {
       path: "/devices/geofencing",
       end: "/devices/geofencing",
       icon: PinIcon,
+    },
+    {
+      name: "Testing",
+      path: "/devices/testing",
+      end: "/devices/testing",
+      icon: FlaskConical,
     },
     {
       name: "Alerts",
