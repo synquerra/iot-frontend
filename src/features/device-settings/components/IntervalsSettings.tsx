@@ -15,6 +15,7 @@ import { useGlobalLoading } from "@/contexts/GlobalLoadingContext";
 import { Clock, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 type DeviceSettingsFormState = {
   NormalSendingInterval: string;
@@ -30,8 +31,8 @@ const DEFAULT_VALUES: DeviceSettingsFormState = {
   NormalSendingInterval: "600",
   SOSSendingInterval: "60",
   NormalScanningInterval: "300",
-  AirplaneInterval: "400",
-  TemperatureLimit: "30",
+  AirplaneInterval: "1800",
+  TemperatureLimit: "50",
   SpeedLimit: "60",
   LowbatLimit: "20",
 };
@@ -42,49 +43,49 @@ const intervalFields: Array<{
   description: string;
   suffix: string;
 }> = [
-  {
-    key: "NormalSendingInterval",
-    label: "Normal Sending Interval",
-    description: "Standard data transmission cadence",
-    suffix: "sec",
-  },
-  {
-    key: "SOSSendingInterval",
-    label: "SOS Sending Interval",
-    description: "Emergency transmission cadence",
-    suffix: "sec",
-  },
-  {
-    key: "NormalScanningInterval",
-    label: "Normal Scanning Interval",
-    description: "Standard GPS and scan update cadence",
-    suffix: "sec",
-  },
-  {
-    key: "AirplaneInterval",
-    label: "Airplane Interval",
-    description: "Flight mode scanning cadence",
-    suffix: "sec",
-  },
-  {
-    key: "TemperatureLimit",
-    label: "Temperature Limit",
-    description: "Alert threshold for device temperature",
-    suffix: "°C",
-  },
-  {
-    key: "SpeedLimit",
-    label: "Speed Limit",
-    description: "Alert threshold for overspeeding",
-    suffix: "km/h",
-  },
-  {
-    key: "LowbatLimit",
-    label: "Low Battery Limit",
-    description: "Battery percentage threshold for alerts",
-    suffix: "%",
-  },
-];
+    {
+      key: "NormalSendingInterval",
+      label: "Normal Sending Interval",
+      description: "Standard data transmission cadence",
+      suffix: "sec",
+    },
+    {
+      key: "SOSSendingInterval",
+      label: "SOS Sending Interval",
+      description: "Emergency transmission cadence",
+      suffix: "sec",
+    },
+    {
+      key: "NormalScanningInterval",
+      label: "Normal Scanning Interval",
+      description: "Standard GPS and scan update cadence",
+      suffix: "sec",
+    },
+    {
+      key: "AirplaneInterval",
+      label: "Airplane Interval",
+      description: "Flight mode scanning cadence",
+      suffix: "sec",
+    },
+    {
+      key: "TemperatureLimit",
+      label: "Temperature Limit",
+      description: "Alert threshold for device temperature",
+      suffix: "°C",
+    },
+    {
+      key: "SpeedLimit",
+      label: "Speed Limit",
+      description: "Alert threshold for overspeeding",
+      suffix: "km/h",
+    },
+    {
+      key: "LowbatLimit",
+      label: "Low Battery Limit",
+      description: "Battery percentage threshold for alerts",
+      suffix: "%",
+    },
+  ];
 
 function toStringValue(value: string | number | undefined, fallback: string) {
   if (value === undefined || value === null || value === "") {
@@ -175,7 +176,7 @@ export function IntervalsSettings({
 
       if (response.status === "success") {
         toast.success("Success", {
-           description: response.message || "Device settings updated successfully",
+          description: response.message || "Device settings updated successfully",
         });
       } else {
         toast.error(response.message || "Failed to update settings");
@@ -192,7 +193,10 @@ export function IntervalsSettings({
   };
 
   return (
-    <Card className="border-primary/10 shadow-sm">
+    <Card className={cn(
+      "border-primary/10 shadow-sm transition-opacity duration-300",
+      !selectedImei && "opacity-50 grayscale pointer-events-none select-none"
+    )}>
       <CardHeader className="pb-4 border-b border-primary/5 flex flex-row items-center justify-between space-y-0 text-left">
         <div className="flex-1">
           <CardTitle className="flex items-center gap-2">
@@ -200,15 +204,22 @@ export function IntervalsSettings({
             Time & Alert Intervals
           </CardTitle>
           <CardDescription>
-            Configure operational cadences and safety threshold limits
+            {!selectedImei 
+              ? "Select a device to configure operational cadences" 
+              : "Configure operational cadences and safety threshold limits"}
           </CardDescription>
-          {latestSettings?.device_timestamp ? (
+          {latestSettings?.device_timestamp && selectedImei ? (
             <p className="mt-2 text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
               Snapshot: {new Date(latestSettings.device_timestamp).toLocaleString("en-IN")}
             </p>
           ) : null}
         </div>
-        <Button onClick={handleSave} className="gap-2 font-bold shadow-lg shadow-primary/10" size="sm">
+        <Button 
+          onClick={handleSave} 
+          disabled={!selectedImei}
+          className="gap-2 font-bold shadow-lg shadow-primary/10" 
+          size="sm"
+        >
           <Save size={14} />
           Update Intervals
         </Button>
@@ -232,6 +243,7 @@ export function IntervalsSettings({
 
               <div className="flex items-center gap-3 bg-background/50 p-2 rounded-md border border-input focus-within:ring-1 focus-within:ring-primary/30 transition-all">
                 <Input
+                  disabled={!selectedImei}
                   type="number"
                   min="0"
                   value={values[field.key]}
@@ -246,7 +258,7 @@ export function IntervalsSettings({
           ))}
         </div>
 
-        </CardContent>
+      </CardContent>
     </Card>
   );
 }

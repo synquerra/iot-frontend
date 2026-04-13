@@ -9,7 +9,13 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Bell, Headphones, Square } from "lucide-react";
 
-export function AmbientListeningCard() {
+type AmbientListeningCardProps = {
+  selectedImei?: string;
+};
+
+export function AmbientListeningCard({ selectedImei }: AmbientListeningCardProps) {
+  const isEnabled = Boolean(selectedImei);
+
   return (
     <Card className="border-primary/10 shadow-sm h-full flex flex-col opacity-50 grayscale pointer-events-none select-none">
       <CardHeader className="pb-4">
@@ -18,7 +24,9 @@ export function AmbientListeningCard() {
           Ambient Listening
         </CardTitle>
         <CardDescription>
-          Configure `AMBIENT_ENABLE`, `AMBIENT_DISABLE`, and `AMBIENT_STOP`
+          {!isEnabled 
+            ? "Select a device to view audio monitoring status" 
+            : "Configure `AMBIENT_ENABLE`, `AMBIENT_DISABLE`, and `AMBIENT_STOP`"}
         </CardDescription>
       </CardHeader>
 

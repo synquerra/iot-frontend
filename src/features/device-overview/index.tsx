@@ -14,6 +14,7 @@ import { NetworkPerformanceCard } from "./components/NetworkPerformanceCard";
 
 import { MetricsGrid } from "./components/MetricGrid";
 import { MetricCardSkeleton } from "./components/SkeletonItems";
+import { DeviceAlertsHistory } from "./components/DeviceAlertsHistory";
 import useDeviceOverview from "./hooks/useDeviceOverview";
 
 export default function DeviceOverviewPage() {
@@ -55,6 +56,7 @@ export default function DeviceOverviewPage() {
     settingsSosInterval: deviceSettings?.raw_SOSSendingInterval ?? "N/A",
     settingsSpeedLimit: deviceSettings?.raw_SpeedLimit ?? "N/A",
     settingsLowBattery: deviceSettings?.raw_LowbatLimit ?? "N/A",
+    settingsTempLimit: deviceSettings?.raw_temperature ?? "N/A",
     settingsAirplaneInterval: deviceSettings?.raw_AirplaneInterval ?? "N/A",
   };
 
@@ -93,6 +95,8 @@ export default function DeviceOverviewPage() {
             signal={data.signal}
             temperature={data.temperature}
             geoid={data.geoid}
+            lowBatLimit={data.settingsLowBattery !== "N/A" ? parseInt(data.settingsLowBattery) : 30}
+            tempLimit={data.settingsTempLimit !== "N/A" ? parseInt(data.settingsTempLimit) : 50}
           />
 
           <div className="grid gap-8 lg:grid-cols-12 items-start">
@@ -104,15 +108,9 @@ export default function DeviceOverviewPage() {
                 stationary={data.stationary}
                 overspeeding={data.overspeeding}
               />
-              <LiveMap
-                latitude={data.latitude}
-                longitude={data.longitude}
-                speed={data.speed}
-                name={data.name}
-                battery={data.battery}
-                lastUpdate={data.lastUpdate}
-                geoid={data.geoid}
-              />
+              <DeviceAlertsHistory imei={data.imei} deviceName={data.name} />
+
+
             </div>
 
             {/* Right Column - System Controls & Intelligence */}
@@ -123,6 +121,7 @@ export default function DeviceOverviewPage() {
                 speedLimit={data.settingsSpeedLimit}
                 lowBattery={data.settingsLowBattery}
                 airplaneInterval={data.settingsAirplaneInterval}
+                temperatureLimit={data.settingsTempLimit}
               />
 
               <div className="grid gap-8 sm:grid-cols-1">
@@ -131,6 +130,16 @@ export default function DeviceOverviewPage() {
                   gpsSignal={data.gpsSignal}
                   gpsSignalRaw={data.gpsSignalRaw}
                   signal={data.signal}
+                />
+                <LiveMap
+                  latitude={data.latitude}
+                  longitude={data.longitude}
+                  speed={data.speed}
+                  name={data.name}
+                  battery={data.battery}
+                  lastUpdate={data.lastUpdate}
+                  geoid={data.geoid}
+                  imei={data.imei}
                 />
                 {/* Legacy Maintenance Layer */}
                 <div className="opacity-30 pointer-events-none grayscale hover:opacity-100 transition-opacity duration-700">

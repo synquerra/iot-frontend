@@ -12,6 +12,8 @@ import {
   Thermometer,
 } from "lucide-react";
 import { MetricCard } from "./MetricCard";
+import { useEffect, useRef } from "react";
+import { toast } from "sonner";
 
 interface MetricsGridProps {
   speed: number;
@@ -21,6 +23,8 @@ interface MetricsGridProps {
   signal: number;
   temperature: number;
   geoid?: string | null;
+  lowBatLimit?: number;
+  tempLimit?: number;
 }
 
 // Custom pulse marker for the minimap
@@ -48,7 +52,31 @@ export function MetricsGrid({
   signal,
   temperature,
   geoid,
+  lowBatLimit = 30,
+  tempLimit = 50,
 }: MetricsGridProps) {
+  const lastToastRef = useRef<number>(0);
+
+  useEffect(() => {
+    const now = Date.now();
+    // Throttle toasts to avoid spam (every 30s)
+    if (now - lastToastRef.current < 30000) return;
+
+    if (temperature > 47) {
+      toast.error("Critical Temperature", {
+        description: `Device is running at ${temperature.toFixed(2)}°C. Shutdown imminent above ${tempLimit}°C.`,
+        duration: 5000,
+      });
+      lastToastRef.current = now;
+    } else if (temperature > 43) {
+      toast.warning("High Temperature Warning", {
+        description: `Device temp is ${temperature.toFixed(2)}°C. Please monitor thermal levels.`,
+        duration: 4000,
+      });
+      lastToastRef.current = now;
+    }
+  }, [temperature, tempLimit]);
+
   const getSignalStrength = (signal: number) => {
     if (signal >= 80) return 4;
     if (signal >= 60) return 3;
@@ -57,13 +85,6 @@ export function MetricsGrid({
     return 0;
   };
 
-  // Determine battery color based on level
-  // const getBatteryColorClass = (level: number) => {
-  //   if (level > 60) return "bg-green-500";
-  //   if (level > 20) return "bg-yellow-500";
-  //   return "bg-red-500";
-  // };
-
   return (
     <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
       <MetricCard
@@ -71,11 +92,11 @@ export function MetricsGrid({
         label="Movement"
         value={speed}
         unit="km/h"
-        color="blue"
+        color="sky"
       >
-        <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground border-t pt-3">
-          <MapPin className="h-3.5 w-3.5" />
-          <span className="font-mono">
+        <div className="mt-4 flex items-center gap-2 text-[10px] text-white/50 border-t border-white/10 pt-3">
+          <MapPin className="h-3.5 w-3.5 opacity-50" />
+          <span className="font-mono tracking-tighter">
             {latitude.toFixed(4)}°N, {longitude.toFixed(4)}°E
           </span>
         </div>
@@ -86,24 +107,23 @@ export function MetricsGrid({
         label="Battery"
         value={battery}
         unit="%"
-        color="yellow"
+        color={battery < lowBatLimit ? "red" : battery > 60 ? "emerald" : "orange"}
       >
         <div className="mt-4 space-y-2">
           <Progress
             value={battery}
             className={cn(
-              "h-2",
+              "h-2 bg-white/20",
               battery > 60
-                ? "text-green-500"
-                : battery > 20
-                  ? "text-yellow-500"
-                  : "text-red-500",
+                ? "text-emerald-300"
+                : battery > lowBatLimit
+                  ? "text-amber-300"
+                  : "text-rose-300",
             )}
-            // The color is applied via the className above, which styles the progress bar
           />
-          <p className="text-xs text-muted-foreground flex justify-between">
-            <span>≈ 3 hours remaining</span>
-            <span className="font-mono">{battery}%</span>
+          <p className="text-[10px] flex justify-between items-center text-white/80">
+            <span className="font-bold uppercase tracking-widest opacity-60">Internal Power</span>
+            <span className="font-mono font-bold">{battery}%</span>
           </p>
         </div>
       </MetricCard>
@@ -113,16 +133,18 @@ export function MetricsGrid({
         label="Signal"
         value={signal}
         unit="%"
-        color="purple"
+        color={signal < 40 ? "red" : signal <= 70 ? "orange" : "emerald"}
       >
-        <div className="mt-4 flex items-center justify-between border-t pt-3">
-          <div className="flex gap-1">
+        <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3">
+          <div className="flex gap-1.5">
             {[...Array(4)].map((_, i) => (
               <div
                 key={i}
                 className={cn(
-                  "h-2 w-6 rounded-full transition-all",
-                  i < getSignalStrength(signal) ? "bg-primary" : "bg-muted",
+                  "h-1.5 w-6 rounded-full transition-all duration-700",
+                  i < getSignalStrength(signal) 
+                    ? "bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]" 
+                    : "bg-white/20",
                 )}
               />
             ))}
@@ -135,13 +157,20 @@ export function MetricsGrid({
         label="Temperature"
         value={temperature}
         unit="°C"
-        color="orange"
+        color={temperature > 47 ? "red" : temperature > 43 ? "orange" : "emerald"}
       >
-        <div className="mt-4 space-y-2 border-t pt-3">
-          <p className="text-xs text-muted-foreground flex justify-between">
-             <span>Sensor Temp</span>
-             <span className="font-mono">{temperature.toFixed(2)} °C</span>
-          </p>
+        <div className="mt-4 space-y-2 border-t border-white/10 pt-3">
+          <div className="pt-0">
+            <p className={cn(
+              "text-[9px] font-bold py-1 px-2 rounded-lg leading-tight",
+              temperature > 43 
+                ? "bg-red-500/20 text-red-100 animate-pulse border border-red-500/30" 
+                : "bg-white/5 text-white/50 border border-white/10"
+            )}>
+              <span className="uppercase tracking-tighter block mb-0.5">Hardware Alert</span>
+              If temp hits {tempLimit}°C, device will shutdown
+            </p>
+          </div>
         </div>
       </MetricCard>
 
@@ -166,19 +195,19 @@ export function MetricsGrid({
                 <MapPin className="h-3 w-3 text-emerald-500" />
                 Smart HUD
               </div>
-              <span className="text-[10px] font-mono text-muted-foreground tracking-tighter">
+              <span className="text-[10px] font-mono tracking-tighter">
                 {latitude.toFixed(4)}°, {longitude.toFixed(4)}°
               </span>
             </div>
             <div className="flex justify-between items-center w-full">
-              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest py-0.5 px-1.5 bg-muted rounded flex items-center gap-1">
-                 <div className="h-1 w-1 rounded-full bg-emerald-500" />
-                 LIVE
+              <span className="text-[9px] font-bold uppercase tracking-widest py-0.5 px-1.5 bg-muted rounded flex items-center gap-1">
+                <div className="h-1 w-1 rounded-full bg-emerald-500" />
+                LIVE
               </span>
               <span className={cn(
                 "px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter transition-all duration-500",
-                geoid 
-                  ? "bg-primary/20 text-primary" 
+                geoid
+                  ? "bg-primary/20 text-primary"
                   : "bg-red-500/20 text-red-500 border border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.3)]"
               )}>
                 {geoid ? `ID: ${geoid}` : "GPS error"}

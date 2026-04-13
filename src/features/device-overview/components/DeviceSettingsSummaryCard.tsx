@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, Activity, Zap, Plane, Settings2 } from "lucide-react";
+import { Clock, Activity, Zap, Plane, Settings2, Thermometer } from "lucide-react";
 
 export type DeviceSettingsSummaryProps = {
   normalInterval?: string;
@@ -7,9 +7,10 @@ export type DeviceSettingsSummaryProps = {
   speedLimit?: string;
   lowBattery?: string;
   airplaneInterval?: string;
+  temperatureLimit?: string;
 };
 
-function SettingRow({ icon: Icon, label, value }: { icon: any, label: string, value: string }) {
+function SettingRow({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
   return (
     <div className="flex items-center justify-between py-2 border-b last:border-0 border-border/50">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -27,6 +28,7 @@ export function DeviceSettingsSummaryCard({
   speedLimit = "N/A",
   lowBattery = "N/A",
   airplaneInterval = "N/A",
+  temperatureLimit = "N/A",
 }: DeviceSettingsSummaryProps) {
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -44,6 +46,7 @@ export function DeviceSettingsSummaryCard({
           <SettingRow icon={Activity} label="SOS Interval" value={sosInterval} />
           <SettingRow icon={Plane} label="Airplane Mode" value={airplaneInterval} />
           <SettingRow icon={Zap} label="Low Battery Alert" value={lowBattery} />
+          <SettingRow icon={Thermometer} label="Temperature Limit" value={temperatureLimit} />
           <SettingRow icon={Activity} label="Speed Limit" value={speedLimit} />
         </div>
       </CardContent>

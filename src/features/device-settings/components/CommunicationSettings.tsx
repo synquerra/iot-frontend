@@ -16,6 +16,7 @@ import { useGlobalLoading } from "@/contexts/GlobalLoadingContext";
 import { Phone, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 type CommunicationSettingsProps = {
   selectedImei: string;
@@ -129,8 +130,13 @@ export function CommunicationSettings({
     }
   };
 
+  const isEnabled = Boolean(selectedImei);
+
   return (
-    <Card className="border-primary/10 shadow-sm">
+    <Card className={cn(
+      "border-primary/10 shadow-sm transition-opacity duration-300",
+      !isEnabled && "opacity-50 grayscale pointer-events-none select-none"
+    )}>
       <CardHeader className="pb-4 border-b border-primary/5 flex flex-row items-center justify-between space-y-0">
           <div className="flex-1">
             <CardTitle className="flex items-center gap-2">
@@ -138,9 +144,11 @@ export function CommunicationSettings({
               Registered Mobile Numbers
             </CardTitle>
             <CardDescription>
-              Direct contact management through dedicated synchronization API
+              {!isEnabled 
+                ? "Select a device to manage contact synchronization" 
+                : "Direct contact management through dedicated synchronization API"}
             </CardDescription>
-            {latestSettings?.device_timestamp ? (
+            {latestSettings?.device_timestamp && isEnabled ? (
               <p className="mt-2 text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
                 Snapshot: {new Date(latestSettings.device_timestamp).toLocaleString("en-IN")}
               </p>
@@ -149,6 +157,7 @@ export function CommunicationSettings({
           <Button
             className="gap-2 font-bold shadow-lg shadow-primary/10"
             onClick={handleSaveContacts}
+            disabled={!isEnabled}
             size="sm"
           >
             <Save size={14} />
@@ -179,12 +188,12 @@ export function CommunicationSettings({
 
                 <div className="space-y-2">
                   <Input
+                    disabled={!isEnabled || !item.editable}
                     id={item.key}
                     inputMode="numeric"
                     maxLength={15}
                     placeholder={item.placeholder}
                     value={contacts[item.key]}
-                    disabled={!item.editable}
                     onChange={(event) =>
                       handleContactChange(item.key, event.target.value)
                     }

@@ -143,11 +143,11 @@ export default function DeviceSettings() {
           </TabsContent>
 
           <TabsContent value="ambient" className="mt-6">
-            <AmbientListeningCard />
+            <AmbientListeningCard selectedImei={selectedImei} />
           </TabsContent>
 
           <TabsContent value="advanced" className="mt-6">
-            <AdvancedSettings />
+            <AdvancedSettings selectedImei={selectedImei} />
           </TabsContent>
         </Tabs>
       </div>

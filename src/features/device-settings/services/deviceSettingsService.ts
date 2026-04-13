@@ -78,10 +78,7 @@ export async function updateDeviceCoreSettings(
   return response.data;
 }
 
-export async function updateAirplaneMode(payload: {
-  topic: string;
-  AirplaneMode: "enable" | "disable";
-}) {
+export async function updateAirplaneMode(payload: { topic: string }) {
   const response = await api.post(`/setting/airplane-mode`, payload);
   return response.data;
 }

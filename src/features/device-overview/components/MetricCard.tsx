@@ -11,10 +11,13 @@ export function MetricCard({
   children,
 }: MetricCardProps) {
   const solidBackgrounds: Record<string, string> = {
-    blue: "bg-blue-600 border-blue-700 shadow-blue-900/20",
-    orange: "bg-orange-500 border-orange-600 shadow-orange-900/20",
-    red: "bg-red-600 border-red-700 shadow-red-900/20",
-    emerald: "bg-emerald-600 border-emerald-700 shadow-emerald-900/20",
+    blue: "bg-gradient-to-br from-blue-500 to-indigo-600 border-indigo-400/30 shadow-indigo-900/30",
+    sky: "bg-gradient-to-br from-sky-400 to-blue-500 border-sky-300/30 shadow-sky-900/20",
+    slate: "bg-gradient-to-br from-slate-700 to-slate-900 border-slate-600/30 shadow-slate-950/40",
+    orange: "bg-gradient-to-br from-amber-500 to-orange-700 border-orange-500/30 shadow-orange-900/40",
+    red: "bg-gradient-to-br from-rose-500 to-red-700 border-rose-500/30 shadow-red-900/40",
+    emerald: "bg-gradient-to-br from-emerald-500 to-emerald-700 border-emerald-500/30 shadow-emerald-900/40",
+    purple: "bg-gradient-to-br from-fuchsia-600 to-purple-800 border-purple-500/30 shadow-purple-900/40",
     primary: "bg-slate-900 border-slate-950 shadow-black/20",
   };
 
