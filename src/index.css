@@ -99,3 +99,19 @@
 .leaflet-bottom {
   z-index: 0 !important;
 }
+
+/* Hide scrollbar but allow scrolling */
+.scroll-container {
+  overflow: auto;
+
+  /* Firefox */
+  scrollbar-width: none;
+
+  /* IE and Edge */
+  -ms-overflow-style: none;
+}
+
+/* Chrome, Safari, Opera */
+.scroll-container::-webkit-scrollbar {
+  display: none;
+}

@@ -14,6 +14,7 @@ import {
 } from "@/features/device-settings/services/deviceSettingsService";
 import type { Device } from "@/features/devices/services/deviceService";
 import { useGlobalLoading } from "@/contexts/GlobalLoadingContext";
+import { cn } from "@/lib/utils";
 import {
   Phone,
   Plane,
@@ -23,6 +24,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useEffect, useState } from "react";
 
 type GeneralDeviceControlsProps = {
   selectedDevice: Device | null;
@@ -34,24 +36,33 @@ export function GeneralDeviceControls({
   latestSettings,
 }: GeneralDeviceControlsProps) {
   const { setIsLoading } = useGlobalLoading();
+  const [localLedStatus, setLocalLedStatus] = useState<string | null>(selectedDevice?.ledStatus || null);
+  const [localAirplaneMode, setLocalAirplaneMode] = useState<string | null>(selectedDevice?.currentMode || null);
 
-  const handleAirplaneToggle = async (enable: boolean) => {
+  useEffect(() => {
+    setLocalLedStatus(selectedDevice?.ledStatus || null);
+    setLocalAirplaneMode(selectedDevice?.currentMode || null);
+  }, [selectedDevice?.ledStatus, selectedDevice?.currentMode]);
+
+  const handleAirplaneEnable = async () => {
     if (!selectedDevice?.topic) {
       toast.error("Device topic is missing.");
       return;
     }
 
     try {
-      setIsLoading(true, "Please wait");
+      setIsLoading(true, "Activating flight mode...");
       const response = await updateAirplaneMode({
         topic: selectedDevice.topic,
-        AirplaneMode: enable ? "enable" : "disable",
       });
 
       if (response.status === "success") {
-        toast.success(response.message || `Airplane mode ${enable ? "enabled" : "disabled"} successfully`);
+        if (response.data?.mode) {
+          setLocalAirplaneMode(response.data.mode);
+        }
+        toast.success(response.message || "Airplane mode enabled successfully");
       } else {
-        toast.error(response.message || "Failed to update airplane mode");
+        toast.error(response.message || "Failed to enable airplane mode");
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "An error occurred");
@@ -74,6 +85,10 @@ export function GeneralDeviceControls({
       });
 
       if (response.status === "success") {
+        // Update local state from response data
+        if (response.data?.LED) {
+          setLocalLedStatus(response.data.LED);
+        }
         toast.success(response.message || `LED ${on ? "switched on" : "switched off"} successfully`);
       } else {
         toast.error(response.message || "Failed to update LED status");
@@ -85,25 +100,32 @@ export function GeneralDeviceControls({
     }
   };
 
-  const isAirplaneEnabled = selectedDevice?.currentMode === "Airplane" || selectedDevice?.currentMode === "AirplaneMode";
-  const isLedOn = selectedDevice?.ledStatus === "SwitchOnLed" || selectedDevice?.ledStatus === "on";
+  const isAirplaneEnabled = localAirplaneMode === "Airplane" || localAirplaneMode === "AirplaneMode" || selectedDevice?.currentMode === "Airplane";
+  const isLedOn = localLedStatus === "SwitchOnLed" || localLedStatus === "on";
 
   return (
-    <Card className="border-primary/10 shadow-sm h-full flex flex-col">
+    <Card className={cn(
+      "border-primary/10 shadow-sm h-full flex flex-col transition-opacity duration-300",
+      !selectedDevice && "opacity-50 grayscale pointer-events-none"
+    )}>
       <CardHeader className="pb-4 border-b border-primary/5 flex flex-row items-center justify-between space-y-0">
         <div>
           <CardTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5 text-primary" />
             General Controls
           </CardTitle>
-          <CardDescription>Always visible primary device toggle commands</CardDescription>
+          <CardDescription>
+            {!selectedDevice 
+              ? "Select a device to enable controls" 
+              : "Always visible primary device toggle commands"}
+          </CardDescription>
         </div>
       </CardHeader>
 
       <CardContent>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {/* Call Controls (Disabled) */}
-          <div className="space-y-4 rounded-lg border p-4 opacity-50 grayscale transition-colors">
+          <div className="space-y-4 rounded-lg border p-4 opacity-30 grayscale transition-colors">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="rounded-lg bg-primary/10 p-2">
@@ -144,12 +166,19 @@ export function GeneralDeviceControls({
               </div>
             </div>
             <div className="flex items-center justify-between pt-2">
-              <span className="text-xs text-muted-foreground font-medium italic">Toggle Status</span>
-              <Switch
-                checked={isAirplaneEnabled}
-                onCheckedChange={handleAirplaneToggle}
-                className="data-[state=checked]:bg-orange-500"
-              />
+              <span className="text-xs text-muted-foreground font-medium italic">Command Status</span>
+              <Button
+                size="sm"
+                variant={isAirplaneEnabled ? "secondary" : "default"}
+                disabled={!selectedDevice || isAirplaneEnabled}
+                onClick={handleAirplaneEnable}
+                className={cn(
+                  "font-bold text-[10px] uppercase tracking-wider",
+                  isAirplaneEnabled ? "bg-orange-500/20 text-orange-600 hover:bg-orange-500/20" : "bg-orange-500 hover:bg-orange-600"
+                )}
+              >
+                {isAirplaneEnabled ? "Flight Mode Active" : "Enable Flight Mode"}
+              </Button>
             </div>
           </div>
 
@@ -178,6 +207,7 @@ export function GeneralDeviceControls({
             <div className="flex items-center justify-between pt-2">
               <span className="text-xs text-muted-foreground font-medium italic">Toggle Status</span>
               <Switch
+                disabled={!selectedDevice}
                 checked={isLedOn}
                 onCheckedChange={handleLedToggle}
                 className="data-[state=checked]:bg-blue-500"

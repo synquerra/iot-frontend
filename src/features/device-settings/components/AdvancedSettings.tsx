@@ -9,20 +9,31 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Settings2 } from "lucide-react";
 import { featureToggleItems, powerItems, deprecatedItems } from "../constants";
+import { cn } from "@/lib/utils";
 
-export function AdvancedSettings() {
+type AdvancedSettingsProps = {
+  selectedImei: string;
+};
+
+export function AdvancedSettings({ selectedImei }: AdvancedSettingsProps) {
+  const isEnabled = Boolean(selectedImei);
   const commsSettings = [...powerItems.filter(i => i.label.includes("Call")), ...featureToggleItems.filter(i => i.label.includes("Call"))];
   const systemSettings = powerItems.filter(i => !i.label.includes("Call"));
 
   return (
-    <Card className="border-primary/10 shadow-sm">
+    <Card className={cn(
+      "border-primary/10 shadow-sm transition-opacity duration-300",
+      !isEnabled && "opacity-50 grayscale pointer-events-none select-none"
+    )}>
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2">
           <Settings2 className="h-5 w-5 text-primary" />
           Advanced System Configuration
         </CardTitle>
         <CardDescription>
-          Fine-tune device operation and connectivity parameters
+          {!isEnabled 
+            ? "Select a device to fine-tune operational parameters" 
+            : "Fine-tune device operation and connectivity parameters"}
         </CardDescription>
       </CardHeader>
 
