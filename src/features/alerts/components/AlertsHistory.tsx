@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Search, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AlertItem } from "./AlertItem";
-import { HistoryItem } from "../types";
+import type { HistoryItem } from "../types";
 
 interface AlertsHistoryProps {
   loading: boolean;

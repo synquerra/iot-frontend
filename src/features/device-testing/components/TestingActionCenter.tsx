@@ -32,14 +32,17 @@ export function TestingActionCenter({ topic, currentMode, ledStatus }: TestingAc
       toast.error("Device topic is missing.");
       return;
     }
+
+    // Airplane mode is now unidirectional (enable only)
+    if (!enable) return;
+
     try {
       setIsLoading(true, "Please wait");
       const response = await updateAirplaneMode({
         topic,
-        AirplaneMode: enable ? "enable" : "disable",
       });
       if (response.status === "success") {
-        toast.success(response.message || `Airplane mode ${enable ? "enabled" : "disabled"}`);
+        toast.success(response.message || "Airplane mode enabled");
       } else {
         toast.error(response.message || "Failed to update airplane mode");
       }
