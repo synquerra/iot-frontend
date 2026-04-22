@@ -44,13 +44,12 @@ export function DeviceHeader({
   };
 
   return (
-    <header className="relative w-full overflow-hidden border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-3">
-
+    <header className="relative w-full overflow-hidden border-b bg-background pb-3">
       <div className="relative z-10">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary shadow-md shadow-primary/20 ring-1 ring-border/50">
-              <Smartphone className="h-6 w-6 text-primary-foreground" />
+              <Smartphone className="h-6 w-6 text-white" />
             </div>
             <div className="flex flex-col gap-1.5 pt-1">
               <div className="flex flex-wrap items-center gap-3">
@@ -73,12 +72,12 @@ export function DeviceHeader({
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground font-medium">
                 {imei && (
-                  <div className="flex items-center gap-1.5 bg-muted/60 px-2 py-0.5 rounded-md border border-border/50">
+                  <div className="flex items-center gap-1.5 bg-muted px-2 py-0.5 rounded-md border border-border">
                     <span className="text-[10px] text-muted-foreground/70 uppercase font-bold tracking-widest">IMEI</span>
                     <span className="font-mono text-foreground font-semibold">{imei}</span>
                   </div>
                 )}
-                <span className="flex items-center gap-1.5 text-muted-foreground/80">
+                <span className="flex items-center gap-1.5 text-muted-foreground">
                   <Clock className="h-4 w-4" />
                   Updated {formatDateTime(lastUpdate)}
                 </span>
@@ -106,7 +105,7 @@ export function DeviceHeader({
 
             <Button
               size="sm"
-              className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg shadow-sm px-4 h-9"
+              className="gap-2 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg shadow-sm px-4 h-9"
               onClick={() => {
                 navigate(`/devices/settings/${imei || routeImei}`);
               }}

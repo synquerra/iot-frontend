@@ -26,35 +26,33 @@ export function AlertsHistory({
   formatDate
 }: AlertsHistoryProps) {
   return (
-    <Card className="overflow-hidden border-2">
-      <CardHeader className="border-b bg-background/50 backdrop-blur-sm p-6">
+    <Card className="overflow-hidden border border-border bg-card shadow-sm rounded-xl">
+      <CardHeader className="border-b border-border bg-muted/5 p-4 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <CardTitle className="text-xl">Event History</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              {filteredItems.length} {filteredItems.length === 1 ? 'event' : 'events'} found
+            <CardTitle className="text-lg font-bold">Event Log</CardTitle>
+            <p className="text-xs font-medium text-muted-foreground mt-1">
+              {filteredItems.length} {filteredItems.length === 1 ? 'record' : 'records'} found
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search events..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 w-full sm:w-[300px]"
-              />
-            </div>
+          <div className="relative w-full lg:w-80">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
+            <Input
+              placeholder="Filter by code or message..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9 border-border bg-background focus-visible:ring-1 focus-visible:ring-primary/20 text-sm font-medium"
+            />
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="p-6">
+      <CardContent className="p-4 sm:p-6">
         {loading ? (
           <div className="space-y-4">
-            {Array(5).fill(0).map((_, i) => (
-              <Skeleton key={i} className="h-24 w-full rounded-xl" />
+            {Array(3).fill(0).map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full rounded-xl" />
             ))}
           </div>
         ) : filteredItems.length > 0 ? (
@@ -70,23 +68,23 @@ export function AlertsHistory({
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="rounded-full bg-muted p-6 mb-4">
-              <CheckCircle2 className="h-10 w-10 text-muted-foreground" />
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="rounded-full bg-muted p-5 mb-4 border border-border/50">
+              <CheckCircle2 className="h-8 w-8 text-muted-foreground/40" />
             </div>
-            <h3 className="text-xl font-bold mb-2">No events found</h3>
-            <p className="text-sm text-muted-foreground max-w-sm mb-6">
+            <h3 className="text-lg font-bold">No active events</h3>
+            <p className="text-xs text-muted-foreground max-w-sm mb-6 font-medium">
               {searchQuery 
-                ? "Try adjusting your search query or switching tabs"
-                : "Excellent! All systems are operating normally."}
+                ? "Try adjusting your filter parameters"
+                : "The system is currently stable and all monitoring protocols are normal."}
             </p>
             {searchQuery && (
               <Button
-                variant="link"
+                variant="ghost"
                 onClick={() => setSearchQuery("")}
-                className="font-bold underline"
+                className="h-8 text-xs font-bold uppercase tracking-wider hover:bg-muted"
               >
-                Clear Search
+                Clear Filter
               </Button>
             )}
           </div>

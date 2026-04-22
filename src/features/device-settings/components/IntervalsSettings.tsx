@@ -58,7 +58,7 @@ const intervalFields: Array<{
     {
       key: "NormalScanningInterval",
       label: "Normal Scanning Interval",
-      description: "Standard GPS and scan update cadence",
+      description: "Standard GPS update cadence",
       suffix: "sec",
     },
     {
@@ -70,19 +70,19 @@ const intervalFields: Array<{
     {
       key: "TemperatureLimit",
       label: "Temperature Limit",
-      description: "Alert threshold for device temperature",
+      description: "Thermal alert threshold",
       suffix: "°C",
     },
     {
       key: "SpeedLimit",
       label: "Speed Limit",
-      description: "Alert threshold for overspeeding",
+      description: "Overspeeding alert threshold",
       suffix: "km/h",
     },
     {
       key: "LowbatLimit",
       label: "Low Battery Limit",
-      description: "Battery percentage threshold for alerts",
+      description: "Battery alert threshold",
       suffix: "%",
     },
   ];
@@ -91,7 +91,6 @@ function toStringValue(value: string | number | undefined, fallback: string) {
   if (value === undefined || value === null || value === "") {
     return fallback;
   }
-
   return String(value);
 }
 
@@ -150,17 +149,14 @@ export function IntervalsSettings({
     }));
   };
 
-
-
   const handleSave = async () => {
     if (!selectedImei || !latestSettings?.topic) {
-      toast.error("Required device identifier (topic/imei) missing.");
+      toast.error("Required device identifier missing.");
       return;
     }
 
     try {
-      setIsLoading(true, "Please wait");
-
+      setIsLoading(true, "Updating settings...");
       const payload = {
         topic: latestSettings.topic,
         NormalSendingInterval: Number(values.NormalSendingInterval),
@@ -175,18 +171,12 @@ export function IntervalsSettings({
       const response = await updateDeviceCoreSettings(payload);
 
       if (response.status === "success") {
-        toast.success("Success", {
-          description: response.message || "Device settings updated successfully",
-        });
+        toast.success(response.message || "Settings updated successfully");
       } else {
         toast.error(response.message || "Failed to update settings");
       }
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to update device settings.";
-      toast.error(message);
+      toast.error(error instanceof Error ? error.message : "An error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -194,70 +184,62 @@ export function IntervalsSettings({
 
   return (
     <Card className={cn(
-      "border-primary/10 shadow-sm transition-opacity duration-300",
+      "border-border shadow-sm transition-opacity duration-300 bg-card rounded-xl",
       !selectedImei && "opacity-50 grayscale pointer-events-none select-none"
     )}>
-      <CardHeader className="pb-4 border-b border-primary/5 flex flex-row items-center justify-between space-y-0 text-left">
-        <div className="flex-1">
-          <CardTitle className="flex items-center gap-2">
+      <CardHeader className="pb-4 border-b border-border flex flex-row items-center justify-between space-y-0 bg-muted/5">
+        <div>
+          <CardTitle className="flex items-center gap-2 text-lg font-bold">
             <Clock className="h-5 w-5 text-primary" />
-            Time & Alert Intervals
+            Cadence & Thresholds
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs font-medium">
             {!selectedImei 
-              ? "Select a device to configure operational cadences" 
-              : "Configure operational cadences and safety threshold limits"}
+              ? "Select a device to configure intervals" 
+              : "Manage operational timing and safety limits"}
           </CardDescription>
-          {latestSettings?.device_timestamp && selectedImei ? (
-            <p className="mt-2 text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
-              Snapshot: {new Date(latestSettings.device_timestamp).toLocaleString("en-IN")}
-            </p>
-          ) : null}
         </div>
         <Button 
           onClick={handleSave} 
           disabled={!selectedImei}
-          className="gap-2 font-bold shadow-lg shadow-primary/10" 
           size="sm"
+          className="h-9 px-4 font-semibold shadow-sm"
         >
-          <Save size={14} />
-          Update Intervals
+          <Save className="h-4 w-4 mr-2" />
+          Apply Settings
         </Button>
       </CardHeader>
 
-      <CardContent className="space-y-6 flex-1 flex flex-col pt-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <CardContent className="pt-6">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {intervalFields.map((field) => (
-            <div key={field.key} className="space-y-3 rounded-lg bg-muted p-4 transition-colors hover:bg-muted/80 border border-transparent hover:border-primary/10">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-2 w-2 rounded-full bg-primary/40" />
-                  <div>
-                    <p className="font-medium text-sm">{field.label}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {field.description}
-                    </p>
-                  </div>
+            <div key={field.key} className="space-y-3 p-4 rounded-xl border border-border bg-muted/20 hover:border-primary/20 transition-all group">
+              <div className="flex items-center gap-3">
+                <div className="h-1.5 w-1.5 rounded-full bg-primary/40 group-hover:bg-primary transition-colors" />
+                <div>
+                  <p className="font-semibold text-sm">{field.label}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">
+                    {field.description}
+                  </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 bg-background/50 p-2 rounded-md border border-input focus-within:ring-1 focus-within:ring-primary/30 transition-all">
+              <div className="flex items-center gap-2 bg-background border border-border rounded-lg px-2 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
                 <Input
                   disabled={!selectedImei}
                   type="number"
                   min="0"
                   value={values[field.key]}
                   onChange={(event) => handleChange(field.key, event.target.value)}
-                  className="border-0 focus-visible:ring-0 h-8 text-sm"
+                  className="border-0 focus-visible:ring-0 h-9 text-sm font-medium bg-transparent shadow-none"
                 />
-                <span className="min-w-10 text-[10px] uppercase font-bold text-muted-foreground px-2 py-1 bg-muted rounded border">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase px-2 py-1 bg-muted/50 rounded-md border border-border/50">
                   {field.suffix}
                 </span>
               </div>
             </div>
           ))}
         </div>
-
       </CardContent>
     </Card>
   );
