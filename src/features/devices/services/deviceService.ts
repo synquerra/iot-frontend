@@ -27,6 +27,10 @@ export type Device = {
   temperature?: string | null;
   currentMode?: string | null;
   ledStatus?: string | null;
+  latitude?: string | null;
+  longitude?: string | null;
+  speed?: string | null;
+  timestamp?: string | null;
 };
 
 async function graphqlRequest<T>(query: string): Promise<T> {
@@ -80,6 +84,10 @@ export async function listDevices(): Promise<Device[]> {
       temperature: device.temperature ?? null,
       currentMode: device.current_mode ?? null,
       ledStatus: device.led_status ?? null,
+      latitude: device.latitude ?? null,
+      longitude: device.longitude ?? null,
+      speed: device.speed ?? null,
+      timestamp: device.timestamp ?? null,
     };
   });
 }

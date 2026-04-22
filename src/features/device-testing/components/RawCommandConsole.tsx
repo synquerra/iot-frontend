@@ -69,7 +69,7 @@ export function RawCommandConsole({ topic }: RawCommandConsoleProps) {
         <Button 
           onClick={handleSend}
           size="sm"
-          className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 font-bold px-4 shadow-lg shadow-primary/20"
+          className="bg-primary hover:bg-primary/90 text-white gap-2 font-bold px-4 shadow-lg shadow-primary/20"
         >
           <Send className="h-3.5 w-3.5" />
           Dispatch

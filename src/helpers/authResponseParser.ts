@@ -45,16 +45,27 @@ type PersistedEnvelope = {
 }
 
 type AuthResponseInput = {
-  uniqueId?: string
-  userType?: string
-  imei?: string
-  email?: string
-  tokens?: Partial<AuthTokens>
-  lastLoginAt?: string
-  firstName?: string | null
-  middleName?: string | null
-  lastName?: string | null
-  mobile?: string | null
+  uniqueId?: string;
+  unique_id?: string;
+  userType?: string;
+  user_type?: string;
+  imei?: string;
+  email?: string;
+  tokens?: {
+    accessToken?: string;
+    access_token?: string;
+    refreshToken?: string;
+    refresh_token?: string;
+  };
+  lastLoginAt?: string;
+  last_login_at?: string;
+  firstName?: string | null;
+  first_name?: string | null;
+  middleName?: string | null;
+  middle_name?: string | null;
+  lastName?: string | null;
+  last_name?: string | null;
+  mobile?: string | null;
 }
 
 /**
@@ -113,19 +124,20 @@ export function parseAuthResponse(response: AuthResponseInput): ParsedAuthContex
     throw new Error('Invalid auth response: response must be an object');
   }
 
-  // Extract required fields
-  const {
-    uniqueId,
-    userType,
-    imei,
-    email,
-    tokens,
-    lastLoginAt,
-    firstName,
-    middleName,
-    lastName,
-    mobile,
-  } = response;
+  // Extract fields (handle both camelCase and snake_case)
+  const uniqueId = response.unique_id || response.uniqueId;
+  const userType = response.user_type || response.userType;
+  const imei = response.imei;
+  const email = response.email;
+  const lastLoginAt = response.last_login_at || response.lastLoginAt;
+  const firstName = response.first_name || response.firstName;
+  const middleName = response.middle_name || response.middleName;
+  const lastName = response.last_name || response.lastName;
+  const mobile = response.mobile;
+
+  // Extract tokens (handle both camelCase and snake_case)
+  const accessToken = response.tokens?.access_token || response.tokens?.accessToken;
+  const refreshToken = response.tokens?.refresh_token || response.tokens?.refreshToken;
 
   // Validate required fields
   if (!uniqueId) {
@@ -146,7 +158,7 @@ export function parseAuthResponse(response: AuthResponseInput): ParsedAuthContex
     throw new Error('Invalid auth response: missing email');
   }
 
-  if (!tokens || !tokens.accessToken || !tokens.refreshToken) {
+  if (!accessToken || !refreshToken) {
     throw new Error('Invalid auth response: missing or invalid tokens');
   }
 
@@ -195,8 +207,8 @@ export function parseAuthResponse(response: AuthResponseInput): ParsedAuthContex
     lastName: lastName || null,
     mobile: mobile || null,
     tokens: {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
+      accessToken,
+      refreshToken,
     },
     lastLoginAt: lastLoginAt || new Date().toISOString(),
   };

@@ -119,7 +119,7 @@ export function DeviceSettingsTargetDeviceCard({
 
           {/* Right Section - Device Info (when selected) */}
           {selectedDevice && (
-            <div className="flex items-center gap-4 bg-gradient-to-r from-primary/5 to-transparent rounded-xl p-3 md:p-4 border border-primary/10 w-full xl:w-auto">
+            <div className="flex items-center gap-4 bg-muted/30 rounded-xl p-3 md:p-4 border border-border w-full xl:w-auto">
               <div className="flex items-center gap-3 shrink-0">
                 <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                   <Smartphone className="h-4 w-4 text-primary" />

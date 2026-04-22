@@ -7,7 +7,7 @@ import { DeviceHeader } from "./components/DeviceHeader";
 import { DeviceHealthCard } from "./components/DeviceHealthCard";
 import { DeviceSettingsSummaryCard } from "./components/DeviceSettingsSummaryCard";
 import { GuardiansList } from "./components/GuardiansList";
-import { LiveMap } from "./components/LiveMap";
+
 
 import { NetworkPerformanceCard } from "./components/NetworkPerformanceCard";
 
@@ -95,6 +95,9 @@ export default function DeviceOverviewPage() {
             signal={data.signal}
             temperature={data.temperature}
             geoid={data.geoid}
+            name={data.name}
+            imei={data.imei}
+            lastUpdate={data.lastUpdate}
             lowBatLimit={data.settingsLowBattery !== "N/A" ? parseInt(data.settingsLowBattery) : 30}
             tempLimit={data.settingsTempLimit !== "N/A" ? parseInt(data.settingsTempLimit) : 50}
           />
@@ -131,16 +134,7 @@ export default function DeviceOverviewPage() {
                   gpsSignalRaw={data.gpsSignalRaw}
                   signal={data.signal}
                 />
-                <LiveMap
-                  latitude={data.latitude}
-                  longitude={data.longitude}
-                  speed={data.speed}
-                  name={data.name}
-                  battery={data.battery}
-                  lastUpdate={data.lastUpdate}
-                  geoid={data.geoid}
-                  imei={data.imei}
-                />
+
                 {/* Legacy Maintenance Layer */}
                 <div className="opacity-30 pointer-events-none grayscale hover:opacity-100 transition-opacity duration-700">
                   <div className="flex items-center gap-3 mb-4">

@@ -99,7 +99,7 @@ export function AddDeviceModal({ children }: { children?: React.ReactNode }) {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="text-white">
               {loading ? "Registering..." : "Add Device"}
             </Button>
           </DialogFooter>

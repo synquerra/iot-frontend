@@ -1,184 +1,267 @@
-import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
-import "leaflet/dist/leaflet.css";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
-import { listDevices, type Device } from "@/features/devices/services/deviceService";
-import type {
-  DeviceCommandResponse,
-  PublishedDeviceCommandResult,
-} from "@/helpers/deviceCommandConstants";
-import { AddGeofenceDialog } from "./components/AddGeofenceDialog";
+import { GeofenceSidebar } from "./components/GeofenceSidebar";
 import { CurrentGeofencesMap } from "./components/CurrentGeofencesMap";
-import { GeofencingHeader } from "./components/GeofencingHeader";
-import { SavedGeofencesCard } from "./components/SavedGeofencesCard";
-import { TargetDeviceCard } from "./components/TargetDeviceCard";
-import {
-  GEOFENCE_COLORS,
-  MAX_GEOFENCES,
-  MAX_VERTICES,
-} from "./constants";
-import { useGeofenceCommand, type GeofencePayload } from "./hooks/useGeofenceCommand";
-import { toLatLngTuple } from "./utils";
+import { GeofenceDeviceHeader } from "./components/GeofenceDeviceHeader";
+import { HardwareSlotManager } from "./components/HardwareSlotManager";
+import { GeofenceEditorDialog } from "./components/GeofenceEditorDialog";
+import { ConfirmationDialog } from "./components/ConfirmationDialog";
+import * as geofenceService from "./services/geofenceService";
+import * as deviceService from "@/features/devices/services/deviceService";
+import type { GeofenceRecord, GeofenceAssignment } from "./types";
 
 export default function GeofencingPage() {
-  const { imei: routeImei } = useParams();
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [isLoadingDevices, setIsLoadingDevices] = useState(true);
-  const [selectedImei, setSelectedImei] = useState(routeImei ?? "");
-  const [isAddGeofenceOpen, setIsAddGeofenceOpen] = useState(false);
-  const [focusedGeofenceId, setFocusedGeofenceId] = useState<string | null>(null);
-  const {
-    geofences: remoteGeofences,
-    loading: geofenceCommandLoading,
-    fetchGeofences,
-    setGeofence,
-    removeGeofenceLocally,
-  } = useGeofenceCommand();
+  const [geofences, setGeofences] = useState<GeofenceRecord[]>([]);
+  const [selectedGeofenceId, setSelectedGeofenceId] = useState<string | null>(null);
+  const [selectedImei, setSelectedImei] = useState<string>("");
+  const [devices, setDevices] = useState<deviceService.Device[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [assignments, setAssignments] = useState<GeofenceAssignment[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
 
+  // Dialog states
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+  // Fetch initial data
   useEffect(() => {
-    setSelectedImei(routeImei ?? "");
-    setIsAddGeofenceOpen(false);
-    setFocusedGeofenceId(null);
-  }, [routeImei]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadDevices = async () => {
+    const loadInitialData = async () => {
       try {
-        setIsLoadingDevices(true);
-        const response = await listDevices();
-        if (!isMounted) {
-          return;
+        setIsLoading(true);
+        const deviceData = await deviceService.listDevices();
+        setDevices(deviceData);
+        if (deviceData.length > 0) {
+          const firstImei = deviceData[0].imei;
+          setSelectedImei(firstImei);
+          const geofenceData = await geofenceService.listGeofences(firstImei);
+          setGeofences(geofenceData.data || []);
         }
-        setDevices(response);
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Failed to load devices";
-        toast.error(message);
+        toast.error("Failed to load geofencing data");
       } finally {
-        if (isMounted) {
-          setIsLoadingDevices(false);
-        }
+        setIsLoading(false);
       }
     };
-
-    loadDevices();
-
-    return () => {
-      isMounted = false;
-    };
+    loadInitialData();
   }, []);
 
-  const selectedDevice = useMemo(
-    () => devices.find((device) => device.imei === selectedImei) ?? null,
-    [devices, selectedImei],
-  );
-
-  const activeDeviceGeofences = useMemo(
-    () =>
-      remoteGeofences.map((geofence, index) => ({
-        id: String(geofence.id ?? geofence.geofence_number),
-        label: geofence.geofence_id,
-        imei: selectedImei,
-        color: GEOFENCE_COLORS[index % GEOFENCE_COLORS.length],
-        coordinates: toLatLngTuple(geofence.coordinates),
-        createdAt: new Date().toISOString(),
-      })),
-    [remoteGeofences, selectedImei],
-  );
-
-  const canAddMoreGeofences = activeDeviceGeofences.length < MAX_GEOFENCES;
-
+  // Fetch geofences and assignments when device selection changes
   useEffect(() => {
-    if (!selectedImei) {
-      return;
+    if (selectedImei) {
+      const loadDeviceData = async () => {
+        try {
+          const geofenceData = await geofenceService.listGeofences(selectedImei);
+          setGeofences(geofenceData.data || []);
+          const currentAssignments = (geofenceData.data || [])
+            .filter((g: any) => g.geofence_number)
+            .map((g: any) => ({
+              imei: selectedImei,
+              geofence_id: String(g.geofence_id),
+              geofence_number: g.geofence_number,
+              status: "ACTIVE" as const
+            }));
+          setAssignments(currentAssignments);
+        } catch (error) {
+          console.error("Failed to load device data", error);
+        }
+      };
+      loadDeviceData();
     }
+  }, [selectedImei]);
 
-    fetchGeofences(selectedImei).catch((error) => {
-      const message =
-        error instanceof Error ? error.message : "Failed to fetch geofences";
-      toast.error(message);
+  const selectedDevice = useMemo(
+    () => devices.find((d) => d.imei === selectedImei) || null,
+    [devices, selectedImei]
+  );
+
+  const selectedGeofence = useMemo(
+    () => geofences.find((g) => g.geofence_id === selectedGeofenceId) || null,
+    [geofences, selectedGeofenceId]
+  );
+
+  const handleUpdateAssignment = (slot: "GEO1" | "GEO2" | "GEO3", geofenceId: string | null) => {
+    setAssignments(prev => {
+      const filtered = prev.filter(a => a.geofence_number !== slot);
+      if (geofenceId === null) return filtered;
+      return [...filtered, {
+        imei: selectedImei,
+        geofence_id: geofenceId,
+        geofence_number: slot,
+        status: "PENDING"
+      } as any];
     });
-  }, [fetchGeofences, selectedImei]);
-
-  const removeGeofence = (geofenceNumber: string) => {
-    removeGeofenceLocally(geofenceNumber);
-    toast.success("Geofence removed.");
   };
 
-  const openAddGeofenceModal = () => {
-    if (!selectedImei) {
-      toast.error("Select a device before adding a geofence.");
+  const handleSyncToDevice = async () => {
+    try {
+      setIsSyncing(true);
+      const response = await geofenceService.assignGeofences(selectedImei, assignments);
+      toast.success(response.message || "Geofence assignments processed");
+      const geofenceData = await geofenceService.listGeofences(selectedImei);
+      setGeofences(geofenceData.data || []);
+    } catch (error) {
+      toast.error("Failed to synchronize with device");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleSaveGeofence = async () => {
+    if (!selectedGeofence) return;
+
+    if (!selectedGeofence.coordinates || selectedGeofence.coordinates.length !== 5) {
+      toast.error("Geofence must have exactly 5 points");
       return;
     }
 
-    if (!canAddMoreGeofences) {
-      toast.error(`You can only create ${MAX_GEOFENCES} geofences per device.`);
-      return;
+    try {
+      setIsSaving(true);
+      if (selectedGeofence.geofence_id.startsWith("temp-")) {
+        const { geofence_id, created_at, updated_at, id, ...data } = selectedGeofence as any;
+        await geofenceService.createGeofence({ ...data, imei: selectedImei } as any);
+        toast.success("Geofence created successfully");
+      } else {
+        const { created_at, updated_at, id, ...data } = selectedGeofence as any;
+        await geofenceService.editGeofence({ ...data, imei: selectedImei } as any);
+        toast.success("Geofence updated successfully");
+      }
+      const data = await geofenceService.listGeofences(selectedImei);
+      setGeofences(data.data || []);
+      setSelectedGeofenceId(null);
+      setIsEditorOpen(false);
+    } catch (error) {
+      toast.error("Failed to save geofence");
+    } finally {
+      setIsSaving(false);
     }
-
-    setIsAddGeofenceOpen(true);
   };
 
-  const saveGeofence = async (
-    imei: string,
-    payload: GeofencePayload,
-  ): Promise<DeviceCommandResponse<PublishedDeviceCommandResult>> => {
-    return setGeofence(imei, payload);
+  const handleDeleteClick = (id: string) => {
+    setDeleteTargetId(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTargetId) return;
+    try {
+      setIsSaving(true);
+      await geofenceService.deleteGeofence(selectedImei, deleteTargetId);
+      setGeofences(prev => prev.filter(g => g.geofence_id !== deleteTargetId));
+      if (selectedGeofenceId === deleteTargetId) setSelectedGeofenceId(null);
+      toast.success("Geofence deleted");
+      setIsDeleteDialogOpen(false);
+    } catch (error) {
+      toast.error("Failed to delete geofence");
+    } finally {
+      setIsSaving(false);
+      setDeleteTargetId(null);
+    }
+  };
+
+  const handleUpdateGeofence = (updates: Partial<GeofenceRecord>) => {
+    setGeofences(prev => prev.map(g => 
+      g.geofence_id === selectedGeofenceId ? { ...g, ...updates } : g
+    ));
+  };
+
+  const handleAddGeofence = () => {
+    const newId = `temp-${Date.now()}`;
+    const newGeo: GeofenceRecord = {
+      geofence_id: newId,
+      geofence_name: "New Geofence",
+      flag: "Safe",
+      color: "#4f46e5",
+      coordinates: [],
+      is_active: true,
+      geofence_number: null
+    };
+    setGeofences(prev => [newGeo, ...prev]);
+    setSelectedGeofenceId(newId);
+    setIsEditorOpen(true);
+  };
+
+  const handleEditGeofence = (id: string) => {
+    setSelectedGeofenceId(id);
+    setIsEditorOpen(true);
   };
 
   return (
     <div className="space-y-6">
-      <GeofencingHeader
-        geofenceCount={activeDeviceGeofences.length}
-        maxGeofences={MAX_GEOFENCES}
-        maxVertices={MAX_VERTICES}
+      <GeofenceDeviceHeader
+        devices={devices}
+        selectedImei={selectedImei}
+        selectedDevice={selectedDevice}
+        onSelectImei={setSelectedImei}
+        isLoading={isLoading}
       />
 
-      <div className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
-        <div className="space-y-6">
-          <TargetDeviceCard
-            routeImei={routeImei}
-            devices={devices}
-            selectedImei={selectedImei}
-            selectedDevice={selectedDevice}
-            isLoadingDevices={isLoadingDevices}
-            onSelectImei={(value) => {
-              setSelectedImei(value);
-              setIsAddGeofenceOpen(false);
-            }}
-          />
+      <HardwareSlotManager
+        selectedImei={selectedImei}
+        allGeofences={geofences}
+        assignments={assignments}
+        onUpdateAssignment={handleUpdateAssignment}
+        onSave={handleSyncToDevice}
+        isSaving={isSyncing}
+      />
 
-          <SavedGeofencesCard
-            selectedImei={selectedImei}
-            geofences={remoteGeofences}
-            canAddGeofence={canAddMoreGeofences}
-            isAddingDisabled={!selectedImei || !canAddMoreGeofences}
-            onAddGeofence={openAddGeofenceModal}
-            onRemoveGeofence={removeGeofence}
-            focusedGeofenceId={focusedGeofenceId}
-            onGeofenceClick={(id: string) => setFocusedGeofenceId(id)}
+      <div className="flex flex-col lg:flex-row h-[calc(100vh-280px)] min-h-[600px] gap-6">
+        {/* Sidebar */}
+        <div className="w-full lg:w-80 shrink-0 h-[300px] lg:h-auto border border-border rounded-xl bg-card shadow-sm overflow-hidden flex flex-col">
+          <GeofenceSidebar
+            geofences={geofences}
+            onSelect={(id) => setSelectedGeofenceId(id)}
+            onAdd={handleAddGeofence}
+            onEdit={handleEditGeofence}
+            selectedId={selectedGeofenceId}
+            onDelete={handleDeleteClick}
+            isLoading={isLoading}
           />
         </div>
 
-        <CurrentGeofencesMap
-          selectedImei={selectedImei}
-          geofences={activeDeviceGeofences}
-          focusedGeofenceId={focusedGeofenceId}
-        />
+        {/* View Map area */}
+        <div className="flex-1 flex flex-col min-w-0 border border-border rounded-xl bg-card shadow-sm overflow-hidden relative">
+          <CurrentGeofencesMap
+            activeCoordinates={selectedGeofence?.coordinates || []}
+            activeColor={selectedGeofence?.color}
+            onAddPoint={() => {}} // Disabled on view map
+            onClearPoints={() => {}} // Disabled on view map
+            otherGeofences={geofences
+              .filter(g => g.geofence_id !== selectedGeofenceId && g.coordinates)
+              .map(g => ({ geofence_id: g.geofence_id, coordinates: g.coordinates!, color: g.color })) as any}
+            isEditing={false} // View mode
+            deviceLocation={selectedDevice?.latitude && selectedDevice?.longitude
+              ? [parseFloat(selectedDevice.latitude), parseFloat(selectedDevice.longitude)]
+              : undefined}
+          />
+        </div>
       </div>
 
-      <AddGeofenceDialog
-        open={isAddGeofenceOpen}
-        onOpenChange={setIsAddGeofenceOpen}
-        selectedImei={selectedImei}
-        activeDeviceGeofences={activeDeviceGeofences}
-        canAddMoreGeofences={canAddMoreGeofences}
-        isSaving={geofenceCommandLoading}
-        maxGeofences={MAX_GEOFENCES}
-        maxVertices={MAX_VERTICES}
-        onSaveGeofence={saveGeofence}
+      {/* Editor Modal */}
+      {selectedGeofence && (
+        <GeofenceEditorDialog
+          isOpen={isEditorOpen}
+          onOpenChange={setIsEditorOpen}
+          geofence={selectedGeofence}
+          onChange={handleUpdateGeofence}
+          onSave={handleSaveGeofence}
+          isSaving={isSaving}
+          deviceLocation={selectedDevice?.latitude && selectedDevice?.longitude
+            ? [parseFloat(selectedDevice.latitude), parseFloat(selectedDevice.longitude)]
+            : undefined}
+        />
+      )}
+
+      <ConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title="Delete Geofence"
+        description="Are you sure you want to permanently delete this geofence? This action cannot be undone and will remove the zone from the device if assigned."
+        confirmLabel="Delete Forever"
+        variant="destructive"
+        onConfirm={confirmDelete}
+        isLoading={isSaving}
       />
     </div>
   );

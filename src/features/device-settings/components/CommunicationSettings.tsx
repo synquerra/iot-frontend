@@ -42,34 +42,34 @@ const contactFields: Array<{
   placeholder: string;
   badge: string;
   badgeVariant: "secondary" | "destructive";
-  indicatorClassName: string;
+  indicatorColor: string;
   editable: boolean;
 }> = [
   {
     key: "phonenum1",
     label: "Primary Number",
-    placeholder: "Enter primary phone number",
+    placeholder: "Enter primary number",
     badge: "Primary",
     badgeVariant: "secondary",
-    indicatorClassName: "bg-green-500",
+    indicatorColor: "bg-emerald-500",
     editable: true,
   },
   {
     key: "phonenum2",
     label: "Secondary Number",
-    placeholder: "Enter secondary phone number",
+    placeholder: "Enter secondary number",
     badge: "Secondary",
     badgeVariant: "secondary",
-    indicatorClassName: "bg-blue-500",
+    indicatorColor: "bg-primary/60",
     editable: true,
   },
   {
     key: "controlroomnum",
-    label: "Control Room Number",
-    placeholder: "Control room phone number",
-    badge: "Emergency",
+    label: "Emergency Line",
+    placeholder: "Control room number",
+    badge: "SOS",
     badgeVariant: "destructive",
-    indicatorClassName: "bg-red-500",
+    indicatorColor: "bg-destructive",
     editable: true,
   },
 ];
@@ -77,7 +77,6 @@ const contactFields: Array<{
 export function CommunicationSettings({
   selectedImei,
   latestSettings,
-  isLoadingLatestSettings,
 }: CommunicationSettingsProps) {
   const [contacts, setContacts] = useState<ContactsFormState>(DEFAULT_CONTACTS);
   const { setIsLoading } = useGlobalLoading();
@@ -108,7 +107,7 @@ export function CommunicationSettings({
     }
 
     try {
-      setIsLoading(true, "Updating device contacts...");
+      setIsLoading(true, "Updating contacts...");
       const response = await updateDevicePhoneNumbers({
         topic: latestSettings.topic,
         phonenum1: contacts.phonenum1,
@@ -117,14 +116,12 @@ export function CommunicationSettings({
       });
 
       if (response.status === "success") {
-        toast.success(response.message || "Device contacts updated successfully");
+        toast.success(response.message || "Contacts updated successfully");
       } else {
         toast.error(response.message || "Failed to update contacts");
       }
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "An error occurred while updating contacts.";
-      toast.error(message);
+      toast.error(error instanceof Error ? error.message : "An error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -134,77 +131,68 @@ export function CommunicationSettings({
 
   return (
     <Card className={cn(
-      "border-primary/10 shadow-sm transition-opacity duration-300",
+      "border-border shadow-sm transition-all duration-300 bg-card rounded-xl",
       !isEnabled && "opacity-50 grayscale pointer-events-none select-none"
     )}>
-      <CardHeader className="pb-4 border-b border-primary/5 flex flex-row items-center justify-between space-y-0">
+      <CardHeader className="pb-4 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-muted/5">
           <div className="flex-1">
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg font-bold">
               <Phone className="h-5 w-5 text-primary" />
-              Registered Mobile Numbers
+              Communication Hub
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs font-medium">
               {!isEnabled 
-                ? "Select a device to manage contact synchronization" 
-                : "Direct contact management through dedicated synchronization API"}
+                ? "Select a device to sync contacts" 
+                : "Manage emergency and primary device contacts"}
             </CardDescription>
-            {latestSettings?.device_timestamp && isEnabled ? (
-              <p className="mt-2 text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
-                Snapshot: {new Date(latestSettings.device_timestamp).toLocaleString("en-IN")}
-              </p>
-            ) : null}
           </div>
           <Button
-            className="gap-2 font-bold shadow-lg shadow-primary/10"
+            className="w-full sm:w-auto gap-2 font-bold h-9 px-4"
             onClick={handleSaveContacts}
             disabled={!isEnabled}
             size="sm"
           >
             <Save size={14} />
-            Save Contacts
+            Sync Contacts
           </Button>
         </CardHeader>
 
-      <CardContent className="space-y-6 flex-1 flex flex-col pt-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 flex-1">
+      <CardContent className="pt-6">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {contactFields.map((item) => (
               <div
                 key={item.key}
-                className="space-y-3 rounded-lg bg-muted p-4 transition-colors hover:bg-muted/80"
+                className="space-y-4 rounded-xl border border-border bg-muted/20 p-4 transition-all hover:border-primary/20 group"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div
-                      className={`h-2 w-2 rounded-full ${item.indicatorClassName}`}
-                    />
-
-                    <div>
-                      <span className="font-medium">{item.label}</span>
-                    </div>
+                    <div className={cn("h-1.5 w-1.5 rounded-full group-hover:scale-125 transition-transform", item.indicatorColor)} />
+                    <span className="font-semibold text-sm">{item.label}</span>
                   </div>
-
-                  <Badge variant={item.badgeVariant}>{item.badge}</Badge>
+                  <Badge variant={item.badgeVariant} className="text-[10px] uppercase font-bold px-2 py-0 h-5">
+                    {item.badge}
+                  </Badge>
                 </div>
 
-                <div className="space-y-2">
+                <div className="relative">
                   <Input
                     disabled={!isEnabled || !item.editable}
                     id={item.key}
-                    inputMode="numeric"
+                    inputMode="tel"
                     maxLength={15}
                     placeholder={item.placeholder}
                     value={contacts[item.key]}
                     onChange={(event) =>
                       handleContactChange(item.key, event.target.value)
                     }
+                    className="h-10 border-border bg-background focus-visible:ring-1 focus-visible:ring-primary/20 text-sm font-medium pr-10"
                   />
+                  <Phone className="absolute right-3 top-3 h-4 w-4 text-muted-foreground/30" />
                 </div>
               </div>
             ))}
           </div>
-
         </CardContent>
     </Card>
   );
 }
-

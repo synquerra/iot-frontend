@@ -31,9 +31,10 @@ export function DeviceGrid() {
       className="
       grid 
       gap-6 
-      sm:grid-cols-1
+      grid-cols-1
       md:grid-cols-2 
-      lg:grid-cols-2
+      xl:grid-cols-3
+      2xl:grid-cols-4
     "
     >
       {filteredDevices.map((device) => (
