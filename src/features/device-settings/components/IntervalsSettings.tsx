@@ -191,7 +191,7 @@ export function IntervalsSettings({
         <div>
           <CardTitle className="flex items-center gap-2 text-lg font-bold">
             <Clock className="h-5 w-5 text-primary" />
-            Cadence & Thresholds
+            Reporting Intervals & Limits
           </CardTitle>
           <CardDescription className="text-xs font-medium">
             {!selectedImei 

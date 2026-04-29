@@ -100,3 +100,16 @@ export async function updateDevicePhoneNumbers(payload: {
   const response = await api.post(`/setting/update-phones`, payload);
   return response.data;
 }
+
+export async function dispatchDeviceAction(payload: {
+  topic: string;
+  action: string;
+  params?: Record<string, any>;
+}) {
+  const response = await api.post(`/setting/raw`, {
+    topic: payload.topic,
+    command: payload.action,
+    params: payload.params || {}
+  });
+  return response.data;
+}

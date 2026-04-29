@@ -13,10 +13,17 @@ import {
   SunMedium,
   Radio,
   Zap,
+  CheckCircle2,
+  XCircle,
+  Square,
+  RefreshCw,
+  Search,
+  FlaskConical
 } from "lucide-react";
 import { useGlobalLoading } from "@/contexts/GlobalLoadingContext";
 import { toast } from "sonner";
 import { updateAirplaneMode, updateLedStatus } from "@/features/device-settings/services/deviceSettingsService";
+import { cn } from "@/lib/utils";
 
 interface TestingActionCenterProps {
   topic?: string | null;
@@ -27,20 +34,14 @@ interface TestingActionCenterProps {
 export function TestingActionCenter({ topic, currentMode, ledStatus }: TestingActionCenterProps) {
   const { setIsLoading } = useGlobalLoading();
 
-  const handleAirplaneToggle = async (enable: boolean) => {
+  const handleAirplaneEnable = async () => {
     if (!topic) {
       toast.error("Device topic is missing.");
       return;
     }
-
-    // Airplane mode is now unidirectional (enable only)
-    if (!enable) return;
-
     try {
-      setIsLoading(true, "Please wait");
-      const response = await updateAirplaneMode({
-        topic,
-      });
+      setIsLoading(true, "Activating flight mode...");
+      const response = await updateAirplaneMode({ topic });
       if (response.status === "success") {
         toast.success(response.message || "Airplane mode enabled");
       } else {
@@ -59,7 +60,7 @@ export function TestingActionCenter({ topic, currentMode, ledStatus }: TestingAc
       return;
     }
     try {
-      setIsLoading(true, "Please wait");
+      setIsLoading(true, `Switching LED ${on ? "ON" : "OFF"}...`);
       const response = await updateLedStatus({
         topic,
         LED: on ? "SwitchOnLed" : "SwitchOffLed",
@@ -76,85 +77,203 @@ export function TestingActionCenter({ topic, currentMode, ledStatus }: TestingAc
     }
   };
 
-  const handleAction = async (actionName: string) => {
-    if (!topic) {
-      toast.error("Device topic is missing.");
-      return;
-    }
-    try {
-      setIsLoading(true, "Please wait");
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      toast.success(`${actionName} command dispatched`);
-    } catch {
-      toast.error("Action failed");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const isAirplaneEnabled = currentMode === "Airplane" || currentMode === "AirplaneMode";
   const isLedOn = ledStatus === "SwitchOnLed" || ledStatus === "on";
 
   return (
-    <Card className="border-primary/10 shadow-sm h-full flex flex-col">
-      <CardHeader className="pb-3 border-b border-primary/5">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <Settings className="h-4 w-4 text-primary" />
-          Action Center
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-4 space-y-5">
-        <div className="grid grid-cols-2 gap-3">
-          <ToggleItem 
-            label="LED Status" 
-            icon={<SunMedium className="h-3 w-3" />} 
-            checked={isLedOn} 
-            onChange={handleLedToggle}
-          />
-          <ToggleItem 
-            label="Aeroplane" 
-            icon={<Plane className="h-3 w-3" />} 
-            checked={isAirplaneEnabled} 
-            onChange={handleAirplaneToggle}
-          />
-          <ToggleItem label="Call Enable" icon={<Phone className="h-3 w-3" />} />
-          <ToggleItem label="Ambient" icon={<Radio className="h-3 w-3" />} />
-          <ToggleItem label="GPS Enable" icon={<Settings className="h-3 w-3" />} />
-          <ToggleItem label="SMS Enable" icon={<Zap className="h-3 w-3" />} />
+    <Card className="border-border shadow-sm h-full flex flex-col bg-card rounded-xl">
+      <CardHeader className="pb-4 border-b border-border flex flex-row items-center justify-between space-y-0 bg-muted/5">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+            <FlaskConical className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <CardTitle className="text-lg font-bold">Hardware Diagnostics</CardTitle>
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">Engineering Control Center</p>
+          </div>
         </div>
+      </CardHeader>
 
-        <div className="grid grid-cols-2 gap-2 pt-2">
-           <Button onClick={() => handleAction("Stop SOS")} variant="destructive" className="h-10 font-bold shadow-md uppercase tracking-wider text-[10px]" disabled>
+      <CardContent className="p-4 md:p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* LED Indicator */}
+          <ActionCard
+            label="LED Indicator"
+            icon={<SunMedium className="h-4 w-4" />}
+            isActive={isLedOn}
+            statusText={isLedOn ? "Active" : "Disabled"}
+          >
+            <div className="flex items-center justify-end pt-2">
+              <Switch checked={isLedOn} onCheckedChange={handleLedToggle} className="data-[state=checked]:bg-primary" />
+            </div>
+          </ActionCard>
+
+          {/* Aeroplane Mode */}
+          <ActionCard
+            label="Airplane Mode"
+            icon={<Plane className="h-4 w-4" />}
+            isActive={isAirplaneEnabled}
+            statusText={isAirplaneEnabled ? "Active" : "Ready"}
+          >
+            <div className="flex items-center justify-end pt-2">
+              <Button
+                size="sm"
+                disabled={isAirplaneEnabled}
+                onClick={handleAirplaneEnable}
+                className="h-7 font-bold text-[9px] uppercase tracking-wider px-3"
+              >
+                {isAirplaneEnabled ? "Locked" : "Enable"}
+              </Button>
+            </div>
+          </ActionCard>
+
+          {/* Call Enable - DISABLED */}
+          <ActionCard
+            label="Call Enable"
+            icon={<Phone className="h-4 w-4" />}
+            isDisabled
+            statusText="Restricted"
+          >
+            <div className="flex items-center justify-end pt-2">
+              <Switch disabled className="scale-75" />
+            </div>
+          </ActionCard>
+
+          {/* Ambient - DISABLED */}
+          <ActionCard
+            label="Ambient"
+            icon={<Radio className="h-4 w-4" />}
+            isDisabled
+            statusText="Restricted"
+          >
+            <div className="flex items-center justify-end pt-2">
+              <Switch disabled className="scale-75" />
+            </div>
+          </ActionCard>
+
+          {/* GPS Enable - DISABLED */}
+          <ActionCard
+            label="GPS Service"
+            icon={<Settings className="h-4 w-4" />}
+            isDisabled
+            statusText="Restricted"
+          >
+            <div className="flex items-center justify-end pt-2">
+              <Switch disabled className="scale-75" />
+            </div>
+          </ActionCard>
+
+          {/* SMS Enable - DISABLED */}
+          <ActionCard
+            label="SMS Gateway"
+            icon={<Zap className="h-4 w-4" />}
+            isDisabled
+            statusText="Restricted"
+          >
+            <div className="flex items-center justify-end pt-2">
+              <Switch disabled className="scale-75" />
+            </div>
+          </ActionCard>
+
+          {/* Stop SOS - DISABLED */}
+          <ActionCard
+            label="Kill SOS"
+            icon={<Square className="h-4 w-4" />}
+            isDisabled
+            statusText="Restricted"
+          >
+            <Button variant="destructive" size="sm" className="w-full h-7 font-bold text-[9px] uppercase mt-2" disabled>
               Stop SOS
-           </Button>
-           <Button onClick={() => handleAction("Stop Ambient")} className="h-10 font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-md uppercase tracking-wider text-[10px]" disabled>
-              Stop Ambient
-           </Button>
-           <Button onClick={() => handleAction("Get Packet")} className="h-10 font-bold bg-emerald-500 hover:bg-emerald-600 text-white shadow-md uppercase tracking-wider text-[10px]" disabled>
-              Get Packet
-           </Button>
-           <Button onClick={() => handleAction("Reset")} className="h-10 font-bold bg-yellow-500 hover:bg-yellow-600 text-white shadow-md uppercase tracking-wider text-[10px]" disabled>
+            </Button>
+          </ActionCard>
+
+          {/* RESET - DISABLED */}
+          <ActionCard
+            label="Reboot Unit"
+            icon={<RefreshCw className="h-4 w-4" />}
+            isDisabled
+            statusText="Restricted"
+          >
+            <Button variant="secondary" size="sm" className="w-full h-7 font-bold text-[9px] uppercase mt-2 bg-yellow-500/10 text-yellow-600 border-none hover:bg-yellow-500/20" disabled>
               RESET
-           </Button>
+            </Button>
+          </ActionCard>
+
+          {/* Get Packet - DISABLED */}
+          <ActionCard
+            label="Query Packet"
+            icon={<Search className="h-4 w-4" />}
+            isDisabled
+            statusText="Restricted"
+          >
+            <Button variant="secondary" size="sm" className="w-full h-7 font-bold text-[9px] uppercase mt-2 bg-emerald-500/10 text-emerald-600 border-none hover:bg-emerald-500/20" disabled>
+              Pull Data
+            </Button>
+          </ActionCard>
+
+          {/* Stop Ambient - DISABLED */}
+          <ActionCard
+            label="Stop Ambient"
+            icon={<Radio className="h-4 w-4" />}
+            isDisabled
+            statusText="Restricted"
+          >
+            <Button variant="secondary" size="sm" className="w-full h-7 font-bold text-[9px] uppercase mt-2 bg-amber-500/10 text-amber-600 border-none hover:bg-amber-500/20" disabled>
+              Cease Mic
+            </Button>
+          </ActionCard>
         </div>
       </CardContent>
     </Card>
   );
 }
 
-function ToggleItem({ label, icon, checked, onChange }: { label: string; icon: React.ReactNode; checked?: boolean; onChange?: (val: boolean) => void }) {
+function ActionCard({
+  label,
+  icon,
+  isActive,
+  isDisabled,
+  statusText,
+  children
+}: {
+  label: string;
+  icon: React.ReactNode;
+  isActive?: boolean;
+  isDisabled?: boolean;
+  statusText: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex items-center justify-between gap-2 bg-muted/40 p-2 px-3 rounded-md border border-primary/5 hover:border-primary/10 transition-all opacity-60">
-      <div className="flex items-center gap-2 min-w-0">
-        <div className="text-primary">{icon}</div>
-        <span className="text-[10px] font-bold uppercase tracking-tight truncate">{label}</span>
+    <div className={cn(
+      "space-y-4 rounded-xl border p-4 transition-all relative overflow-hidden",
+      isActive ? "bg-primary/5 border-primary/30" : "bg-card border-border hover:border-primary/20",
+      isDisabled && "opacity-50 bg-muted/20 border-dashed"
+    )}>
+      <div className="flex items-center gap-3">
+        <div className={cn(
+          "rounded-lg p-2 border",
+          isActive ? "bg-primary/20 border-primary/30" : "bg-muted border-border",
+          isDisabled && "bg-muted/50 border-muted-foreground/10"
+        )}>
+          <div className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")}>
+            {icon}
+          </div>
+        </div>
+        <div>
+          <p className="font-bold text-xs">{label}</p>
+          <div className="flex items-center gap-1">
+            {isActive ? (
+              <CheckCircle2 className="h-3 w-3 text-primary" />
+            ) : (
+              <XCircle className="h-3 w-3 text-muted-foreground/40" />
+            )}
+            <p className={cn("text-[9px] font-bold uppercase tracking-wider", isActive ? "text-primary" : "text-muted-foreground")}>
+              {statusText}
+            </p>
+          </div>
+        </div>
       </div>
-      <Switch 
-        checked={checked} 
-        onCheckedChange={onChange}
-        className="scale-75" 
-        disabled
-      />
+      {children}
     </div>
   );
 }

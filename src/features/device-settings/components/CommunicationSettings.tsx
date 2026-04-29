@@ -138,7 +138,7 @@ export function CommunicationSettings({
           <div className="flex-1">
             <CardTitle className="flex items-center gap-2 text-lg font-bold">
               <Phone className="h-5 w-5 text-primary" />
-              Communication Hub
+              Device Contacts
             </CardTitle>
             <CardDescription className="text-xs font-medium">
               {!isEnabled 
