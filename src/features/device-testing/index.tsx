@@ -71,7 +71,7 @@ export default function DeviceTesting() {
 
   return (
     <div className="w-full bg-background pb-10">
-      <div className="space-y-6 max-w-[1600px] mx-auto px-4 sm:px-6">
+      <div className="space-y-6  mx-auto">
         <DeviceSettingsHeader
           title="Device Testing Dashboard"
           currentMode={selectedDevice?.currentMode}
@@ -88,39 +88,46 @@ export default function DeviceTesting() {
         />
 
         {/* Dashboard Tools Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-           {/* Column 1: Configs */}
-           <div className="space-y-5">
-              <CompactIntervals selectedImei={selectedImei} latestSettings={latestSettings} />
-              <CompactContacts latestSettings={latestSettings} />
-           </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Column 1: Configs */}
+          <div className="space-y-5">
+            <CompactIntervals selectedImei={selectedImei} latestSettings={latestSettings} />
+            <CompactContacts latestSettings={latestSettings} />
+          </div>
 
-           {/* Column 2: Spatial */}
-           <div className="h-full">
-              <GeofenceSettings topic={selectedDevice?.topic} />
-           </div>
+          {/* Column 2: Spatial */}
+          <div className="h-full">
+            <GeofenceSettings
+              selectedImei={selectedImei}
+              topic={selectedDevice?.topic}
+              deviceLocation={selectedDevice?.latitude && selectedDevice?.longitude
+                ? [parseFloat(selectedDevice.latitude), parseFloat(selectedDevice.longitude)]
+                : undefined
+              }
+            />
+          </div>
 
-           {/* Column 3: Control */}
-           <div className="h-full">
-              <TestingActionCenter 
-                topic={selectedDevice?.topic} 
-                currentMode={selectedDevice?.currentMode} 
-                ledStatus={selectedDevice?.ledStatus}
-              />
-           </div>
+          {/* Column 3: Control */}
+
         </div>
-
+        <div className="h-full mt-2">
+          <TestingActionCenter
+            topic={selectedDevice?.topic}
+            currentMode={selectedDevice?.currentMode}
+            ledStatus={selectedDevice?.ledStatus}
+          />
+        </div>
         {/* Unified Results Console */}
         <div className="mt-2">
-           <TestingResultsConsole topic={selectedDevice?.topic} />
+          <TestingResultsConsole imei={selectedImei} />
         </div>
 
         {/* Context Footer */}
         <div className="flex items-center gap-4 text-muted-foreground/60 border-t border-primary/5 pt-6">
-           <FlaskConical size={14} />
-           <p className="text-[10px] uppercase font-bold tracking-widest">
-             Engineering Mode View-Only • Telemetry Monitoring • SYN-SECURE-ID
-           </p>
+          <FlaskConical size={14} />
+          <p className="text-[10px] uppercase font-bold tracking-widest">
+            Engineering Mode View-Only • Telemetry Monitoring • SYN-SECURE-ID
+          </p>
         </div>
       </div>
     </div>

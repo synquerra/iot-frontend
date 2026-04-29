@@ -111,7 +111,7 @@ export function GeneralDeviceControls({
         <div>
           <CardTitle className="flex items-center gap-2 text-lg font-bold">
             <Settings className="h-5 w-5 text-primary" />
-            General Controls
+            Hardware Diagnostics
           </CardTitle>
           <CardDescription className="text-xs font-medium">
             {!selectedDevice 
