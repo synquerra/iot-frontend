@@ -112,9 +112,11 @@ export default function DeviceTesting() {
         </div>
         <div className="h-full mt-2">
           <TestingActionCenter
+            imei={selectedImei}
             topic={selectedDevice?.topic}
             currentMode={selectedDevice?.currentMode}
             ledStatus={selectedDevice?.ledStatus}
+            incomingCallEnabled={latestSettings?.incoming_call_enabled}
           />
         </div>
         {/* Unified Results Console */}

@@ -1,8 +1,9 @@
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { ActivityBreakdown } from "./components/ActivityBreakdown";
-
+import { listGeofences } from "../geofencing/services/geofenceService";
+import type { GeofenceRecord } from "../geofencing/types";
 import { DeviceHeader } from "./components/DeviceHeader";
 import { DeviceHealthCard } from "./components/DeviceHealthCard";
 import { DeviceSettingsSummaryCard } from "./components/DeviceSettingsSummaryCard";
@@ -21,6 +22,15 @@ export default function DeviceOverviewPage() {
   const { imei } = useParams();
   const [refreshing, setRefreshing] = useState(false);
   const { device, deviceStatus, analyticsHealth, deviceSettings, isLoading, refresh } = useDeviceOverview(imei ?? "");
+  const [geofences, setGeofences] = useState<GeofenceRecord[]>([]);
+
+  useEffect(() => {
+    if (imei) {
+      listGeofences(imei).then(res => {
+        if (res.data) setGeofences(res.data);
+      }).catch(err => console.error("Failed to load geofences for overview", err));
+    }
+  }, [imei]);
 
   const getStat = (stats: string[] | undefined, key: string) => {
     if (!stats) return 0;
@@ -100,6 +110,7 @@ export default function DeviceOverviewPage() {
             lastUpdate={data.lastUpdate}
             lowBatLimit={data.settingsLowBattery !== "N/A" ? parseInt(data.settingsLowBattery) : 30}
             tempLimit={data.settingsTempLimit !== "N/A" ? parseInt(data.settingsTempLimit) : 50}
+            geofences={geofences.filter(g => g.coordinates) as any}
           />
 
           <div className="grid gap-8 lg:grid-cols-12 items-start">

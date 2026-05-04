@@ -25,18 +25,13 @@ export function TestingResultsConsole({ imei }: TestingResultsConsoleProps) {
   const pollingRef = useRef<any>(null);
 
   useEffect(() => {
-    if (scrollRef.current && isLive) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, isLive]);
-
-  useEffect(() => {
     if (!imei) return;
 
     const fetchLatest = async (isInitial = false) => {
       try {
         const response = await getRawMessages(imei, 0, isInitial ? 5 : 10);
-        setMessages(response.messages.reverse());
+        // Show new responses on top (assuming API returns latest first)
+        setMessages(response.messages);
       } catch (error) {
         console.error("Polling error:", error);
       }

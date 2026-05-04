@@ -134,16 +134,15 @@ export function CommunicationSettings({
       "border-border shadow-sm transition-all duration-300 bg-card rounded-xl",
       !isEnabled && "opacity-50 grayscale pointer-events-none select-none"
     )}>
-      <CardHeader className="pb-4 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-muted/5">
+      <CardHeader className="py-3 px-4 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-muted/5">
           <div className="flex-1">
-            <CardTitle className="flex items-center gap-2 text-lg font-bold">
-              <Phone className="h-5 w-5 text-primary" />
+            <CardTitle className="text-sm font-bold uppercase tracking-tight">
               Device Contacts
             </CardTitle>
-            <CardDescription className="text-xs font-medium">
+            <CardDescription className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">
               {!isEnabled 
-                ? "Select a device to sync contacts" 
-                : "Manage emergency and primary device contacts"}
+                ? "Select device to sync" 
+                : "Operational contact management"}
             </CardDescription>
           </div>
           <Button

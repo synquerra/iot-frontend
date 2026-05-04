@@ -14,6 +14,7 @@ import DevicesPage from "./features/devices";
 import AlertsPage from "./features/alerts";
 import TelemetryPage from "./features/telemetry";
 import DeviceTesting from "./features/device-testing";
+import FotaPage from "./features/fota";
 
 export const router = createBrowserRouter([
   {
@@ -58,6 +59,10 @@ export const router = createBrowserRouter([
               {
                 path: "testing/:imei?",
                 element: <DeviceTesting />, // /devices/testing
+              },
+              {
+                path: "fota",
+                element: <FotaPage />, // /devices/fota
               },
             ],
           },

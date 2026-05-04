@@ -59,24 +59,7 @@ export function AlertItem({ item, isRefreshing, onAcknowledge, formatDate }: Ale
           </div>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
-          {!item.is_acknowledged ? (
-            <Button
-              size="sm"
-              disabled={isRefreshing}
-              onClick={() => onAcknowledge(item.id)}
-              className="h-8 text-[10px] font-bold uppercase tracking-wider bg-primary hover:bg-primary/90 text-white px-4 rounded-lg"
-            >
-              <Bell className="h-3.5 w-3.5 mr-2" />
-              Acknowledge
-            </Button>
-          ) : (
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase px-3 py-1.5 bg-muted rounded-lg border border-border/50">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-              Resolved
-            </div>
-          )}
-        </div>
+
       </div>
     </div>
   );

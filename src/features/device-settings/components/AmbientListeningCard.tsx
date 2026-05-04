@@ -18,15 +18,14 @@ export function AmbientListeningCard({ selectedImei }: AmbientListeningCardProps
 
   return (
     <Card className="border-primary/10 shadow-sm h-full flex flex-col opacity-50 grayscale pointer-events-none select-none">
-      <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2">
-          <Headphones className="h-5 w-5 text-primary" />
+      <CardHeader className="py-3 px-4 border-b border-border bg-muted/5 rounded-t-xl">
+        <CardTitle className="text-sm font-bold uppercase tracking-tight">
           Ambient Listening
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">
           {!isEnabled 
-            ? "Select a device to view audio monitoring status" 
-            : "Configure `AMBIENT_ENABLE`, `AMBIENT_DISABLE`, and `AMBIENT_STOP`"}
+            ? "Select device to view status" 
+            : "Audio monitoring and control"}
         </CardDescription>
       </CardHeader>
 

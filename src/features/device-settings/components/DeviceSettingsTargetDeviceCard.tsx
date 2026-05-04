@@ -1,8 +1,4 @@
 import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -10,7 +6,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ChevronRight, Cpu, Smartphone, AlertCircle } from "lucide-react";
+import { ChevronRight, Cpu, Smartphone, Activity } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { Device } from "@/features/devices/services/deviceService";
 
 type DeviceSettingsTargetDeviceCardProps = {
@@ -33,149 +30,113 @@ export function DeviceSettingsTargetDeviceCard({
   currentMode,
 }: DeviceSettingsTargetDeviceCardProps) {
   return (
-    <Card className="overflow-hidden shadow-lg">
-
-      <CardContent className="p-0">
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 p-4 md:p-6">
-          {/* Left Section - Title & Device Selection */}
-          <div className="flex flex-col md:flex-row md:items-center gap-4 flex-1 w-full">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10 shrink-0">
-                <Cpu className="h-5 w-5 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <h3 className="text-[10px] md:text-sm font-semibold text-muted-foreground uppercase tracking-wider truncate">
-                  Target Device
-                </h3>
-                <p className="text-lg md:text-2xl font-bold tracking-tight truncate">
-                  Configuration
-                </p>
-              </div>
+    <div className="relative overflow-hidden bg-card border border-border rounded-xl shadow-sm p-2 px-3 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        {/* Left Section: Breadcrumb & Selector */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
+              <Cpu className="h-4 w-4 text-primary" />
             </div>
-
-            <div className="hidden md:flex items-center gap-2 text-muted-foreground shrink-0">
-              <ChevronRight className="h-4 w-4" />
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
+                System
+              </span>
+              <ChevronRight className="h-3 w-3 text-muted-foreground/20" />
             </div>
-
-            {routeImei ? (
-              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                <Badge variant="secondary" className="px-3 py-1 text-xs md:text-sm whitespace-nowrap">
-                  <Smartphone className="h-3.5 w-3.5 mr-2" />
-                  {selectedDevice?.displayName ?? "Selected device"}
-                </Badge>
-                <code className="relative rounded bg-muted px-2 py-1 font-mono text-[10px] md:text-xs font-semibold whitespace-nowrap">
-                  {selectedImei}
-                </code>
-              </div>
-            ) : (
-              <div className="w-full md:max-w-xs shrink-0">
-                <Select
-                  value={selectedImei}
-                  onValueChange={onSelectImei}
-                  disabled={isLoadingDevices}
-                >
-                  <SelectTrigger className="h-10 md:h-11 bg-background/50 backdrop-blur-sm border transition-all duration-200">
-                    <SelectValue placeholder={
-                      <div className="flex items-center gap-2">
-                        <Smartphone className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">Select device</span>
-                      </div>
-                    } />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    {devices.length === 0 ? (
-                      <div className="flex items-center gap-2 p-2 text-muted-foreground">
-                        <AlertCircle className="h-4 w-4" />
-                        <span className="text-sm">No devices available</span>
-                      </div>
-                    ) : (
-                      devices.map((device) => (
-                        <SelectItem
-                          key={device.imei}
-                          value={device.imei}
-                          className="cursor-pointer"
-                        >
-                          <div className="flex items-center justify-between w-full gap-3">
-                            <div className="flex flex-col items-start min-w-0">
-                              <span className="font-medium text-sm truncate w-full">{device.displayName}</span>
-                              <code className="text-[10px] text-muted-foreground font-mono">
-                                {device.imei}
-                              </code>
-                            </div>
-                            {selectedImei === device.imei && (
-                              <Badge variant="outline" className="text-[8px] h-4">
-                                Active
-                              </Badge>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <span className="text-[11px] font-bold uppercase tracking-wider text-foreground/80">
+              Settings
+            </span>
           </div>
 
-          {/* Right Section - Device Info (when selected) */}
-          {selectedDevice && (
-            <div className="flex items-center gap-4 bg-muted/30 rounded-xl p-3 md:p-4 border border-border w-full xl:w-auto">
-              <div className="flex items-center gap-3 shrink-0">
-                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Smartphone className="h-4 w-4 text-primary" />
-                </div>
-                <div className="hidden sm:block">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                    Active Device
-                  </p>
-                  <p className="font-semibold text-xs md:text-sm truncate max-w-[120px]">
-                    {selectedDevice.displayName}
-                  </p>
-                </div>
+          <div className="h-6 w-px bg-border/60 mx-1 hidden md:block" />
+
+          {/* Minimal Device Selector */}
+          <div className="flex-1 md:w-[240px]">
+            {routeImei ? (
+              <div className="flex items-center gap-2 px-3 h-8 bg-muted/30 rounded-md border border-transparent">
+                 <Smartphone className="h-3.5 w-3.5 text-muted-foreground/60" />
+                 <span className="text-xs font-black uppercase tracking-tight truncate">
+                   {selectedDevice?.displayName || selectedImei}
+                 </span>
               </div>
-
-              <div className="h-8 w-px bg-border shrink-0" />
-
-              <div className="min-w-0 flex-1 xl:flex-none">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5 truncate">
-                  IMEI
-                </p>
-                <code className="font-mono text-xs md:text-sm font-medium bg-background/50 px-2 py-0.5 rounded-md truncate block sm:inline">
-                  {selectedDevice.imei}
-                </code>
-              </div>
-
-              {currentMode && (
-                <>
-                  <div className="h-8 w-px bg-border shrink-0 hidden md:block" />
-                  <div className="min-w-0 flex-1 xl:flex-none">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5 truncate">
-                      Current Mode
-                    </p>
-                    <Badge variant="outline" className="text-orange-600 border-orange-500/30 bg-orange-500/5 font-bold px-2 py-0.5">
-                      {currentMode}
-                    </Badge>
+            ) : (
+              <Select
+                value={selectedImei}
+                onValueChange={onSelectImei}
+                disabled={isLoadingDevices}
+              >
+                <SelectTrigger className="w-full bg-transparent border-none shadow-none h-8 text-xs font-black uppercase tracking-tight hover:bg-muted/50 transition-colors focus:ring-0">
+                  <div className="flex items-center gap-2 truncate">
+                    <Smartphone className="h-3.5 w-3.5 text-muted-foreground/60" />
+                    <SelectValue placeholder="Select Device" />
                   </div>
-                </>
-              )}
-
-              <Badge variant="default" className="bg-primary/20 text-primary hover:bg-primary/30 border-none text-[10px] px-2 py-0 shrink-0 hidden sm:flex">
-                Configured
-              </Badge>
-            </div>
-          )}
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {devices.map((device) => (
+                    <SelectItem
+                      key={device.imei}
+                      value={device.imei}
+                      className="text-xs font-bold uppercase"
+                    >
+                      {device.displayName || `ID: ${device.imei.slice(-6)}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
         </div>
 
-        {/* Loading overlay for device selection */}
-        {isLoadingDevices && !routeImei && (
-          <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px] flex items-center justify-center rounded-xl">
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              <span className="text-sm text-muted-foreground">Loading devices...</span>
+        {/* Right Section: Status & Mode */}
+        {selectedDevice && (
+          <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 border-border/50 pt-2 md:pt-0">
+            {/* Online Status */}
+            <div className="flex items-center gap-1.5">
+               <div className={cn(
+                 "h-1.5 w-1.5 rounded-full",
+                 selectedDevice.status === "active" ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/30"
+               )} />
+               <span className={cn(
+                 "text-[10px] font-black uppercase tracking-widest",
+                 selectedDevice.status === "active" ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
+               )}>
+                 {selectedDevice.status === "active" ? "Online" : "Offline"}
+               </span>
+            </div>
+
+            {/* Mode Badge */}
+            {currentMode && (
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-px bg-border/60 hidden md:block" />
+                <div className="flex items-center gap-1.5">
+                   <Activity className="h-3 w-3 text-orange-500/70" />
+                   <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tighter text-orange-600 border-orange-500/30 bg-orange-500/5 px-2 py-0 h-4 leading-none">
+                     {currentMode}
+                   </Badge>
+                </div>
+              </div>
+            )}
+
+            {/* IMEI Tag (Only on desktop) */}
+            <div className="hidden lg:flex items-center gap-2">
+               <div className="h-4 w-px bg-border/60" />
+               <code className="text-[10px] font-mono font-bold text-muted-foreground/60 uppercase">
+                 IMEI: {selectedImei}
+               </code>
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Loading overlay for device selection */}
+      {isLoadingDevices && !routeImei && (
+        <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] flex items-center justify-center">
+          <RefreshCw className="h-4 w-4 animate-spin text-primary/40" />
+        </div>
+      )}
+    </div>
   );
 }
+
+import { RefreshCw } from "lucide-react";

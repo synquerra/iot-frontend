@@ -12,10 +12,11 @@ import {
   type LatestDeviceSettingsRecord,
 } from "@/features/device-settings/services/deviceSettingsService";
 import { useGlobalLoading } from "@/contexts/GlobalLoadingContext";
-import { Clock, Save } from "lucide-react";
+import { Clock, Save, ShieldAlert, Activity } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
 
 type DeviceSettingsFormState = {
   NormalSendingInterval: string;
@@ -36,56 +37,6 @@ const DEFAULT_VALUES: DeviceSettingsFormState = {
   SpeedLimit: "60",
   LowbatLimit: "20",
 };
-
-const intervalFields: Array<{
-  key: keyof DeviceSettingsFormState;
-  label: string;
-  description: string;
-  suffix: string;
-}> = [
-    {
-      key: "NormalSendingInterval",
-      label: "Normal Sending Interval",
-      description: "Standard data transmission cadence",
-      suffix: "sec",
-    },
-    {
-      key: "SOSSendingInterval",
-      label: "SOS Sending Interval",
-      description: "Emergency transmission cadence",
-      suffix: "sec",
-    },
-    {
-      key: "NormalScanningInterval",
-      label: "Normal Scanning Interval",
-      description: "Standard GPS update cadence",
-      suffix: "sec",
-    },
-    {
-      key: "AirplaneInterval",
-      label: "Airplane Interval",
-      description: "Flight mode scanning cadence",
-      suffix: "sec",
-    },
-    {
-      key: "TemperatureLimit",
-      label: "Temperature Limit",
-      description: "Thermal alert threshold",
-      suffix: "°C",
-    },
-    {
-      key: "SpeedLimit",
-      label: "Speed Limit",
-      description: "Overspeeding alert threshold",
-      suffix: "km/h",
-    },
-    {
-      key: "LowbatLimit",
-      label: "Low Battery Limit",
-      description: "Battery alert threshold",
-      suffix: "%",
-    },
-  ];
 
 function toStringValue(value: string | number | undefined, fallback: string) {
   if (value === undefined || value === null || value === "") {
@@ -156,7 +107,7 @@ export function IntervalsSettings({
     }
 
     try {
-      setIsLoading(true, "Updating settings...");
+      setIsLoading(true, "Updating hardware settings...");
       const payload = {
         topic: latestSettings.topic,
         NormalSendingInterval: Number(values.NormalSendingInterval),
@@ -187,60 +138,139 @@ export function IntervalsSettings({
       "border-border shadow-sm transition-opacity duration-300 bg-card rounded-xl",
       !selectedImei && "opacity-50 grayscale pointer-events-none select-none"
     )}>
-      <CardHeader className="pb-4 border-b border-border flex flex-row items-center justify-between space-y-0 bg-muted/5">
+      <CardHeader className="py-3 px-4 flex flex-col md:flex-row md:items-center justify-between gap-4 space-y-0 bg-muted/5 rounded-t-xl border-b border-border">
         <div>
-          <CardTitle className="flex items-center gap-2 text-lg font-bold">
-            <Clock className="h-5 w-5 text-primary" />
-            Reporting Intervals & Limits
+          <CardTitle className="text-sm font-black uppercase tracking-tight">
+            Intervals & Limits
           </CardTitle>
-          <CardDescription className="text-xs font-medium">
-            {!selectedImei 
-              ? "Select a device to configure intervals" 
-              : "Manage operational timing and safety limits"}
+          <CardDescription className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">
+            Telemetry timing and threshold controls
           </CardDescription>
         </div>
         <Button 
           onClick={handleSave} 
           disabled={!selectedImei}
           size="sm"
-          className="h-9 px-4 font-semibold shadow-sm"
+          className="h-10 px-6 font-black uppercase tracking-widest text-[11px] shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
         >
           <Save className="h-4 w-4 mr-2" />
-          Apply Settings
+          Apply Configuration
         </Button>
       </CardHeader>
 
-      <CardContent className="pt-6">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {intervalFields.map((field) => (
-            <div key={field.key} className="space-y-3 p-4 rounded-xl border border-border bg-muted/20 hover:border-primary/20 transition-all group">
-              <div className="flex items-center gap-3">
-                <div className="h-1.5 w-1.5 rounded-full bg-primary/40 group-hover:bg-primary transition-colors" />
-                <div>
-                  <p className="font-semibold text-sm">{field.label}</p>
-                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">
-                    {field.description}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 bg-background border border-border rounded-lg px-2 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
-                <Input
-                  disabled={!selectedImei}
-                  type="number"
-                  min="0"
-                  value={values[field.key]}
-                  onChange={(event) => handleChange(field.key, event.target.value)}
-                  className="border-0 focus-visible:ring-0 h-9 text-sm font-medium bg-transparent shadow-none"
-                />
-                <span className="text-[10px] font-bold text-muted-foreground uppercase px-2 py-1 bg-muted/50 rounded-md border border-border/50">
-                  {field.suffix}
-                </span>
-              </div>
+      <CardContent className="p-0">
+        <div className="grid grid-cols-1 lg:grid-cols-2">
+          {/* Section 1: Intervals */}
+          <div className="p-6 space-y-6 border-b lg:border-b-0 lg:border-r border-border">
+            <div className="flex items-center gap-2 mb-2">
+              <Activity className="h-4 w-4 text-primary/60" />
+              <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">Transmission Intervals</h4>
             </div>
-          ))}
+            
+            <div className="grid gap-4">
+              <SettingRow 
+                label="Normal Sending"
+                description="Regular packet transmission frequency"
+                value={values.NormalSendingInterval}
+                unit="SEC"
+                onChange={(v) => handleChange("NormalSendingInterval", v)}
+              />
+              <SettingRow 
+                label="SOS Sending"
+                description="Emergency transmission frequency"
+                value={values.SOSSendingInterval}
+                unit="SEC"
+                onChange={(v) => handleChange("SOSSendingInterval", v)}
+              />
+              <SettingRow 
+                label="Normal Scanning"
+                description="GPS location update frequency"
+                value={values.NormalScanningInterval}
+                unit="SEC"
+                onChange={(v) => handleChange("NormalScanningInterval", v)}
+              />
+              <SettingRow 
+                label="Airplane Interval"
+                description="Flight mode telemetry frequency"
+                value={values.AirplaneInterval}
+                unit="SEC"
+                onChange={(v) => handleChange("AirplaneInterval", v)}
+              />
+            </div>
+          </div>
+
+          {/* Section 2: Limits */}
+          <div className="p-6 space-y-6">
+            <div className="flex items-center gap-2 mb-2">
+              <ShieldAlert className="h-4 w-4 text-orange-500/60" />
+              <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-orange-600">Safety Thresholds</h4>
+            </div>
+
+            <div className="grid gap-4">
+              <SettingRow 
+                label="Thermal Limit"
+                description="Maximum operating temperature threshold"
+                value={values.TemperatureLimit}
+                unit="°C"
+                onChange={(v) => handleChange("TemperatureLimit", v)}
+              />
+              <SettingRow 
+                label="Speed Limit"
+                description="Movement velocity alert threshold"
+                value={values.SpeedLimit}
+                unit="KM/H"
+                onChange={(v) => handleChange("SpeedLimit", v)}
+              />
+              <SettingRow 
+                label="Critical Battery"
+                description="Power level alert threshold"
+                value={values.LowbatLimit}
+                unit="%"
+                onChange={(v) => handleChange("LowbatLimit", v)}
+              />
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function SettingRow({ 
+  label, 
+  description, 
+  value, 
+  unit, 
+  onChange 
+}: { 
+  label: string; 
+  description: string; 
+  value: string; 
+  unit: string; 
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-6 group">
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-bold uppercase tracking-tight text-foreground/90 group-hover:text-primary transition-colors">
+          {label}
+        </p>
+        <p className="text-[10px] text-muted-foreground/60 leading-tight truncate">
+          {description}
+        </p>
+      </div>
+      <div className="flex items-center gap-2 bg-muted/30 border border-border rounded-lg p-1 hover:border-primary/30 transition-all w-[120px] shrink-0">
+        <Input
+          type="number"
+          min="0"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="border-0 focus-visible:ring-0 h-7 text-xs font-mono font-bold bg-transparent shadow-none text-right"
+        />
+        <span className="text-[9px] font-black text-muted-foreground/50 pr-2 shrink-0">
+          {unit}
+        </span>
+      </div>
+    </div>
   );
 }

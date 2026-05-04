@@ -206,9 +206,9 @@ export default function GeofencingPage() {
         isSaving={isSyncing}
       />
 
-      <div className="flex flex-col lg:flex-row h-[calc(100vh-280px)] min-h-[600px] gap-6">
+      <div className="flex flex-col lg:flex-row lg:h-[calc(100vh-320px)] lg:min-h-[600px] gap-6">
         {/* Sidebar */}
-        <div className="w-full lg:w-80 shrink-0 h-[300px] lg:h-auto border border-border rounded-xl bg-card shadow-sm overflow-hidden flex flex-col">
+        <div className="w-full lg:w-80 shrink-0 h-[350px] lg:h-auto border border-border rounded-xl bg-card shadow-sm overflow-hidden flex flex-col">
           <GeofenceSidebar
             geofences={geofences}
             onSelect={(id) => setSelectedGeofenceId(id)}
@@ -221,7 +221,7 @@ export default function GeofencingPage() {
         </div>
 
         {/* View Map area */}
-        <div className="flex-1 flex flex-col min-w-0 border border-border rounded-xl bg-card shadow-sm overflow-hidden relative">
+        <div className="flex-1 flex flex-col min-w-0 h-[400px] lg:h-auto border border-border rounded-xl bg-card shadow-sm overflow-hidden relative">
           <CurrentGeofencesMap
             activeCoordinates={selectedGeofence?.coordinates || []}
             activeColor={selectedGeofence?.color}

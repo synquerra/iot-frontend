@@ -17,6 +17,7 @@ export type LatestDeviceSettingsRecord = {
   raw_LowbatLimit?: string | null;
   current_mode?: string | null;
   led_status?: string | null;
+  incoming_call_enabled?: boolean | null;
 };
 
 function extractLatestRecord(payload: unknown): LatestDeviceSettingsRecord | null {
@@ -50,6 +51,7 @@ function extractLatestRecord(payload: unknown): LatestDeviceSettingsRecord | nul
     raw_LowbatLimit: target.lowbat_limit ?? target.raw_LowbatLimit,
     current_mode: target.current_mode,
     led_status: target.led_status,
+    incoming_call_enabled: target.incoming_call_enabled,
   } as LatestDeviceSettingsRecord;
 }
 
@@ -111,5 +113,10 @@ export async function dispatchDeviceAction(payload: {
     command: payload.action,
     params: payload.params || {}
   });
+  return response.data;
+}
+
+export async function toggleIncomingCalls(payload: { imei: string; status: "Enable" | "Disable" }) {
+  const response = await api.post(`/setting/toggle-incoming-calls`, payload);
   return response.data;
 }

@@ -10,6 +10,7 @@ import {
 import {
   updateAirplaneMode,
   updateLedStatus,
+  toggleIncomingCalls,
   type LatestDeviceSettingsRecord,
 } from "@/features/device-settings/services/deviceSettingsService";
 import type { Device } from "@/features/devices/services/deviceService";
@@ -38,11 +39,43 @@ export function GeneralDeviceControls({
   const { setIsLoading } = useGlobalLoading();
   const [localLedStatus, setLocalLedStatus] = useState<string | null>(selectedDevice?.ledStatus || null);
   const [localAirplaneMode, setLocalAirplaneMode] = useState<string | null>(selectedDevice?.currentMode || null);
+  const [localIncomingCallEnabled, setLocalIncomingCallEnabled] = useState<boolean | null>(latestSettings?.incoming_call_enabled || null);
 
   useEffect(() => {
     setLocalLedStatus(selectedDevice?.ledStatus || null);
     setLocalAirplaneMode(selectedDevice?.currentMode || null);
   }, [selectedDevice?.ledStatus, selectedDevice?.currentMode]);
+
+  useEffect(() => {
+    setLocalIncomingCallEnabled(latestSettings?.incoming_call_enabled || null);
+  }, [latestSettings?.incoming_call_enabled]);
+
+  const handleToggleIncomingCalls = async (on: boolean) => {
+    if (!selectedDevice?.imei) {
+      toast.error("Device IMEI is missing.");
+      return;
+    }
+
+    try {
+      const action = on ? "Enable" : "Disable";
+      setIsLoading(true, `Command sent: ${action} Incoming Calls...`);
+      const response = await toggleIncomingCalls({
+        imei: selectedDevice.imei,
+        status: action,
+      });
+
+      if (response.status === "success") {
+        setLocalIncomingCallEnabled(on);
+        toast.success(response.message || `Incoming calls ${on ? "enabled" : "disabled"} successfully`);
+      } else {
+        toast.error(response.message || `Failed to ${on ? "enable" : "disable"} incoming calls`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleAirplaneEnable = async () => {
     if (!selectedDevice?.topic) {
@@ -107,35 +140,57 @@ export function GeneralDeviceControls({
       "border-border shadow-sm h-full flex flex-col transition-opacity duration-300 bg-card rounded-xl",
       !selectedDevice && "opacity-50 grayscale pointer-events-none"
     )}>
-      <CardHeader className="pb-4 border-b border-border flex flex-row items-center justify-between space-y-0 bg-muted/5">
+      <CardHeader className="py-3 px-4 border-b border-border flex flex-row items-center justify-between space-y-0 bg-muted/5">
         <div>
-          <CardTitle className="flex items-center gap-2 text-lg font-bold">
-            <Settings className="h-5 w-5 text-primary" />
-            Hardware Diagnostics
+          <CardTitle className="text-sm font-bold uppercase tracking-tight">
+            Core Controls
           </CardTitle>
-          <CardDescription className="text-xs font-medium">
+          <CardDescription className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">
             {!selectedDevice 
-              ? "Select a device to enable controls" 
-              : "Direct hardware command center"}
+              ? "Select device to enable" 
+              : "Direct hardware overrides"}
           </CardDescription>
         </div>
       </CardHeader>
 
       <CardContent className="p-4 md:p-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {/* Call Controls (Placeholder/Future) */}
-          <div className="space-y-4 rounded-xl border border-border p-4 bg-muted/20 opacity-40">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-background p-2 border border-border">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="font-semibold text-sm">Call Controls</p>
-                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Restricted</p>
+          {/* Incoming Calls Toggle */}
+          <div className={cn(
+            "space-y-4 rounded-xl border p-4 transition-all",
+            localIncomingCallEnabled ? "bg-primary/5 border-primary/30" : "bg-card border-border hover:border-primary/20"
+          )}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "rounded-lg p-2 border",
+                  localIncomingCallEnabled ? "bg-primary/20 border-primary/30" : "bg-muted border-border"
+                )}>
+                  <Phone className={cn("h-4 w-4", localIncomingCallEnabled ? "text-primary" : "text-muted-foreground")} />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">Incoming Calls</p>
+                  <div className="flex items-center gap-1">
+                    {localIncomingCallEnabled ? (
+                      <CheckCircle2 className="h-3 w-3 text-primary" />
+                    ) : (
+                      <XCircle className="h-3 w-3 text-muted-foreground/40" />
+                    )}
+                    <p className={cn("text-[10px] font-bold uppercase tracking-wider", localIncomingCallEnabled ? "text-primary" : "text-muted-foreground")}>
+                      {localIncomingCallEnabled ? "Enabled" : "Disabled"}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" className="h-8 text-xs font-bold" disabled>Enable</Button>
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Status</span>
+              <Switch
+                disabled={!selectedDevice}
+                checked={!!localIncomingCallEnabled}
+                onCheckedChange={handleToggleIncomingCalls}
+                className="data-[state=checked]:bg-primary"
+              />
             </div>
           </div>
 

@@ -4,35 +4,63 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Phone,
   Plane,
   Settings,
   SunMedium,
-  Radio,
-  Zap,
-  CheckCircle2,
-  XCircle,
   Square,
-  RefreshCw,
   Search,
-  FlaskConical
+  FlaskConical,
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react";
 import { useGlobalLoading } from "@/contexts/GlobalLoadingContext";
 import { toast } from "sonner";
-import { updateAirplaneMode, updateLedStatus } from "@/features/device-settings/services/deviceSettingsService";
+import { 
+  updateAirplaneMode, 
+  updateLedStatus,
+  toggleIncomingCalls
+} from "@/features/device-settings/services/deviceSettingsService";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 interface TestingActionCenterProps {
+  imei?: string | null;
   topic?: string | null;
   currentMode?: string | null;
   ledStatus?: string | null;
+  incomingCallEnabled?: boolean | null;
 }
 
-export function TestingActionCenter({ topic, currentMode, ledStatus }: TestingActionCenterProps) {
+export function TestingActionCenter({ imei, topic, currentMode, ledStatus, incomingCallEnabled }: TestingActionCenterProps) {
   const { setIsLoading } = useGlobalLoading();
+
+  const handleToggleIncomingCalls = async (on: boolean) => {
+    if (!imei) {
+      toast.error("Device IMEI is missing.");
+      return;
+    }
+    try {
+      const action = on ? "Enable" : "Disable";
+      setIsLoading(true, `${on ? "Enabling" : "Disabling"} incoming calls...`);
+      const response = await toggleIncomingCalls({ 
+        imei, 
+        status: action 
+      });
+      if (response.status === "success") {
+        toast.success(response.message || `Incoming calls ${on ? "enabled" : "disabled"}`);
+      } else {
+        toast.error(response.message || `Failed to ${on ? "enable" : "disable"} incoming calls`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleAirplaneEnable = async () => {
     if (!topic) {
@@ -81,199 +109,122 @@ export function TestingActionCenter({ topic, currentMode, ledStatus }: TestingAc
   const isLedOn = ledStatus === "SwitchOnLed" || ledStatus === "on";
 
   return (
-    <Card className="border-border shadow-sm h-full flex flex-col bg-card rounded-xl">
-      <CardHeader className="pb-4 border-b border-border flex flex-row items-center justify-between space-y-0 bg-muted/5">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-            <FlaskConical className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <CardTitle className="text-lg font-bold">Hardware Diagnostics</CardTitle>
-            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">Engineering Control Center</p>
-          </div>
+    <Card className="shadow-sm border-border overflow-hidden">
+      <CardHeader className="p-4 pb-0 flex flex-row items-center justify-between space-y-0">
+        <div className="flex items-center gap-2">
+          <FlaskConical className="h-4 w-4 text-primary" />
+          <h3 className="text-md font-bold tracking-tight">System Testing</h3>
         </div>
+        <Badge 
+          variant={topic ? "secondary" : "destructive"} 
+          className="text-[9px] font-black tracking-widest uppercase px-2 py-0.5"
+        >
+          {topic ? "Link Active" : "No Link"}
+        </Badge>
       </CardHeader>
-
-      <CardContent className="p-4 md:p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* LED Indicator */}
-          <ActionCard
-            label="LED Indicator"
-            icon={<SunMedium className="h-4 w-4" />}
+      <Separator className="mt-4" />
+      
+      <CardContent className="p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {/* LED Toggle */}
+          <TestingItem 
+            label="LED Status" 
+            icon={<SunMedium className="h-3.5 w-3.5" />} 
+            status={isLedOn ? "ON" : "OFF"}
             isActive={isLedOn}
-            statusText={isLedOn ? "Active" : "Disabled"}
           >
-            <div className="flex items-center justify-end pt-2">
-              <Switch checked={isLedOn} onCheckedChange={handleLedToggle} className="data-[state=checked]:bg-primary" />
-            </div>
-          </ActionCard>
+            <Switch checked={isLedOn} onCheckedChange={handleLedToggle} />
+          </TestingItem>
 
-          {/* Aeroplane Mode */}
-          <ActionCard
-            label="Airplane Mode"
-            icon={<Plane className="h-4 w-4" />}
+          {/* Airplane Mode */}
+          <TestingItem 
+            label="Airplane" 
+            icon={<Plane className="h-3.5 w-3.5" />} 
+            status={isAirplaneEnabled ? "ACTIVE" : "READY"}
             isActive={isAirplaneEnabled}
-            statusText={isAirplaneEnabled ? "Active" : "Ready"}
           >
-            <div className="flex items-center justify-end pt-2">
-              <Button
-                size="sm"
-                disabled={isAirplaneEnabled}
-                onClick={handleAirplaneEnable}
-                className="h-7 font-bold text-[9px] uppercase tracking-wider px-3"
-              >
-                {isAirplaneEnabled ? "Locked" : "Enable"}
-              </Button>
-            </div>
-          </ActionCard>
-
-          {/* Call Enable - DISABLED */}
-          <ActionCard
-            label="Call Enable"
-            icon={<Phone className="h-4 w-4" />}
-            isDisabled
-            statusText="Restricted"
-          >
-            <div className="flex items-center justify-end pt-2">
-              <Switch disabled className="scale-75" />
-            </div>
-          </ActionCard>
-
-          {/* Ambient - DISABLED */}
-          <ActionCard
-            label="Ambient"
-            icon={<Radio className="h-4 w-4" />}
-            isDisabled
-            statusText="Restricted"
-          >
-            <div className="flex items-center justify-end pt-2">
-              <Switch disabled className="scale-75" />
-            </div>
-          </ActionCard>
-
-          {/* GPS Enable - DISABLED */}
-          <ActionCard
-            label="GPS Service"
-            icon={<Settings className="h-4 w-4" />}
-            isDisabled
-            statusText="Restricted"
-          >
-            <div className="flex items-center justify-end pt-2">
-              <Switch disabled className="scale-75" />
-            </div>
-          </ActionCard>
-
-          {/* SMS Enable - DISABLED */}
-          <ActionCard
-            label="SMS Gateway"
-            icon={<Zap className="h-4 w-4" />}
-            isDisabled
-            statusText="Restricted"
-          >
-            <div className="flex items-center justify-end pt-2">
-              <Switch disabled className="scale-75" />
-            </div>
-          </ActionCard>
-
-          {/* Stop SOS - DISABLED */}
-          <ActionCard
-            label="Kill SOS"
-            icon={<Square className="h-4 w-4" />}
-            isDisabled
-            statusText="Restricted"
-          >
-            <Button variant="destructive" size="sm" className="w-full h-7 font-bold text-[9px] uppercase mt-2" disabled>
-              Stop SOS
+            <Button 
+              variant="outline" 
+              size="sm" 
+              disabled={isAirplaneEnabled} 
+              onClick={handleAirplaneEnable}
+              className="h-7 text-[10px] font-bold uppercase"
+            >
+              {isAirplaneEnabled ? "Locked" : "Enable"}
             </Button>
-          </ActionCard>
+          </TestingItem>
 
-          {/* RESET - DISABLED */}
-          <ActionCard
-            label="Reboot Unit"
-            icon={<RefreshCw className="h-4 w-4" />}
-            isDisabled
-            statusText="Restricted"
+          {/* Incoming Calls Toggle */}
+          <TestingItem 
+            label="Voice Link" 
+            icon={<Phone className="h-3.5 w-3.5" />} 
+            status={incomingCallEnabled ? "READY" : "LOCKED"}
+            isActive={!!incomingCallEnabled}
           >
-            <Button variant="secondary" size="sm" className="w-full h-7 font-bold text-[9px] uppercase mt-2 bg-yellow-500/10 text-yellow-600 border-none hover:bg-yellow-500/20" disabled>
-              RESET
-            </Button>
-          </ActionCard>
+            <Switch 
+              checked={!!incomingCallEnabled} 
+              onCheckedChange={handleToggleIncomingCalls} 
+            />
+          </TestingItem>
 
-          {/* Get Packet - DISABLED */}
-          <ActionCard
-            label="Query Packet"
-            icon={<Search className="h-4 w-4" />}
-            isDisabled
-            statusText="Restricted"
-          >
-            <Button variant="secondary" size="sm" className="w-full h-7 font-bold text-[9px] uppercase mt-2 bg-emerald-500/10 text-emerald-600 border-none hover:bg-emerald-500/20" disabled>
-              Pull Data
-            </Button>
-          </ActionCard>
+          <TestingItem label="GPS Sync" icon={<Settings className="h-3.5 w-3.5" />} status="LOCKED" isDisabled>
+             <Badge variant="outline" className="text-[8px] opacity-50">DISABLED</Badge>
+          </TestingItem>
 
-          {/* Stop Ambient - DISABLED */}
-          <ActionCard
-            label="Stop Ambient"
-            icon={<Radio className="h-4 w-4" />}
-            isDisabled
-            statusText="Restricted"
-          >
-            <Button variant="secondary" size="sm" className="w-full h-7 font-bold text-[9px] uppercase mt-2 bg-amber-500/10 text-amber-600 border-none hover:bg-amber-500/20" disabled>
-              Cease Mic
-            </Button>
-          </ActionCard>
+          <TestingItem label="SOS Signal" icon={<Square className="h-3.5 w-3.5" />} status="LOCKED" isDisabled>
+             <Badge variant="outline" className="text-[8px] opacity-50">DISABLED</Badge>
+          </TestingItem>
+
+          <TestingItem label="Data Query" icon={<Search className="h-3.5 w-3.5" />} status="LOCKED" isDisabled>
+             <Badge variant="outline" className="text-[8px] opacity-50">DISABLED</Badge>
+          </TestingItem>
         </div>
       </CardContent>
     </Card>
   );
 }
 
-function ActionCard({
-  label,
-  icon,
-  isActive,
-  isDisabled,
-  statusText,
-  children
-}: {
-  label: string;
-  icon: React.ReactNode;
+function TestingItem({ 
+  label, 
+  icon, 
+  status, 
+  isActive, 
+  isDisabled, 
+  children 
+}: { 
+  label: string; 
+  icon: React.ReactNode; 
+  status: string;
   isActive?: boolean;
   isDisabled?: boolean;
-  statusText: string;
   children: React.ReactNode;
 }) {
   return (
     <div className={cn(
-      "space-y-4 rounded-xl border p-4 transition-all relative overflow-hidden",
-      isActive ? "bg-primary/5 border-primary/30" : "bg-card border-border hover:border-primary/20",
-      isDisabled && "opacity-50 bg-muted/20 border-dashed"
+      "flex items-center justify-between p-3 rounded-lg border transition-all",
+      isActive ? "bg-primary/5 border-primary/20" : "bg-muted/10 border-border",
+      isDisabled && "opacity-50 grayscale border-dashed"
     )}>
       <div className="flex items-center gap-3">
         <div className={cn(
-          "rounded-lg p-2 border",
-          isActive ? "bg-primary/20 border-primary/30" : "bg-muted border-border",
-          isDisabled && "bg-muted/50 border-muted-foreground/10"
+          "h-8 w-8 rounded-md flex items-center justify-center border",
+          isActive ? "bg-primary/20 border-primary/30 text-primary" : "bg-background border-border text-muted-foreground"
         )}>
-          <div className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")}>
-            {icon}
-          </div>
+          {icon}
         </div>
-        <div>
-          <p className="font-bold text-xs">{label}</p>
+        <div className="flex flex-col">
+          <span className="text-[10px] font-bold uppercase tracking-tight leading-none mb-1">{label}</span>
           <div className="flex items-center gap-1">
-            {isActive ? (
-              <CheckCircle2 className="h-3 w-3 text-primary" />
-            ) : (
-              <XCircle className="h-3 w-3 text-muted-foreground/40" />
-            )}
-            <p className={cn("text-[9px] font-bold uppercase tracking-wider", isActive ? "text-primary" : "text-muted-foreground")}>
-              {statusText}
-            </p>
+             {isActive ? <CheckCircle2 className="h-2.5 w-2.5 text-primary" /> : <AlertCircle className="h-2.5 w-2.5 text-muted-foreground/50" />}
+             <span className={cn("text-[9px] font-black tracking-widest", isActive ? "text-primary" : "text-muted-foreground")}>
+               {status}
+             </span>
           </div>
         </div>
       </div>
-      {children}
+      <div>
+        {children}
+      </div>
     </div>
   );
 }
