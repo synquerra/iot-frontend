@@ -5,10 +5,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Smartphone, Activity, Battery, Signal, ChevronRight } from "lucide-react";
+import { Smartphone, Battery, Signal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Device } from "@/features/devices/services/deviceService";
-import { Badge } from "@/components/ui/badge";
 
 interface GeofenceDeviceHeaderProps {
   devices: Device[];
@@ -28,18 +27,10 @@ export function GeofenceDeviceHeader({
   return (
     <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-2 px-3 bg-card border border-border rounded-xl shadow-sm">
       <div className="flex items-center gap-2">
-        {/* Navigation Breadcrumb Style */}
         <div className="flex items-center gap-2 shrink-0">
           <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
             <Smartphone className="h-4 w-4 text-primary" />
           </div>
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 hidden sm:block">
-            Fleet
-          </span>
-          <ChevronRight className="h-3 w-3 text-muted-foreground/30 hidden sm:block" />
-          <span className="text-[11px] font-bold uppercase tracking-wider text-foreground/80">
-            Geofencing
-          </span>
         </div>
 
         <div className="h-6 w-px bg-border/60 mx-1 hidden md:block" />
@@ -91,13 +82,13 @@ export function GeofenceDeviceHeader({
               <div className="flex items-center gap-1">
                 <Battery className={cn(
                   "h-3 w-3",
-                  selectedDevice.battery < 20 ? "text-red-500" : "text-muted-foreground/60"
+                  Number(selectedDevice?.battery || 0) < 20 ? "text-red-500" : "text-muted-foreground/60"
                 )} />
-                <span className="text-[10px] font-mono font-bold">{selectedDevice.battery}%</span>
+                <span className="text-[10px] font-mono font-bold">{selectedDevice?.battery || 0}%</span>
               </div>
               <div className="flex items-center gap-1">
                 <Signal className="h-3 w-3 text-muted-foreground/60" />
-                <span className="text-[10px] font-mono font-bold">{selectedDevice.signal}%</span>
+                <span className="text-[10px] font-mono font-bold">{selectedDevice?.signal || 0}%</span>
               </div>
             </div>
           </div>

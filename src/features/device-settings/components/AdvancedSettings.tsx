@@ -7,7 +7,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Settings2 } from "lucide-react";
 import { featureToggleItems, powerItems, deprecatedItems } from "../constants";
 import { cn } from "@/lib/utils";
 

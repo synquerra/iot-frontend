@@ -1,6 +1,5 @@
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Smartphone, Clock, CheckCircle2, Bell } from "lucide-react";
+import { Smartphone, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { HistoryItem } from "../types";
 

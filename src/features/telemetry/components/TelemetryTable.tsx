@@ -112,6 +112,20 @@ export const columns: ColumnDef<TelemetryData>[] = [
     cell: ({ row }) => <div className="font-mono">{row.getValue("rawTemperature") || "-"}</div>,
   },
   {
+    accessorKey: "geoid",
+    header: "Geo Status",
+    cell: ({ row }) => {
+      const geoid = row.original.geoid;
+      if (geoid === "10") {
+        return <span className="text-muted-foreground font-mono italic">Not in a geofence</span>;
+      }
+      if (geoid === "11") {
+        return <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-none h-5 text-[10px] uppercase">GPS Disabled</Badge>;
+      }
+      return <div className="font-mono">{geoid ? `ID: ${geoid}` : "-"}</div>;
+    },
+  },
+  {
     accessorKey: "alert",
     header: "Alert Status",
     cell: ({ row }) => {

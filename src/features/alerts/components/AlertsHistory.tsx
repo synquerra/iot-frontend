@@ -1,8 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { AlertItem } from "./AlertItem";
 import type { HistoryItem } from "../types";
 
@@ -26,24 +26,17 @@ export function AlertsHistory({
   formatDate
 }: AlertsHistoryProps) {
   return (
-    <Card className="overflow-hidden border border-border bg-card shadow-sm rounded-xl">
-      <CardHeader className="border-b border-border bg-muted/5 p-4 sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <Card className="overflow-hidden border border-border bg-card shadow-sm rounded-2xl">
+      <CardHeader className="border-b border-border bg-muted/5 py-4 px-6">
+        <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-lg font-bold">Event Log</CardTitle>
-            <p className="text-xs font-medium text-muted-foreground mt-1">
-              {filteredItems.length} {filteredItems.length === 1 ? 'record' : 'records'} found
-            </p>
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 leading-none mb-1">Audit Stream</CardTitle>
+            <p className="text-[11px] font-bold uppercase tracking-tight text-foreground/80 leading-none">System Event Log</p>
           </div>
-
-          <div className="relative w-full lg:w-80">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
-            <Input
-              placeholder="Filter by code or message..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 border-border bg-background focus-visible:ring-1 focus-visible:ring-primary/20 text-sm font-medium"
-            />
+          <div className="flex items-center gap-2">
+             <Badge variant="outline" className="text-[9px] font-black tracking-widest px-2 py-0.5 h-5 bg-muted/30 border-border/50">
+               {filteredItems.length} Records Found
+             </Badge>
           </div>
         </div>
       </CardHeader>

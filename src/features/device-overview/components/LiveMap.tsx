@@ -1,10 +1,9 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Compass, Smartphone, ZoomIn, ZoomOut } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Compass, ZoomIn, ZoomOut } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   MapContainer,
   Marker,
@@ -111,7 +110,7 @@ interface LiveMapProps {
 }
 
 export function LiveMap({ latitude, longitude, geoid, fullScreen = false, imei, geofences = [] }: LiveMapProps) {
-  const [zoom, setZoom] = useState(14);
+  const [zoom] = useState(14);
   const navigate = useNavigate();
   const position: [number, number] = [latitude, longitude];
 
@@ -160,10 +159,16 @@ export function LiveMap({ latitude, longitude, geoid, fullScreen = false, imei, 
         <Marker position={position} icon={createDeviceMarker()}>
           <Popup className="premium-popup">
             <div className="p-2 min-w-[150px]">
-              <div className={cn("p-2.5 rounded-lg border", geoid ? "bg-primary/5 border-primary/20" : "bg-red-500/5 border-red-500/20")}>
+              <div className={cn("p-2.5 rounded-lg border", 
+                geoid === "11" ? "bg-amber-500/5 border-amber-500/20" :
+                (geoid && geoid !== "10") ? "bg-primary/5 border-primary/20" : 
+                "bg-red-500/5 border-red-500/20")}>
                 <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-1">Geofence Status</p>
-                <p className={cn("font-mono text-xs font-black", geoid ? "text-primary" : "text-red-500")}>
-                  {geoid || "OUT OF ZONE"}
+                <p className={cn("font-mono text-xs font-black", 
+                  geoid === "11" ? "text-amber-600" :
+                  (geoid && geoid !== "10") ? "text-primary" : 
+                  "text-red-500")}>
+                  {geoid === "11" ? "GPS DISABLED" : (geoid && geoid !== "10") ? `ZONE: ${geoid}` : "NOT IN GEOFENCE"}
                 </p>
               </div>
             </div>
@@ -182,12 +187,14 @@ export function LiveMap({ latitude, longitude, geoid, fullScreen = false, imei, 
           variant="outline" 
           className={cn(
             "pointer-events-auto px-4 py-2 rounded-xl border backdrop-blur-2xl shadow-2xl font-mono text-xs font-black tracking-widest uppercase transition-all",
-            geoid 
-              ? "bg-slate-950/90 text-white border-white/10 ring-1 ring-white/10" 
-              : "bg-red-500/20 text-red-400 border-red-500/30"
+            geoid === "11"
+              ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+              : (geoid && geoid !== "10")
+                ? "bg-slate-950/90 text-white border-white/10 ring-1 ring-white/10" 
+                : "bg-red-500/20 text-red-400 border-red-500/30"
           )}
         >
-          {geoid || "NO GEOFENCE LOCK"}
+          {geoid === "11" ? "GPS DISABLED" : (geoid && geoid !== "10") ? `ZONE: ${geoid}` : "NOT IN GEOFENCE"}
         </Badge>
       </div>
 

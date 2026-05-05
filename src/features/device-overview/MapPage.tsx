@@ -19,7 +19,7 @@ export default function MapPage() {
   const { device, isLoading: isOverviewLoading } = useDeviceOverview(imei ?? "");
   
   // Use live location for high-frequency polling
-  const { location, isLoading: isLocationLoading, error } = useLiveLocation(imei ?? "", 3000);
+  const { location, error } = useLiveLocation(imei ?? "", 3000);
 
   const [geofences, setGeofences] = useState<GeofenceRecord[]>([]);
 

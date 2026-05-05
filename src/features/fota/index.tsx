@@ -1,15 +1,13 @@
 import { useEffect, useState } from "react";
 import { 
-  Cpu, 
   Download, 
   History, 
-  Info, 
   RefreshCw, 
   Package,
   Calendar,
-  FileCode,
   Plus,
-  Edit2
+  Edit2,
+  Search
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -34,6 +32,7 @@ export default function FotaPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUpdate, setEditingUpdate] = useState<FotaUpdate | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchUpdates = async () => {
     try {
@@ -59,36 +58,65 @@ export default function FotaPage() {
     return (size / (1024 * 1024)).toFixed(2) + " MB";
   };
 
+  const filteredUpdates = updates.filter(u => 
+    u.version_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.version_code.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Header section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-lg font-black tracking-tight uppercase">FOTA Registry</h1>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-            Operational firmware lifecycle management
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button 
-            onClick={fetchUpdates} 
-            disabled={isLoading}
-            variant="outline"
-            className="font-bold gap-2"
-          >
-            <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
-            Refresh
-          </Button>
-          <Button 
-            onClick={() => {
-              setEditingUpdate(null);
-              setIsFormOpen(true);
-            }}
-            className="font-bold gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Add Firmware
-          </Button>
+      {/* Unified Control Card */}
+      <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-top-2 duration-500">
+        <div className="p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6">
+          {/* Left: Branding & Context */}
+          <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+            <div className="shrink-0 flex items-center gap-3 px-1">
+               <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
+                  <Package className="h-4 w-4 text-primary" />
+               </div>
+               <div>
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 leading-none mb-1">Firmware Ops</h3>
+                  <p className="text-[11px] font-bold uppercase tracking-tight text-foreground/80 leading-none">FOTA Registry</p>
+               </div>
+            </div>
+
+            <div className="h-8 w-px bg-border/60 mx-2 hidden sm:block" />
+
+            {/* Version Search */}
+            <div className="relative group flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
+              <input 
+                placeholder="Search versions or build codes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 h-9 text-xs font-bold bg-muted/20 border border-border/50 focus:bg-background focus:ring-1 focus:ring-primary/20 transition-all rounded-xl outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Right: Primary Actions */}
+          <div className="flex items-center gap-2">
+            <Button 
+              onClick={fetchUpdates} 
+              disabled={isLoading}
+              variant="outline"
+              className="h-9 px-4 font-black uppercase tracking-widest text-[9px] gap-2 rounded-xl border-border/50 bg-background hover:bg-muted/50"
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", isLoading && "animate-spin text-primary")} />
+              {isLoading ? "Fetching" : "Sync Registry"}
+            </Button>
+            
+            <Button 
+              onClick={() => {
+                setEditingUpdate(null);
+                setIsFormOpen(true);
+              }}
+              className="h-9 px-4 font-black uppercase tracking-widest text-[9px] gap-2 rounded-xl shadow-lg bg-primary hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Firmware
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -108,7 +136,7 @@ export default function FotaPage() {
                   <Skeleton key={i} className="h-12 w-full rounded-lg" />
                 ))}
               </div>
-            ) : updates.length > 0 ? (
+            ) : filteredUpdates.length > 0 ? (
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
@@ -121,7 +149,7 @@ export default function FotaPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {updates.map((update) => (
+                    {filteredUpdates.map((update) => (
                       <TableRow key={update.id} className="hover:bg-muted/30 transition-colors">
                         <TableCell>
                           <div className="flex items-center gap-2">

@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Terminal, Send, Trash2, History, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -20,7 +19,6 @@ export function TestingResultsConsole({ imei }: TestingResultsConsoleProps) {
   const [messages, setMessages] = useState<RawMqttMessage[]>([]);
   const [command, setCommand] = useState("");
   const [sessionCommands, setSessionCommands] = useState<Array<{ text: string; time: string }>>([]);
-  const [isLive, setIsLive] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<any>(null);
 
@@ -29,8 +27,7 @@ export function TestingResultsConsole({ imei }: TestingResultsConsoleProps) {
 
     const fetchLatest = async (isInitial = false) => {
       try {
-        const response = await getRawMessages(imei, 0, isInitial ? 5 : 10);
-        // Show new responses on top (assuming API returns latest first)
+        const response = await getRawMessages(imei, 0, isInitial ? 5 : 15);
         setMessages(response.messages);
       } catch (error) {
         console.error("Polling error:", error);
@@ -38,7 +35,7 @@ export function TestingResultsConsole({ imei }: TestingResultsConsoleProps) {
     };
 
     fetchLatest(true);
-    pollingRef.current = setInterval(() => fetchLatest(false), 1000);
+    pollingRef.current = setInterval(() => fetchLatest(false), 1500);
 
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
@@ -56,7 +53,6 @@ export function TestingResultsConsole({ imei }: TestingResultsConsoleProps) {
 
     try {
       setIsLoading(true, "Publishing test packet...");
-
       let payload;
       try {
         payload = JSON.parse(command);
@@ -86,131 +82,150 @@ export function TestingResultsConsole({ imei }: TestingResultsConsoleProps) {
   const useHistoryCommand = (cmd: string) => setCommand(cmd);
 
   return (
-    <div className="flex flex-col h-full border rounded-lg bg-background">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b">
-        <div className="flex items-center gap-2">
-          <Terminal className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Packet Stream</span>
-          <Badge variant="outline" className="text-xs">
-            Live
-          </Badge>
+    <div className="flex flex-col h-[600px] border border-border/60 rounded-2xl bg-card shadow-lg overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* High-Density Header */}
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 bg-muted/5">
+        <div className="flex items-center gap-4">
+           <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+              <Terminal className="h-4 w-4 text-primary" />
+           </div>
+           <div>
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 leading-none mb-1">Telemetry Stream</h3>
+              <div className="flex items-center gap-2">
+                 <p className="text-[11px] font-black uppercase tracking-tight text-foreground/80 leading-none">Packet Stream Console</p>
+                 <Badge variant="outline" className="h-4 px-1.5 text-[8px] font-black uppercase tracking-widest border-emerald-500/20 text-emerald-600 bg-emerald-500/5 animate-pulse">
+                    Live
+                 </Badge>
+              </div>
+           </div>
         </div>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="sm" onClick={handleClear}>
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Clear console</TooltipContent>
-        </Tooltip>
+
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="hidden sm:flex text-[9px] font-mono font-bold tracking-widest px-2 py-0.5 bg-muted/30 border-border/50">
+             {messages.length} Packets Captured
+          </Badge>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleClear}
+                className="h-9 w-9 rounded-xl hover:bg-destructive/10 hover:text-destructive text-muted-foreground/40 transition-all"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="text-[10px] font-bold uppercase tracking-widest">Clear Buffer</TooltipContent>
+          </Tooltip>
+        </div>
       </div>
 
       {/* Main Content - Grid Layout */}
-      <div className="grid grid-cols-3 flex-1 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-12 flex-1 min-h-0">
         {/* Messages Panel */}
-        <div className="col-span-2 border-r flex flex-col min-h-0">
-          <div className="px-4 py-2 border-b bg-muted/20">
-            <span className="text-xs font-mono text-muted-foreground">
-              {messages.length} message{messages.length !== 1 ? 's' : ''}
-            </span>
-          </div>
-
+        <div className="lg:col-span-8 border-r border-border/50 flex flex-col min-h-0 bg-background">
           <ScrollArea className="flex-1" ref={scrollRef}>
-            <div className="space-y-0 p-2">
+            <div className="p-3 space-y-3">
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className="group border-b last:border-0 px-2 py-2 hover:bg-muted/20 transition-colors"
+                  className="group border border-border/40 rounded-xl bg-card shadow-sm px-4 py-3 hover:border-primary/20 transition-all duration-200"
                 >
-                  <div className="flex items-start gap-2">
-                    <span className="text-[11px] font-mono text-muted-foreground shrink-0">
-                      {new Date(msg.received_at).toLocaleTimeString([], { hour12: false })}
-                    </span>
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant="secondary"
-                          className={cn(
-                            "text-[10px] font-mono px-1.5",
-                            msg.message_type === "json" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                          )}
-                        >
-                          {msg.message_type}
-                        </Badge>
-                        <span className="text-[11px] font-mono text-muted-foreground truncate">
-                          {msg.topic}
+                  <div className="flex items-start gap-4">
+                    <div className="flex flex-col items-center gap-1 shrink-0 pt-0.5">
+                       <span className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-tighter">
+                         {new Date(msg.received_at).toLocaleTimeString([], { hour12: false, second: '2-digit' })}
+                       </span>
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              "text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md",
+                              msg.message_type === "json" 
+                                ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" 
+                                : "bg-muted text-muted-foreground"
+                            )}
+                          >
+                            {msg.message_type}
+                          </Badge>
+                          <span className="text-[11px] font-mono font-semibold text-foreground/70 truncate tracking-tight">
+                            {msg.topic}
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-mono text-muted-foreground/50 group-hover:text-primary/60 transition-colors uppercase font-bold">
+                          ID: {msg.id.slice(-6)}
                         </span>
                       </div>
-                      <pre className="text-xs font-mono whitespace-pre-wrap break-all text-foreground/80">
-                        {msg.payload_text}
-                      </pre>
+                      <div className="bg-slate-950 rounded-lg p-3 border border-slate-800 shadow-inner overflow-x-auto">
+                        <pre className="text-[12px] font-mono whitespace-pre-wrap break-all text-emerald-400 leading-relaxed">
+                          {msg.payload_text}
+                        </pre>
+                      </div>
                     </div>
                   </div>
                 </div>
               ))}
 
               {messages.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <Terminal className="h-8 w-8 mb-2 opacity-20" />
-                  <p className="text-xs">No messages received</p>
-                  <p className="text-[10px]">Waiting for device connection...</p>
+                <div className="flex flex-col items-center justify-center py-24 text-muted-foreground space-y-4">
+                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center border border-dashed border-border">
+                    <Terminal className="h-8 w-8 opacity-40" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-bold tracking-tight">Listening for Packets</p>
+                    <p className="text-xs text-muted-foreground">Waiting for MQTT handshake...</p>
+                  </div>
                 </div>
               )}
             </div>
           </ScrollArea>
-
-          {!isLive && messages.length > 0 && (
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setIsLive(true);
-                  if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-                }}
-              >
-                Scroll to bottom
-              </Button>
-            </div>
-          )}
         </div>
 
         {/* Command Panel */}
-        <div className="flex flex-col min-h-0">
+        <div className="lg:col-span-4 flex flex-col min-h-0 bg-muted/10">
           {/* Command Input */}
-          <div className="p-3 border-b space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-medium">Send Command</label>
-              <span className="text-[10px] font-mono text-muted-foreground">JSON or string</span>
+          <div className="p-5 border-b border-border/50 space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Packet Injector</label>
+              <Badge variant="outline" className="text-[9px] font-bold tracking-wider uppercase">JSON Schema</Badge>
             </div>
-            <Textarea
-              placeholder='{"command": "get_status"}'
-              className="font-mono text-xs min-h-[80px] resize-none"
-              value={command}
-              onChange={(e) => setCommand(e.target.value)}
-            />
+            <div className="relative">
+              <Textarea
+                placeholder='{"action": "ping", "timestamp": "now"}'
+                className="font-mono text-xs min-h-[120px] resize-none bg-background border-border shadow-sm rounded-xl focus:ring-1 focus:ring-primary/20 transition-all p-4"
+                value={command}
+                onChange={(e) => setCommand(e.target.value)}
+              />
+              <div className="absolute top-3 right-3 h-2 w-2 rounded-full bg-emerald-500/40 animate-pulse" />
+            </div>
             <Button
               onClick={handleSendManual}
-              size="sm"
-              className="w-full gap-2"
+              size="lg"
+              className={cn(
+                "w-full gap-3 font-black uppercase tracking-[0.2em] text-[10px] h-12 rounded-xl transition-all shadow-lg",
+                command.trim() ? "bg-primary hover:shadow-primary/30" : "bg-muted text-muted-foreground"
+              )}
               disabled={!command.trim()}
             >
               <Send className="h-3.5 w-3.5" />
-              Execute
+              Inject Packet
             </Button>
           </div>
 
-          <Separator />
-
           {/* Command History */}
-          <div className="flex-1 flex flex-col min-h-0 p-3">
-            <div className="flex items-center gap-2 mb-3">
-              <History className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs font-medium">History</span>
-              <span className="text-[10px] text-muted-foreground">
-                ({sessionCommands.length})
-              </span>
+          <div className="flex-1 flex flex-col min-h-0 p-5">
+            <div className="flex items-center justify-between mb-4 px-1">
+              <div className="flex items-center gap-2">
+                <History className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Session History</span>
+              </div>
+              <Badge variant="secondary" className="text-[10px] font-bold h-5 px-2 rounded-md">
+                {sessionCommands.length}
+              </Badge>
             </div>
 
             <ScrollArea className="flex-1">
@@ -219,24 +234,25 @@ export function TestingResultsConsole({ imei }: TestingResultsConsoleProps) {
                   <button
                     key={i}
                     onClick={() => useHistoryCommand(cmd.text)}
-                    className="w-full text-left p-2 rounded border bg-muted/10 hover:bg-muted/20 transition-colors group"
+                    className="w-full text-left p-3 rounded-xl border border-border bg-card shadow-sm hover:border-primary/30 transition-all group relative overflow-hidden"
                   >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] font-mono text-muted-foreground">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-mono font-bold text-muted-foreground uppercase">
                         {cmd.time}
                       </span>
-                      <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <ChevronRight className="h-4 w-4 text-primary opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
                     </div>
-                    <code className="text-[11px] font-mono truncate block">
+                    <code className="text-xs font-mono text-foreground truncate block group-hover:text-primary transition-colors">
                       {cmd.text}
                     </code>
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary opacity-0 group-hover:opacity-100 transition-all" />
                   </button>
                 ))}
 
                 {sessionCommands.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p className="text-xs">No commands sent</p>
-                    <p className="text-[10px] mt-1">Commands will appear here</p>
+                  <div className="text-center py-12 text-muted-foreground space-y-2">
+                    <p className="text-sm font-bold tracking-tight">No Buffer</p>
+                    <p className="text-xs text-muted-foreground">Waiting for injection...</p>
                   </div>
                 )}
               </div>

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FotaUpdate } from "../types";
+import type { FotaUpdate } from "../types";
 import { createFotaUpdate, editFotaUpdate } from "../services/fotaService";
 import { toast } from "sonner";
 import { RefreshCw, PackagePlus, Edit3, FileUp } from "lucide-react";

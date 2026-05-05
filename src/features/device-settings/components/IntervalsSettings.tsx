@@ -12,11 +12,10 @@ import {
   type LatestDeviceSettingsRecord,
 } from "@/features/device-settings/services/deviceSettingsService";
 import { useGlobalLoading } from "@/contexts/GlobalLoadingContext";
-import { Clock, Save, ShieldAlert, Activity } from "lucide-react";
+import { Save, ShieldAlert, Activity } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Separator } from "@/components/ui/separator";
 
 type DeviceSettingsFormState = {
   NormalSendingInterval: string;

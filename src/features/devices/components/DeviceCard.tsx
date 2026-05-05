@@ -330,8 +330,13 @@ export function DeviceCard({
             <div className="col-span-2 flex flex-wrap items-center gap-1 mt-1">
               <Cpu className="h-3 w-3 text-muted-foreground" />
               {device.geoid && (
-                <span className="rounded border border-border bg-muted text-muted-foreground px-1.5 py-0.5 text-xs font-mono">
-                  geo:{device.geoid}
+                <span className={cn(
+                  "rounded border px-1.5 py-0.5 text-xs font-mono font-bold uppercase tracking-tight",
+                  device.geoid === "10" && "bg-slate-100 text-slate-500 border-slate-200",
+                  device.geoid === "11" && "bg-amber-100 text-amber-700 border-amber-200",
+                  device.geoid !== "10" && device.geoid !== "11" && "bg-muted text-muted-foreground border-border"
+                )}>
+                  {device.geoid === "10" ? "No Geofence" : device.geoid === "11" ? "GPS Disabled" : `Geo: ${device.geoid}`}
                 </span>
               )}
 

@@ -6,11 +6,9 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { DeviceSettingsHeader } from "./components/DeviceSettingsHeader";
-import { DeviceSettingsTargetDeviceCard } from "./components/DeviceSettingsTargetDeviceCard";
+import { UnifiedDeviceHeader } from "./components/UnifiedDeviceHeader";
 import { AdvancedSettings } from "./components/AdvancedSettings";
 import { CommunicationSettings } from "./components/CommunicationSettings";
-import { AmbientListeningCard } from "./components/AmbientListeningCard";
 import { IntervalsSettings } from "./components/IntervalsSettings";
 import { GeneralDeviceControls } from "./components/GeneralDeviceControls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -101,10 +99,7 @@ export default function DeviceSettings() {
   return (
     <div className="w-full bg-background">
       <div className="space-y-6">
-        <DeviceSettingsHeader 
-          currentMode={selectedDevice?.currentMode} 
-        />
-        <DeviceSettingsTargetDeviceCard
+        <UnifiedDeviceHeader
           routeImei={routeImei}
           devices={devices}
           selectedImei={selectedImei}
@@ -120,10 +115,9 @@ export default function DeviceSettings() {
         />
         
         <Tabs defaultValue="intervals" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 bg-muted/50 h-auto p-1 gap-1">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 bg-muted/50 h-auto p-1 gap-1">
             <TabsTrigger value="intervals" className="py-2.5 font-bold data-[state=active]:shadow-md">Time & Alerts</TabsTrigger>
             <TabsTrigger value="communication" className="py-2.5 font-bold data-[state=active]:shadow-md">Contacts</TabsTrigger>
-            <TabsTrigger value="ambient" className="py-2.5 font-bold data-[state=active]:shadow-md">Ambient Listening</TabsTrigger>
             <TabsTrigger value="advanced" className="py-2.5 font-bold data-[state=active]:shadow-md">Advanced</TabsTrigger>
           </TabsList>
           
@@ -140,10 +134,6 @@ export default function DeviceSettings() {
               selectedImei={selectedImei}
               latestSettings={latestSettings}
             />
-          </TabsContent>
-
-          <TabsContent value="ambient" className="mt-6">
-            <AmbientListeningCard selectedImei={selectedImei} />
           </TabsContent>
 
           <TabsContent value="advanced" className="mt-6">

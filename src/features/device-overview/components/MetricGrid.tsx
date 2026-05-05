@@ -150,11 +150,13 @@ export function MetricsGrid({
           <div className="absolute bottom-3 right-3 z-[1000]">
             <span className={cn(
               "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-xl border transition-all group-hover:scale-105",
-              geoid
-                ? "bg-primary text-white border-primary"
-                : "bg-red-600 text-white border-red-700 dark:bg-red-500 dark:border-red-600"
+              geoid === "11" 
+                ? "bg-amber-600 text-white border-amber-700"
+                : (geoid && geoid !== "10")
+                  ? "bg-primary text-white border-primary"
+                  : "bg-red-600 text-white border-red-700 dark:bg-red-500 dark:border-red-600"
             )}>
-              {geoid ? `ZONE: ${geoid}` : "NO GEOFENCE"}
+              {geoid === "11" ? "GPS DISABLED" : (geoid && geoid !== "10") ? `ZONE: ${geoid}` : "NOT IN GEOFENCE"}
             </span>
           </div>
           

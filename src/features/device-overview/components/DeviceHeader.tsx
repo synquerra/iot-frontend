@@ -53,9 +53,6 @@ export function DeviceHeader({
             </div>
             <div className="flex flex-col gap-1.5 pt-1">
               <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-                  {name || "Device Overview"}
-                </h1>
                 <Badge 
                   variant={status === "Online" ? "default" : "secondary"}
                   className={cn(

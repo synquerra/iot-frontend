@@ -3,14 +3,12 @@ import { Switch } from "@/components/ui/switch";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   updateAirplaneMode,
   updateLedStatus,
   toggleIncomingCalls,
+  toggleAmbientListening,
   type LatestDeviceSettingsRecord,
 } from "@/features/device-settings/services/deviceSettingsService";
 import type { Device } from "@/features/devices/services/deviceService";
@@ -19,11 +17,11 @@ import { cn } from "@/lib/utils";
 import {
   Phone,
   Plane,
-  Settings,
   SunMedium,
-  CheckCircle2,
-  XCircle,
+  Mic,
+  StopCircle
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 
@@ -40,6 +38,11 @@ export function GeneralDeviceControls({
   const [localLedStatus, setLocalLedStatus] = useState<string | null>(selectedDevice?.ledStatus || null);
   const [localAirplaneMode, setLocalAirplaneMode] = useState<string | null>(selectedDevice?.currentMode || null);
   const [localIncomingCallEnabled, setLocalIncomingCallEnabled] = useState<boolean | null>(latestSettings?.incoming_call_enabled || null);
+  const [localAmbientStatus, setLocalAmbientStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLocalAmbientStatus(null);
+  }, [latestSettings?.ambient_listening_status]);
 
   useEffect(() => {
     setLocalLedStatus(selectedDevice?.ledStatus || null);
@@ -132,150 +135,181 @@ export function GeneralDeviceControls({
     }
   };
 
+  const handleToggleAmbient = async (status: "Enable" | "Disable" | "Stop") => {
+    if (!selectedDevice?.imei) {
+      toast.error("Device IMEI is missing.");
+      return;
+    }
+    try {
+      setIsLoading(true, `Requesting ambient listening ${status}...`);
+      const response = await toggleAmbientListening({ 
+        imei: selectedDevice.imei, 
+        status 
+      });
+      if (response.status === "success") {
+        toast.success(response.message || `Ambient listening ${status} requested`);
+        if (response.data?.status) {
+          setLocalAmbientStatus(response.data.status);
+        }
+      } else {
+        toast.error(response.message || `Failed to ${status} ambient listening`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const isAirplaneEnabled = localAirplaneMode === "Airplane" || localAirplaneMode === "AirplaneMode" || selectedDevice?.currentMode === "Airplane";
   const isLedOn = localLedStatus === "SwitchOnLed" || localLedStatus === "on";
+  const ambientListeningStatus = localAmbientStatus ?? latestSettings?.ambient_listening_status;
+  const isListening = ambientListeningStatus === "Enable";
 
   return (
-    <Card className={cn(
-      "border-border shadow-sm h-full flex flex-col transition-opacity duration-300 bg-card rounded-xl",
+    <div className={cn(
+      "grid gap-4 sm:grid-cols-2 lg:grid-cols-4",
       !selectedDevice && "opacity-50 grayscale pointer-events-none"
     )}>
-      <CardHeader className="py-3 px-4 border-b border-border flex flex-row items-center justify-between space-y-0 bg-muted/5">
-        <div>
-          <CardTitle className="text-sm font-bold uppercase tracking-tight">
-            Core Controls
-          </CardTitle>
-          <CardDescription className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">
-            {!selectedDevice 
-              ? "Select device to enable" 
-              : "Direct hardware overrides"}
-          </CardDescription>
-        </div>
-      </CardHeader>
-
-      <CardContent className="p-4 md:p-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {/* Incoming Calls Toggle */}
-          <div className={cn(
-            "space-y-4 rounded-xl border p-4 transition-all",
-            localIncomingCallEnabled ? "bg-primary/5 border-primary/30" : "bg-card border-border hover:border-primary/20"
-          )}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  "rounded-lg p-2 border",
-                  localIncomingCallEnabled ? "bg-primary/20 border-primary/30" : "bg-muted border-border"
-                )}>
-                  <Phone className={cn("h-4 w-4", localIncomingCallEnabled ? "text-primary" : "text-muted-foreground")} />
-                </div>
-                <div>
-                  <p className="font-semibold text-sm">Incoming Calls</p>
-                  <div className="flex items-center gap-1">
-                    {localIncomingCallEnabled ? (
-                      <CheckCircle2 className="h-3 w-3 text-primary" />
-                    ) : (
-                      <XCircle className="h-3 w-3 text-muted-foreground/40" />
-                    )}
-                    <p className={cn("text-[10px] font-bold uppercase tracking-wider", localIncomingCallEnabled ? "text-primary" : "text-muted-foreground")}>
-                      {localIncomingCallEnabled ? "Enabled" : "Disabled"}
-                    </p>
-                  </div>
-                </div>
+      {/* Incoming Calls Card */}
+      <Card className={cn(
+        "border transition-all duration-300",
+        localIncomingCallEnabled ? "bg-primary/5 border-primary/30" : "bg-card border-border shadow-sm"
+      )}>
+        <CardContent className="p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "rounded-lg p-2 border",
+                localIncomingCallEnabled ? "bg-primary/20 border-primary/30" : "bg-muted border-border"
+              )}>
+                <Phone className={cn("h-4 w-4", localIncomingCallEnabled ? "text-primary" : "text-muted-foreground")} />
+              </div>
+              <div>
+                <p className="font-bold text-sm tracking-tight">Incoming Calls</p>
+                <Badge variant={localIncomingCallEnabled ? "default" : "outline"} className="text-[8px] font-black tracking-widest px-1 py-0 h-4">
+                  {localIncomingCallEnabled ? "ACTIVE" : "LOCKED"}
+                </Badge>
               </div>
             </div>
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Status</span>
-              <Switch
-                disabled={!selectedDevice}
-                checked={!!localIncomingCallEnabled}
-                onCheckedChange={handleToggleIncomingCalls}
-                className="data-[state=checked]:bg-primary"
-              />
-            </div>
+            <Switch
+              disabled={!selectedDevice}
+              checked={!!localIncomingCallEnabled}
+              onCheckedChange={handleToggleIncomingCalls}
+            />
           </div>
+          <p className="text-[10px] text-muted-foreground leading-tight">Allow or block incoming calls to the device.</p>
+        </CardContent>
+      </Card>
 
-          {/* Airplane Mode */}
-          <div className={cn(
-            "space-y-4 rounded-xl border p-4 transition-all",
-            isAirplaneEnabled ? "bg-primary/5 border-primary/30" : "bg-card border-border hover:border-primary/20"
-          )}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  "rounded-lg p-2 border",
-                  isAirplaneEnabled ? "bg-primary/20 border-primary/30" : "bg-muted border-border"
-                )}>
-                  <Plane className={cn("h-4 w-4", isAirplaneEnabled ? "text-primary" : "text-muted-foreground")} />
-                </div>
-                <div>
-                  <p className="font-semibold text-sm">Airplane Mode</p>
-                  <div className="flex items-center gap-1">
-                    {isAirplaneEnabled ? (
-                      <CheckCircle2 className="h-3 w-3 text-primary" />
-                    ) : (
-                      <XCircle className="h-3 w-3 text-muted-foreground/40" />
-                    )}
-                    <p className={cn("text-[10px] font-bold uppercase tracking-wider", isAirplaneEnabled ? "text-primary" : "text-muted-foreground")}>
-                      {isAirplaneEnabled ? "Active" : "Inactive"}
-                    </p>
-                  </div>
+      {/* Airplane Mode Card */}
+      <Card className={cn(
+        "border transition-all duration-300",
+        isAirplaneEnabled ? "bg-primary/5 border-primary/30" : "bg-card border-border shadow-sm"
+      )}>
+        <CardContent className="p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "rounded-lg p-2 border",
+                isAirplaneEnabled ? "bg-primary/20 border-primary/30" : "bg-muted border-border"
+              )}>
+                <Plane className={cn("h-4 w-4", isAirplaneEnabled ? "text-primary" : "text-muted-foreground")} />
+              </div>
+              <div>
+                <p className="font-bold text-sm tracking-tight">Flight Mode</p>
+                <Badge variant={isAirplaneEnabled ? "default" : "outline"} className="text-[8px] font-black tracking-widest px-1 py-0 h-4">
+                  {isAirplaneEnabled ? "ACTIVE" : "READY"}
+                </Badge>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant={isAirplaneEnabled ? "outline" : "default"}
+              disabled={!selectedDevice || isAirplaneEnabled}
+              onClick={handleAirplaneEnable}
+              className="h-7 font-black text-[9px] uppercase px-3"
+            >
+              {isAirplaneEnabled ? "Locked" : "Enable"}
+            </Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground leading-tight">Deactivate cellular radio for specific transit modes.</p>
+        </CardContent>
+      </Card>
+
+      {/* LED Card */}
+      <Card className={cn(
+        "border transition-all duration-300",
+        isLedOn ? "bg-primary/5 border-primary/30" : "bg-card border-border shadow-sm"
+      )}>
+        <CardContent className="p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "rounded-lg p-2 border",
+                isLedOn ? "bg-primary/20 border-primary/30" : "bg-muted border-border"
+              )}>
+                <SunMedium className={cn("h-4 w-4", isLedOn ? "text-primary" : "text-muted-foreground")} />
+              </div>
+              <div>
+                <p className="font-bold text-sm tracking-tight">LED</p>
+              </div>
+            </div>
+            <Switch
+              disabled={!selectedDevice}
+              checked={isLedOn}
+              onCheckedChange={handleLedToggle}
+            />
+          </div>
+          <p className="text-[10px] text-muted-foreground leading-tight">Control the device status LED for stealth or signaling.</p>
+        </CardContent>
+      </Card>
+
+      {/* Ambient Listening Card */}
+      <Card className={cn(
+        "border transition-all duration-300",
+        isListening ? "bg-primary/5 border-primary/30" : "bg-card border-border shadow-sm"
+      )}>
+        <CardContent className="p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "rounded-lg p-2 border",
+                isListening ? "bg-primary/20 border-primary/30 text-primary animate-pulse" : "bg-muted border-border"
+              )}>
+                <Mic className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-bold text-sm tracking-tight">Audio Monitor</p>
+                <div className="flex items-center gap-1.5">
+                   <Badge variant={isListening ? "default" : "outline"} className="text-[8px] font-black tracking-widest px-1 py-0 h-4">
+                     {ambientListeningStatus || "READY"}
+                   </Badge>
+                   {isListening && <div className="h-1.5 w-1.5 rounded-full bg-primary animate-ping" />}
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Status</span>
-              <Button
-                size="sm"
-                variant={isAirplaneEnabled ? "outline" : "default"}
-                disabled={!selectedDevice || isAirplaneEnabled}
-                onClick={handleAirplaneEnable}
-                className="h-8 font-bold text-[10px] uppercase tracking-wider px-4"
+            <div className="flex items-center gap-1.5">
+               <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10 disabled:opacity-30"
+                onClick={() => handleToggleAmbient("Stop")}
+                disabled={ambientListeningStatus === "Stop"}
+                title="Stop Monitoring"
               >
-                {isAirplaneEnabled ? "Active" : "Enable"}
+                <StopCircle className="h-4 w-4" />
               </Button>
-            </div>
-          </div>
-
-          {/* LED Controls */}
-          <div className={cn(
-            "space-y-4 rounded-xl border p-4 transition-all",
-            isLedOn ? "bg-primary/5 border-primary/30" : "bg-card border-border hover:border-primary/20"
-          )}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  "rounded-lg p-2 border",
-                  isLedOn ? "bg-primary/20 border-primary/30" : "bg-muted border-border"
-                )}>
-                  <SunMedium className={cn("h-4 w-4", isLedOn ? "text-primary" : "text-muted-foreground")} />
-                </div>
-                <div>
-                  <p className="font-semibold text-sm">LED Indicator</p>
-                  <div className="flex items-center gap-1">
-                    {isLedOn ? (
-                      <CheckCircle2 className="h-3 w-3 text-primary" />
-                    ) : (
-                      <XCircle className="h-3 w-3 text-muted-foreground/40" />
-                    )}
-                    <p className={cn("text-[10px] font-bold uppercase tracking-wider", isLedOn ? "text-primary" : "text-muted-foreground")}>
-                      {isLedOn ? "Active" : "Disabled"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Toggle</span>
               <Switch
                 disabled={!selectedDevice}
-                checked={isLedOn}
-                onCheckedChange={handleLedToggle}
-                className="data-[state=checked]:bg-primary"
+                checked={isListening}
+                onCheckedChange={(on) => handleToggleAmbient(on ? "Enable" : "Disable")}
               />
             </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+          <p className="text-[10px] text-muted-foreground leading-tight">Continuous voice recording & streaming diagnostics.</p>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

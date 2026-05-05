@@ -6,8 +6,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { DeviceSettingsHeader } from "@/features/device-settings/components/DeviceSettingsHeader";
-import { DeviceSettingsTargetDeviceCard } from "@/features/device-settings/components/DeviceSettingsTargetDeviceCard";
+import { UnifiedDeviceHeader } from "@/features/device-settings/components/UnifiedDeviceHeader";
 import { CompactIntervals } from "./components/CompactIntervals";
 import { CompactContacts } from "./components/CompactContacts";
 import { TestingResultsConsole } from "./components/TestingResultsConsole";
@@ -72,12 +71,7 @@ export default function DeviceTesting() {
   return (
     <div className="w-full bg-background pb-10">
       <div className="space-y-6  mx-auto">
-        <DeviceSettingsHeader
-          title="Device Testing Dashboard"
-          currentMode={selectedDevice?.currentMode}
-        />
-
-        <DeviceSettingsTargetDeviceCard
+        <UnifiedDeviceHeader
           routeImei={routeImei}
           devices={devices}
           selectedImei={selectedImei}
@@ -117,6 +111,7 @@ export default function DeviceTesting() {
             currentMode={selectedDevice?.currentMode}
             ledStatus={selectedDevice?.ledStatus}
             incomingCallEnabled={latestSettings?.incoming_call_enabled}
+            ambientListeningStatus={latestSettings?.ambient_listening_status}
           />
         </div>
         {/* Unified Results Console */}
