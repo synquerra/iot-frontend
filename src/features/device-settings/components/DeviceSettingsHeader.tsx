@@ -9,11 +9,11 @@ export function DeviceSettingsHeader({ title = "Device Settings", currentMode }:
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="text-lg font-bold tracking-tight text-foreground uppercase">
           {title}
         </h1>
-        <p className="mt-1 text-muted-foreground text-sm">
-          Configure and manage your device parameters
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+          Operational Control Panel
         </p>
       </div>
       <div className="flex items-center gap-2">

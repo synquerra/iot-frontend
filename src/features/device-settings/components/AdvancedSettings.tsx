@@ -7,7 +7,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Settings2 } from "lucide-react";
 import { featureToggleItems, powerItems, deprecatedItems } from "../constants";
 import { cn } from "@/lib/utils";
 
@@ -25,15 +24,14 @@ export function AdvancedSettings({ selectedImei }: AdvancedSettingsProps) {
       "border-primary/10 shadow-sm transition-opacity duration-300",
       !isEnabled && "opacity-50 grayscale pointer-events-none select-none"
     )}>
-      <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2">
-          <Settings2 className="h-5 w-5 text-primary" />
-          Advanced System Configuration
+      <CardHeader className="py-3 px-4 border-b border-border bg-muted/5 rounded-t-xl">
+        <CardTitle className="text-sm font-bold uppercase tracking-tight">
+          Advanced System Config
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">
           {!isEnabled 
-            ? "Select a device to fine-tune operational parameters" 
-            : "Fine-tune device operation and connectivity parameters"}
+            ? "Select device to configure" 
+            : "Operational connectivity parameters"}
         </CardDescription>
       </CardHeader>
 

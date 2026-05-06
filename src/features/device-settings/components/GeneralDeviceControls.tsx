@@ -1,226 +1,224 @@
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   updateAirplaneMode,
   updateLedStatus,
+  toggleIncomingCalls,
+  toggleAmbientListening,
   type LatestDeviceSettingsRecord,
 } from "@/features/device-settings/services/deviceSettingsService";
 import type { Device } from "@/features/devices/services/deviceService";
 import { useGlobalLoading } from "@/contexts/GlobalLoadingContext";
 import { cn } from "@/lib/utils";
-import {
-  Phone,
-  Plane,
-  Settings,
-  SunMedium,
-  CheckCircle2,
-  XCircle,
-} from "lucide-react";
+import { Phone, Plane, SunMedium, Mic, StopCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 
-type GeneralDeviceControlsProps = {
+type Props = {
   selectedDevice: Device | null;
   latestSettings: LatestDeviceSettingsRecord | null;
 };
 
-export function GeneralDeviceControls({
-  selectedDevice,
-  latestSettings,
-}: GeneralDeviceControlsProps) {
+export function GeneralDeviceControls({ selectedDevice, latestSettings }: Props) {
   const { setIsLoading } = useGlobalLoading();
-  const [localLedStatus, setLocalLedStatus] = useState<string | null>(selectedDevice?.ledStatus || null);
-  const [localAirplaneMode, setLocalAirplaneMode] = useState<string | null>(selectedDevice?.currentMode || null);
+  const [localLedStatus, setLocalLedStatus] = useState<string | null>(null);
+  const [localAirplaneMode, setLocalAirplaneMode] = useState<string | null>(null);
+  const [localCallEnabled, setLocalCallEnabled] = useState<boolean | null>(null);
+  const [localAmbientStatus, setLocalAmbientStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    setLocalLedStatus(selectedDevice?.ledStatus || null);
-    setLocalAirplaneMode(selectedDevice?.currentMode || null);
+    setLocalLedStatus(selectedDevice?.ledStatus ?? null);
+    setLocalAirplaneMode(selectedDevice?.currentMode ?? null);
   }, [selectedDevice?.ledStatus, selectedDevice?.currentMode]);
 
-  const handleAirplaneEnable = async () => {
-    if (!selectedDevice?.topic) {
-      toast.error("Device topic is missing.");
-      return;
-    }
+  useEffect(() => {
+    setLocalCallEnabled(latestSettings?.incoming_call_enabled ?? null);
+  }, [latestSettings?.incoming_call_enabled]);
 
+  useEffect(() => {
+    setLocalAmbientStatus(null);
+  }, [latestSettings?.ambient_listening_status]);
+
+  const isAirplane = localAirplaneMode === "Airplane" || localAirplaneMode === "AirplaneMode";
+  const isLedOn = localLedStatus === "SwitchOnLed" || localLedStatus === "on";
+  const ambientStatus = localAmbientStatus ?? latestSettings?.ambient_listening_status;
+  const isListening = ambientStatus === "Enable";
+
+  const handleCalls = async (on: boolean) => {
+    if (!selectedDevice?.imei) return toast.error("Device IMEI missing");
+    try {
+      setIsLoading(true, `${on ? "Enabling" : "Disabling"} incoming calls...`);
+      const res = await toggleIncomingCalls({ imei: selectedDevice.imei, status: on ? "Enable" : "Disable" });
+      if (res.status === "success") {
+        setLocalCallEnabled(on);
+        toast.success(res.message || `Calls ${on ? "enabled" : "disabled"}`);
+      } else toast.error(res.message || "Failed");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error");
+    } finally { setIsLoading(false); }
+  };
+
+  const handleAirplane = async () => {
+    if (!selectedDevice?.topic) return toast.error("Device topic missing");
     try {
       setIsLoading(true, "Activating flight mode...");
-      const response = await updateAirplaneMode({
-        topic: selectedDevice.topic,
-      });
-
-      if (response.status === "success") {
-        if (response.data?.mode) {
-          setLocalAirplaneMode(response.data.mode);
-        }
-        toast.success(response.message || "Airplane mode enabled successfully");
-      } else {
-        toast.error(response.message || "Failed to enable airplane mode");
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "An error occurred");
-    } finally {
-      setIsLoading(false);
-    }
+      const res = await updateAirplaneMode({ topic: selectedDevice.topic });
+      if (res.status === "success") {
+        if (res.data?.mode) setLocalAirplaneMode(res.data.mode);
+        toast.success(res.message || "Flight mode enabled");
+      } else toast.error(res.message || "Failed");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error");
+    } finally { setIsLoading(false); }
   };
 
-  const handleLedToggle = async (on: boolean) => {
-    if (!selectedDevice?.topic) {
-      toast.error("Device topic is missing.");
-      return;
-    }
-
+  const handleLed = async (on: boolean) => {
+    if (!selectedDevice?.topic) return toast.error("Device topic missing");
     try {
-      setIsLoading(true, "Please wait");
-      const response = await updateLedStatus({
-        topic: selectedDevice.topic,
-        LED: on ? "SwitchOnLed" : "SwitchOffLed",
-      });
-
-      if (response.status === "success") {
-        if (response.data?.LED) {
-          setLocalLedStatus(response.data.LED);
-        }
-        toast.success(response.message || `LED ${on ? "switched on" : "switched off"} successfully`);
-      } else {
-        toast.error(response.message || "Failed to update LED status");
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "An error occurred");
-    } finally {
-      setIsLoading(false);
-    }
+      setIsLoading(true, "Updating LED...");
+      const res = await updateLedStatus({ topic: selectedDevice.topic, LED: on ? "SwitchOnLed" : "SwitchOffLed" });
+      if (res.status === "success") {
+        if (res.data?.LED) setLocalLedStatus(res.data.LED);
+        toast.success(res.message || `LED ${on ? "on" : "off"}`);
+      } else toast.error(res.message || "Failed");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error");
+    } finally { setIsLoading(false); }
   };
 
-  const isAirplaneEnabled = localAirplaneMode === "Airplane" || localAirplaneMode === "AirplaneMode" || selectedDevice?.currentMode === "Airplane";
-  const isLedOn = localLedStatus === "SwitchOnLed" || localLedStatus === "on";
+  const handleAmbient = async (status: "Enable" | "Disable" | "Stop") => {
+    if (!selectedDevice?.imei) return toast.error("Device IMEI missing");
+    try {
+      setIsLoading(true, `${status === "Stop" ? "Stopping" : status === "Enable" ? "Enabling" : "Disabling"} audio monitor...`);
+      const res = await toggleAmbientListening({ imei: selectedDevice.imei, status });
+      if (res.status === "success") {
+        if (res.data?.status) setLocalAmbientStatus(res.data.status);
+        toast.success(res.message || `Audio monitor ${status.toLowerCase()}`);
+      } else toast.error(res.message || "Failed");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error");
+    } finally { setIsLoading(false); }
+  };
+
+  const disabled = !selectedDevice;
+
+  const controls = [
+    {
+      id: "incoming-calls",
+      icon: Phone,
+      label: "Incoming Calls",
+      description: "Allow calls to device",
+      isOn: !!localCallEnabled,
+      activeColor: "text-emerald-600 dark:text-emerald-400",
+      activeBg: "bg-emerald-500/10 border-emerald-500/20",
+      control: (
+        <Switch
+          disabled={disabled}
+          checked={!!localCallEnabled}
+          onCheckedChange={handleCalls}
+        />
+      ),
+    },
+    {
+      id: "flight-mode",
+      icon: Plane,
+      label: "Flight Mode",
+      description: isAirplane ? "Radio disabled" : "Cellular active",
+      isOn: isAirplane,
+      activeColor: "text-indigo-600 dark:text-indigo-400",
+      activeBg: "bg-indigo-500/10 border-indigo-500/20",
+      control: (
+        <Button
+          size="sm"
+          variant={isAirplane ? "secondary" : "outline"}
+          disabled={disabled || isAirplane}
+          onClick={handleAirplane}
+          className="h-6 px-2.5 text-[10px] font-bold uppercase tracking-wide"
+        >
+          {isAirplane ? "Active" : "Enable"}
+        </Button>
+      ),
+    },
+    {
+      id: "led-status",
+      icon: SunMedium,
+      label: "Status LED",
+      description: isLedOn ? "Indicator on" : "Indicator off",
+      isOn: isLedOn,
+      activeColor: "text-amber-600 dark:text-amber-400",
+      activeBg: "bg-amber-500/10 border-amber-500/20",
+      control: (
+        <Switch
+          disabled={disabled}
+          checked={isLedOn}
+          onCheckedChange={handleLed}
+        />
+      ),
+    },
+    {
+      id: "audio-monitor",
+      icon: Mic,
+      label: "Audio Monitor",
+      description: isListening ? "Streaming live" : "Standby",
+      isOn: isListening,
+      activeColor: "text-rose-600 dark:text-rose-400",
+      activeBg: "bg-rose-500/10 border-rose-500/20",
+      control: (
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 text-destructive hover:bg-destructive/10 disabled:opacity-50"
+            onClick={() => handleAmbient("Stop")}
+            title="Hard Reset / Stop Monitoring"
+            disabled={disabled || ambientStatus === "Stop"}
+          >
+            <StopCircle className="h-3.5 w-3.5" />
+          </Button>
+          <Switch
+            disabled={disabled}
+            checked={isListening}
+            onCheckedChange={(on) => handleAmbient(on ? "Enable" : "Disable")}
+          />
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <Card className={cn(
-      "border-border shadow-sm h-full flex flex-col transition-opacity duration-300 bg-card rounded-xl",
-      !selectedDevice && "opacity-50 grayscale pointer-events-none"
+    <div className={cn(
+      "grid grid-cols-2 lg:grid-cols-4 gap-3",
+      disabled && "opacity-50 grayscale pointer-events-none"
     )}>
-      <CardHeader className="pb-4 border-b border-border flex flex-row items-center justify-between space-y-0 bg-muted/5">
-        <div>
-          <CardTitle className="flex items-center gap-2 text-lg font-bold">
-            <Settings className="h-5 w-5 text-primary" />
-            Hardware Diagnostics
-          </CardTitle>
-          <CardDescription className="text-xs font-medium">
-            {!selectedDevice 
-              ? "Select a device to enable controls" 
-              : "Direct hardware command center"}
-          </CardDescription>
-        </div>
-      </CardHeader>
-
-      <CardContent className="p-4 md:p-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {/* Call Controls (Placeholder/Future) */}
-          <div className="space-y-4 rounded-xl border border-border p-4 bg-muted/20 opacity-40">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-background p-2 border border-border">
-                <Phone className="h-4 w-4 text-muted-foreground" />
+      {controls.map((ctrl) => {
+        const Icon = ctrl.icon;
+        return (
+          <div
+            key={ctrl.id}
+            className={cn(
+              "bg-card border rounded-xl p-3 flex flex-col gap-3 transition-all",
+              ctrl.isOn ? cn("border", ctrl.activeBg) : "border-border shadow-sm"
+            )}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className={cn(
+                "p-1.5 rounded-lg border",
+                ctrl.isOn ? cn(ctrl.activeBg) : "bg-muted border-border"
+              )}>
+                <Icon className={cn(
+                  "h-4 w-4",
+                  ctrl.isOn ? ctrl.activeColor : "text-muted-foreground"
+                )} />
               </div>
-              <div>
-                <p className="font-semibold text-sm">Call Controls</p>
-                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Restricted</p>
-              </div>
+              {ctrl.control}
             </div>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" className="h-8 text-xs font-bold" disabled>Enable</Button>
+            <div>
+              <p className="text-xs font-semibold leading-tight">{ctrl.label}</p>
+              <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">{ctrl.description}</p>
             </div>
           </div>
-
-          {/* Airplane Mode */}
-          <div className={cn(
-            "space-y-4 rounded-xl border p-4 transition-all",
-            isAirplaneEnabled ? "bg-primary/5 border-primary/30" : "bg-card border-border hover:border-primary/20"
-          )}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  "rounded-lg p-2 border",
-                  isAirplaneEnabled ? "bg-primary/20 border-primary/30" : "bg-muted border-border"
-                )}>
-                  <Plane className={cn("h-4 w-4", isAirplaneEnabled ? "text-primary" : "text-muted-foreground")} />
-                </div>
-                <div>
-                  <p className="font-semibold text-sm">Airplane Mode</p>
-                  <div className="flex items-center gap-1">
-                    {isAirplaneEnabled ? (
-                      <CheckCircle2 className="h-3 w-3 text-primary" />
-                    ) : (
-                      <XCircle className="h-3 w-3 text-muted-foreground/40" />
-                    )}
-                    <p className={cn("text-[10px] font-bold uppercase tracking-wider", isAirplaneEnabled ? "text-primary" : "text-muted-foreground")}>
-                      {isAirplaneEnabled ? "Active" : "Inactive"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Status</span>
-              <Button
-                size="sm"
-                variant={isAirplaneEnabled ? "outline" : "default"}
-                disabled={!selectedDevice || isAirplaneEnabled}
-                onClick={handleAirplaneEnable}
-                className="h-8 font-bold text-[10px] uppercase tracking-wider px-4"
-              >
-                {isAirplaneEnabled ? "Active" : "Enable"}
-              </Button>
-            </div>
-          </div>
-
-          {/* LED Controls */}
-          <div className={cn(
-            "space-y-4 rounded-xl border p-4 transition-all",
-            isLedOn ? "bg-primary/5 border-primary/30" : "bg-card border-border hover:border-primary/20"
-          )}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  "rounded-lg p-2 border",
-                  isLedOn ? "bg-primary/20 border-primary/30" : "bg-muted border-border"
-                )}>
-                  <SunMedium className={cn("h-4 w-4", isLedOn ? "text-primary" : "text-muted-foreground")} />
-                </div>
-                <div>
-                  <p className="font-semibold text-sm">LED Indicator</p>
-                  <div className="flex items-center gap-1">
-                    {isLedOn ? (
-                      <CheckCircle2 className="h-3 w-3 text-primary" />
-                    ) : (
-                      <XCircle className="h-3 w-3 text-muted-foreground/40" />
-                    )}
-                    <p className={cn("text-[10px] font-bold uppercase tracking-wider", isLedOn ? "text-primary" : "text-muted-foreground")}>
-                      {isLedOn ? "Active" : "Disabled"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Toggle</span>
-              <Switch
-                disabled={!selectedDevice}
-                checked={isLedOn}
-                onCheckedChange={handleLedToggle}
-                className="data-[state=checked]:bg-primary"
-              />
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        );
+      })}
+    </div>
   );
 }

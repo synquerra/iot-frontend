@@ -1,6 +1,4 @@
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  AlertCircle,
   AlertOctagon,
   XCircle,
   AlertTriangle,
@@ -143,45 +141,28 @@ export default function AlertsPage() {
     });
   };
 
-  const Icon = viewMode === "alerts" ? AlertCircle : AlertOctagon;
-
   return (
-    <div className="min-h-screen">
-      <div className="mx-auto ">
-        <AlertsHeader 
-          icon={Icon} 
-          isRefreshing={isRefreshing} 
-          onRefresh={() => fetchData(false)} 
-        />
+    <div className="space-y-6">
+      <AlertsHeader 
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        isRefreshing={isRefreshing} 
+        onRefresh={() => fetchData(false)} 
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+      />
 
-        {/* Mode Toggle */}
-        <div className="mb-6">
-          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)} className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-2 p-1">
-              <TabsTrigger value="errors" className=" gap-2">
-                <AlertOctagon className="h-4 w-4" />
-                Errors
-              </TabsTrigger>
-              <TabsTrigger value="alerts" className=" gap-2">
-                <AlertCircle className="h-4 w-4" />
-                Alerts
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+      <SeverityOverview cards={cards} loading={loading} />
 
-        <SeverityOverview cards={cards} loading={loading} />
-
-        <AlertsHistory 
-          loading={loading}
-          filteredItems={filteredItems}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          isRefreshing={isRefreshing}
-          onAcknowledge={handleAcknowledge}
-          formatDate={formatDate}
-        />
-      </div>
+      <AlertsHistory 
+        loading={loading}
+        filteredItems={filteredItems}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        isRefreshing={isRefreshing}
+        onAcknowledge={handleAcknowledge}
+        formatDate={formatDate}
+      />
     </div>
   );
 }

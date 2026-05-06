@@ -3,6 +3,7 @@
 import {
   BellIcon,
   BrainCogIcon,
+  Cpu,
   FlaskConical,
   PhoneIcon,
   PieChart,
@@ -61,6 +62,12 @@ const data = {
       path: "/alerts",
       end: "/alerts",
       icon: BellIcon,
+    },
+    {
+      name: "FOTA Updates",
+      path: "/devices/fota",
+      end: "/devices/fota",
+      icon: Cpu,
     },
   ],
 };

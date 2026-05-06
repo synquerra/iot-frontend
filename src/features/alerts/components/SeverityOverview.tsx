@@ -43,7 +43,7 @@ export function SeverityOverview({ cards, loading }: SeverityOverviewProps) {
   };
 
   return (
-    <div className="mb-8 grid gap-4 grid-cols-1 sm:grid-cols-3">
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
       {loading ? (
         Array(3).fill(0).map((_, i) => (
           <Card key={i} className="overflow-hidden border-border bg-card">
@@ -67,7 +67,7 @@ export function SeverityOverview({ cards, loading }: SeverityOverviewProps) {
                 severity.border
               )}
             >
-              <CardContent className="p-5">
+              <CardContent className="p-4">
                 <div className="relative z-10 flex flex-col gap-4">
                   <div className="flex items-start justify-between">
                     <Badge
@@ -89,8 +89,8 @@ export function SeverityOverview({ cards, loading }: SeverityOverviewProps) {
                     </div>
                   </div>
 
-                  <div className="flex items-baseline gap-2">
-                    <span className={cn("text-3xl font-bold font-mono tracking-tight", severity.text)}>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className={cn("text-2xl font-bold font-mono tracking-tight", severity.text)}>
                       {card.count.toLocaleString()}
                     </span>
                     <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">

@@ -12,7 +12,6 @@ import {
 import { cn } from "@/lib/utils";
 import {
   CalendarIcon,
-  Cpu,
   Eye,
   MapPinned,
   MoreVertical,
@@ -41,7 +40,6 @@ type Props = {
     geoid?: string | null;
     createdAt?: string | null;
     topic?: string | null;
-
     battery?: string | null;
     signal?: string | null;
     gps_strength?: string | null;
@@ -67,7 +65,7 @@ export function DeviceCard({
   onStatusToggle,
 }: Props) {
   const [isToggling, setIsToggling] = useState(false);
-  // Format createdAt if it exists
+
   const formattedDate = device.createdAt
     ? new Date(device.createdAt).toLocaleString("en-US", {
       month: "short",
@@ -80,7 +78,6 @@ export function DeviceCard({
     : null;
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Prevent card click when clicking on dropdown or button
     if ((e.target as HTMLElement).closest(".dropdown-trigger") || (e.target as HTMLElement).closest(".action-button")) {
       return;
     }
@@ -93,10 +90,9 @@ export function DeviceCard({
       toast.error("Device topic is missing.");
       return;
     }
-
     try {
       setIsToggling(true);
-      const newStatus = device.status === "inactive"; // If currently inactive, we want to activate
+      const newStatus = device.status === "inactive";
       await toggleDeviceStatus(device.topic, newStatus);
       toast.success(`Device ${newStatus ? "activated" : "deactivated"} successfully`);
       onStatusToggle?.();
@@ -107,273 +103,207 @@ export function DeviceCard({
     }
   };
 
+  const isActive = device.status === "active";
+
   return (
     <Card
       onClick={handleCardClick}
       className={cn(
-        "cursor-pointer hover:shadow-lg transition-all duration-200 relative group",
-        device.status === "inactive" && "opacity-80"
+        "cursor-pointer transition-all duration-200 relative group hover:shadow-md border-border",
+        !isActive && "opacity-75"
       )}
     >
-      <CardContent className="p-4">
-        {/* Dropdown Menu - Top Right */}
-        <div className="absolute top-2 right-2 z-10 dropdown-trigger">
+      <CardContent className="p-3">
+        {/* Dropdown Menu */}
+        <div className="absolute top-3 right-3 z-10 dropdown-trigger">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 transition-opacity"
+                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={(e) => e.stopPropagation()}
               >
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel>Device Actions</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Device Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
 
-              {/* Toggle Status Option */}
-              <DropdownMenuItem
-                onClick={handleToggleStatus}
-                disabled={isToggling}
-                className="cursor-pointer"
-              >
-                <Power className={cn("h-4 w-4 mr-2", device.status === "active" ? "text-destructive" : "text-emerald-500")} />
+              <DropdownMenuItem onClick={handleToggleStatus} disabled={isToggling} className="cursor-pointer">
+                <Power className={cn("h-4 w-4 mr-2", isActive ? "text-destructive" : "text-emerald-500")} />
                 <div className="flex flex-col text-left">
-                  <span>{device.status === "active" ? "Deactivate" : "Activate"}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {device.status === "active" ? "Set device to offline" : "Set device to online"}
-                  </span>
+                  <span>{isActive ? "Deactivate" : "Activate"}</span>
+                  <span className="text-xs text-muted-foreground">{isActive ? "Set to offline" : "Set to online"}</span>
                 </div>
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
 
-              {/* View Option */}
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onView?.();
-                }}
-                className="cursor-pointer"
-              >
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onView?.(); }} className="cursor-pointer">
                 <Eye className="h-4 w-4 mr-2" />
-                <div className="flex flex-col">
-                  <span>View Details</span>
-                  <span className="text-xs text-muted-foreground">
-                    View device information
-                  </span>
-                </div>
+                <span>View Overview</span>
               </DropdownMenuItem>
 
-              {/* Settings Option */}
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSettings?.();
-                }}
-                className="cursor-pointer"
-              >
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSettings?.(); }} className="cursor-pointer">
                 <Settings className="h-4 w-4 mr-2" />
-                <div className="flex flex-col">
-                  <span>Settings</span>
-                  <span className="text-xs text-muted-foreground">
-                    Configure device
-                  </span>
-                </div>
+                <span>Settings</span>
               </DropdownMenuItem>
 
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onGeofencing?.();
-                }}
-                className="cursor-pointer"
-              >
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onGeofencing?.(); }} className="cursor-pointer">
                 <MapPinned className="h-4 w-4 mr-2" />
-                <div className="flex flex-col">
-                  <span>Geofencing</span>
-                  <span className="text-xs text-muted-foreground">
-                    Manage map boundaries
-                  </span>
-                </div>
+                <span>Geofencing</span>
               </DropdownMenuItem>
 
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onTelemetry?.();
-                }}
-                className="cursor-pointer"
-              >
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onTelemetry?.(); }} className="cursor-pointer">
                 <Activity className="h-4 w-4 mr-2" />
-                <div className="flex flex-col">
-                  <span>Telemetry</span>
-                  <span className="text-xs text-muted-foreground">
-                    View raw data stream
-                  </span>
-                </div>
+                <span>Telemetry</span>
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
 
-              {/* Remove Option (Disabled) */}
               <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemove?.();
-                }}
+                onClick={(e) => { e.stopPropagation(); onRemove?.(); }}
                 disabled
-                className="text-destructive focus:text-destructive cursor-not-allowed opacity-50"
+                className="text-destructive focus:text-destructive cursor-not-allowed opacity-40"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 <div className="flex flex-col">
                   <span>Remove Device</span>
-                  <span className="text-xs text-muted-foreground">
-                    Coming soon
-                  </span>
+                  <span className="text-xs text-muted-foreground">Coming soon</span>
                 </div>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
-        {/* Header row - Name, status, short ID */}
-        <div className="flex items-center justify-between mb-3 pr-8">
-          <div className="flex items-center gap-3 min-w-0">
-            <h3 className="font-semibold truncate">{device.displayName}</h3>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              <Badge
-                variant="secondary"
-                className={cn(
-                  "text-[10px] px-1.5 py-0 h-5 capitalize font-bold",
-                  device.status === "active"
-                    ? "bg-green-100/80 text-green-700 border-green-200 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30"
-                    : "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700",
-                )}
-              >
-                {device.status}
+        {/* Status indicator line */}
+        <div className={cn(
+          "absolute left-0 top-4 bottom-4 w-0.5 rounded-full transition-all",
+          isActive ? "bg-emerald-500" : "bg-muted-foreground/20"
+        )} />
+
+        {/* Header */}
+        <div className="pl-3 pr-7 mb-2">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <Badge
+              variant="secondary"
+              className={cn(
+                "text-[9px] px-1.5 py-0 h-3.5 capitalize font-bold border",
+                isActive
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800/50"
+                  : "bg-muted text-muted-foreground border-border"
+              )}
+            >
+              {isActive ? "Active" : "Inactive"}
+            </Badge>
+            {device.geoid && device.geoid !== "10" && (
+              <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-3.5 font-mono font-bold border-primary/30 text-primary">
+                {device.geoid === "11" ? "GPS Off" : `Zone: ${device.geoid}`}
               </Badge>
-              
-              <Button
-                size="sm"
-                variant="default"
-                className={cn(
-                  "action-button h-8 px-4 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm rounded-lg",
-                  device.status === "active" 
-                    ? "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700" 
-                    : "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-500/20"
-                )}
-                onClick={handleToggleStatus}
-                disabled={isToggling}
-              >
-                {isToggling ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>
-                    <Power className={cn("h-3.5 w-3.5 mr-2", device.status === "active" ? "opacity-50" : "opacity-100")} />
-                    {device.status === "active" ? "Deactivate" : "Activate"}
-                  </>
-                )}
-              </Button>
-            </div>
+            )}
           </div>
+          <h3 className="font-semibold text-sm tracking-tight truncate">{device.displayName}</h3>
         </div>
 
-        {/* Compact info grid */}
-        <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-          {/* IMEI */}
-          <div className="min-w-0 group/copy">
-            <span className="block text-xs uppercase text-muted-foreground">IMEI</span>
-            <div 
-              className="flex items-center gap-1.5 cursor-pointer hover:text-foreground transition-colors"
-              title="Click to copy IMEI"
+        {/* Info Grid */}
+        <div className="pl-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+          <div className="min-w-0">
+            <span className="block text-[9px] font-semibold uppercase text-muted-foreground mb-0.5">IMEI</span>
+            <div
+              className="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors group/imei"
               onClick={(e) => {
                 e.stopPropagation();
                 navigator.clipboard.writeText(device.imei);
-                toast.success("IMEI copied to clipboard");
+                toast.success("IMEI copied");
               }}
+              title="Click to copy"
             >
               <span className="font-mono truncate">{device.imei}</span>
-              <Copy className="h-3 w-3 opacity-0 group-hover/copy:opacity-100 transition-opacity" />
+              <Copy className="h-3 w-3 opacity-0 group-hover/imei:opacity-60 transition-opacity flex-shrink-0" />
             </div>
           </div>
 
-          {/* Topic (if exists) */}
           {device.topic && (
-            <div className="min-w-0 group/copy">
-              <span className="block text-xs uppercase text-muted-foreground">
-                Topic
-              </span>
+            <div className="min-w-0">
+              <span className="block text-[9px] font-semibold uppercase text-muted-foreground mb-0.5">Topic</span>
               <div
-                className="flex items-center gap-1.5 cursor-pointer hover:text-foreground transition-colors"
-                title="Click to copy Topic"
+                className="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors group/topic"
                 onClick={(e) => {
                   e.stopPropagation();
                   navigator.clipboard.writeText(device.topic!);
-                  toast.success("Topic copied to clipboard");
+                  toast.success("Topic copied");
                 }}
+                title="Click to copy"
               >
-                <span className="font-mono truncate">
-                  {device.topic.length > 20
-                    ? `${device.topic.substring(0, 18)}…`
-                    : device.topic}
-                </span>
-                <Copy className="h-3 w-3 opacity-0 group-hover/copy:opacity-100 transition-opacity" />
+                <span className="font-mono truncate">{device.topic.length > 18 ? `${device.topic.substring(0, 16)}…` : device.topic}</span>
+                <Copy className="h-3 w-3 opacity-0 group-hover/topic:opacity-60 transition-opacity flex-shrink-0" />
               </div>
             </div>
           )}
+        </div>
 
-          {/* Geo ID and fingerprint chips */}
-          {(device.geoid || device.imei) && (
-            <div className="col-span-2 flex flex-wrap items-center gap-1 mt-1">
-              <Cpu className="h-3 w-3 text-muted-foreground" />
-              {device.geoid && (
-                <span className="rounded border border-border bg-muted text-muted-foreground px-1.5 py-0.5 text-xs font-mono">
-                  geo:{device.geoid}
-                </span>
-              )}
-
-            </div>
-          )}
-
-          {/* Telemetry Stats */}
-          <div className="col-span-2 flex flex-wrap items-center gap-3 mt-2 pt-2 border-t border-border/50">
+        {/* Telemetry Row */}
+        {(device.battery || device.signal || device.gps_strength || device.temperature) && (
+          <div className="pl-3 flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-border/50">
             {device.battery && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground" title="Battery">
-                <Battery className="h-3.5 w-3.5 text-green-500" />
+              <div className={cn("flex items-center gap-1 text-xs", Number(device.battery) < 20 ? "text-red-500" : "text-muted-foreground")} title="Battery">
+                <Battery className="h-3.5 w-3.5 flex-shrink-0" />
                 <span className="font-medium">{device.battery}%</span>
               </div>
             )}
             {device.signal && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground" title="Network Signal">
-                <Wifi className="h-3.5 w-3.5 text-blue-500" />
+              <div className="flex items-center gap-1 text-xs text-muted-foreground" title="Signal">
+                <Wifi className="h-3.5 w-3.5 flex-shrink-0" />
                 <span className="font-medium">{device.signal}</span>
               </div>
             )}
             {device.gps_strength && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground" title="GPS Strength">
-                <Signal className="h-3.5 w-3.5 text-purple-500" />
+              <div className="flex items-center gap-1 text-xs text-muted-foreground" title="GPS">
+                <Signal className="h-3.5 w-3.5 flex-shrink-0" />
                 <span className="font-medium">{device.gps_strength}</span>
               </div>
             )}
             {device.temperature && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground" title="Temperature">
-                <Thermometer className="h-3.5 w-3.5 text-orange-500" />
+              <div className="flex items-center gap-1 text-xs text-muted-foreground" title="Temperature">
+                <Thermometer className="h-3.5 w-3.5 flex-shrink-0" />
                 <span className="font-medium">{device.temperature}</span>
               </div>
             )}
           </div>
-        </div>
-
-        {/* Footer with date */}
-        {formattedDate && (
-          <div className="mt-2 flex items-center gap-1 border-t border-border pt-2 text-xs text-muted-foreground">
-            <CalendarIcon className="h-3 w-3" />
-            <span>{formattedDate}</span>
-          </div>
         )}
+
+        {/* Footer */}
+        <div className="pl-3 mt-2 flex items-center justify-between gap-2">
+          {formattedDate && (
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <CalendarIcon className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate">{formattedDate}</span>
+            </div>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className={cn(
+              "action-button h-7 px-3 text-[10px] font-bold uppercase tracking-wide ml-auto flex-shrink-0",
+              isActive
+                ? "text-muted-foreground hover:bg-muted"
+                : "text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+            )}
+            onClick={handleToggleStatus}
+            disabled={isToggling}
+          >
+            {isToggling ? (
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <>
+                <Power className="h-3.5 w-3.5 mr-1" />
+                {isActive ? "Deactivate" : "Activate"}
+              </>
+            )}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

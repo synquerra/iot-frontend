@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { MapContainer, Marker, TileLayer } from "react-leaflet";
+import { MapContainer, Marker, TileLayer, Polygon } from "react-leaflet";
 import {
   Battery,
   Move,
@@ -26,6 +26,7 @@ interface MetricsGridProps {
   name?: string;
   imei?: string;
   lastUpdate?: string;
+  geofences?: Array<{ geofence_id: string; coordinates: { lat: number; lng: number }[]; color?: string }>;
 }
 
 const createMinimapMarker = (color: string = "#4F46E5") => {
@@ -55,8 +56,9 @@ export function MetricsGrid({
   lowBatLimit = 30,
   tempLimit = 50,
   name,
-  // imei,
-  // lastUpdate,
+  imei,
+  lastUpdate,
+  geofences = [],
 }: MetricsGridProps) {
   const lastToastRef = useRef<number>(0);
 
@@ -111,7 +113,10 @@ export function MetricsGrid({
       </div>
 
       {/* 4-column section for Live Map */}
-      <Card className="lg:col-span-4 group hover:shadow-xl transition-all duration-500 overflow-hidden flex flex-col h-full min-h-[120px] border-border bg-card rounded-xl">
+      <Card 
+        onClick={() => imei && (window.location.href = `/devices/map/${imei}`)}
+        className="lg:col-span-4 group hover:shadow-xl transition-all duration-500 overflow-hidden flex flex-col h-full min-h-[120px] border-border bg-card rounded-xl cursor-pointer hover:border-primary/50 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
         <CardContent className="p-0 flex-1 relative">
           <MapContainer
             center={[latitude, longitude]}
@@ -123,19 +128,42 @@ export function MetricsGrid({
             style={{ height: "100%", width: "100%", position: "absolute", top: 0, left: 0, zIndex: 0 }}
           >
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            
+            {/* Render Geofences in Minimap */}
+            {geofences.map((geo) => (
+              <Polygon
+                key={geo.geofence_id}
+                positions={geo.coordinates.map(c => [c.lat, c.lng])}
+                pathOptions={{
+                  color: geo.color || "#64748b",
+                  fillColor: geo.color || "#64748b",
+                  fillOpacity: 0.1,
+                  weight: 1,
+                }}
+              />
+            ))}
+
             <Marker position={[latitude, longitude]} icon={createMinimapMarker()} />
           </MapContainer>
-          <div className="absolute inset-0 bg-background/5 pointer-events-none" />
+          <div className="absolute inset-0 bg-background/5 pointer-events-none group-hover:bg-primary/5 transition-colors" />
           
           <div className="absolute bottom-3 right-3 z-[1000]">
             <span className={cn(
-              "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-xl border",
-              geoid
-                ? "bg-primary text-white border-primary"
-                : "bg-red-600 text-white border-red-700 dark:bg-red-500 dark:border-red-600"
+              "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-xl border transition-all group-hover:scale-105",
+              geoid === "11" 
+                ? "bg-amber-600 text-white border-amber-700"
+                : (geoid && geoid !== "10")
+                  ? "bg-primary text-white border-primary"
+                  : "bg-red-600 text-white border-red-700 dark:bg-red-500 dark:border-red-600"
             )}>
-              {geoid ? `ZONE: ${geoid}` : "NO GEOFENCE"}
+              {geoid === "11" ? "GPS DISABLED" : (geoid && geoid !== "10") ? `ZONE: ${geoid}` : "NOT IN GEOFENCE"}
             </span>
+          </div>
+          
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 backdrop-blur-[1px]">
+             <span className="bg-white/90 text-black px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-2xl scale-90 group-hover:scale-100 transition-transform">
+               Open Live Map
+             </span>
           </div>
         </CardContent>
       </Card>
