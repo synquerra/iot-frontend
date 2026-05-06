@@ -84,20 +84,13 @@ export function TestingResultsConsole({ imei }: TestingResultsConsoleProps) {
   return (
     <div className="flex flex-col h-[600px] border border-border/60 rounded-2xl bg-card shadow-lg overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* High-Density Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 bg-muted/5">
-        <div className="flex items-center gap-4">
-           <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
-              <Terminal className="h-4 w-4 text-primary" />
-           </div>
-           <div>
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 leading-none mb-1">Telemetry Stream</h3>
-              <div className="flex items-center gap-2">
-                 <p className="text-[11px] font-black uppercase tracking-tight text-foreground/80 leading-none">Packet Stream Console</p>
-                 <Badge variant="outline" className="h-4 px-1.5 text-[8px] font-black uppercase tracking-widest border-emerald-500/20 text-emerald-600 bg-emerald-500/5 animate-pulse">
-                    Live
-                 </Badge>
-              </div>
-           </div>
+      <div className="flex items-center justify-between py-3 px-4 border-b flex-row gap-3 space-y-0 bg-muted/5">
+        <div className="flex items-center gap-2">
+          <Terminal className="h-4 w-4 text-primary" />
+          <h3 className="text-xs font-bold uppercase tracking-wide">Packet Stream Console</h3>
+          <Badge variant="outline" className="h-4 px-1.5 text-[9px] font-black uppercase tracking-widest border-emerald-500/20 text-emerald-600 bg-emerald-500/5 animate-pulse ml-2">
+            Live
+          </Badge>
         </div>
 
         <div className="flex items-center gap-2">

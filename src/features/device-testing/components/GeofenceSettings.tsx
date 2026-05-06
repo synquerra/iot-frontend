@@ -53,13 +53,22 @@ export function GeofenceSettings({ topic, selectedImei, deviceLocation }: Geofen
   }, [selectedImei]);
 
   const loadExistingGeofences = async () => {
+    if (!selectedImei) return;
     try {
+      console.log(`[GeofenceSettings] Loading geofences for IMEI: ${selectedImei}`);
       const response = await geofenceService.listGeofences(selectedImei);
-      if (response.status === "success") {
-        setExistingGeofences(response.data);
+      console.log(`[GeofenceSettings] Response:`, response);
+      if (response && (response.status === "success" || Array.isArray(response.data))) {
+        setExistingGeofences(response.data || []);
+      } else if (Array.isArray(response)) {
+        // Fallback if the API returns the array directly
+        setExistingGeofences(response);
+      } else {
+        toast.error("Geofence records could not be retrieved");
       }
     } catch (error) {
-      console.error("Failed to load geofences", error);
+      console.error("[GeofenceSettings] Failed to load geofences", error);
+      toast.error("Network error while fetching geofences");
     }
   };
 
@@ -171,13 +180,15 @@ export function GeofenceSettings({ topic, selectedImei, deviceLocation }: Geofen
 
   return (
     <Card className="border-primary/10 shadow-sm h-full flex flex-col">
-      <CardHeader className="pb-3 border-b border-primary/5 flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-sm flex items-center gap-2 uppercase font-black tracking-tight">
+      <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between gap-3 space-y-0 bg-muted/5">
+        <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 text-primary" />
-          Geofence Control
-        </CardTitle>
+          <CardTitle className="text-xs font-bold flex items-center gap-2 uppercase tracking-wide">
+            Geofence Control
+          </CardTitle>
+        </div>
         <div className="flex items-center gap-1.5">
-          <Badge variant="outline" className="text-[8px] font-black tracking-widest px-1.5 py-0 h-4 uppercase">
+          <Badge variant="outline" className="text-[9px] font-black tracking-widest uppercase px-1.5 py-0 h-4 border">
             {topic ? "Active Link" : "Offline"}
           </Badge>
           <Button 

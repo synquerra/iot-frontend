@@ -9,7 +9,7 @@ export default function DevicesPage() {
 
   return (
     <DeviceTableProvider devices={devices} loading={loading} refresh={refresh}>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <DeviceToolbar />
         <DeviceStatusGrid />
         <DeviceGrid />

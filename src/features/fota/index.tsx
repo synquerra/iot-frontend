@@ -64,7 +64,7 @@ export default function FotaPage() {
   );
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-4 animate-in fade-in duration-500">
       {/* Unified Control Card */}
       <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-top-2 duration-500">
         <div className="p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6">
@@ -124,7 +124,7 @@ export default function FotaPage() {
         {/* Main List */}
         <Card className="lg:col-span-8 shadow-sm">
           <CardHeader className="py-3 px-4 border-b border-border bg-muted/5">
-            <CardTitle className="text-sm font-bold uppercase tracking-tight">
+            <CardTitle className="text-xs font-bold uppercase tracking-tight">
               Firmware Registry
             </CardTitle>
             <CardDescription className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">Available updates and historical versions</CardDescription>
@@ -137,15 +137,15 @@ export default function FotaPage() {
                 ))}
               </div>
             ) : filteredUpdates.length > 0 ? (
-              <div className="rounded-md border">
+              <div className="rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
-                      <TableHead className="font-bold">Version</TableHead>
-                      <TableHead className="font-bold">Version Code</TableHead>
-                      <TableHead className="font-bold">Size</TableHead>
-                      <TableHead className="font-bold">Released</TableHead>
-                      <TableHead className="text-right font-bold">Action</TableHead>
+                      <TableHead className="font-bold whitespace-nowrap">Version</TableHead>
+                      <TableHead className="font-bold whitespace-nowrap">Build Code</TableHead>
+                      <TableHead className="font-bold whitespace-nowrap hidden sm:table-cell">Size</TableHead>
+                      <TableHead className="font-bold whitespace-nowrap hidden md:table-cell">Released</TableHead>
+                      <TableHead className="text-right font-bold">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -153,17 +153,18 @@ export default function FotaPage() {
                       <TableRow key={update.id} className="hover:bg-muted/30 transition-colors">
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="font-mono">{update.version_name}</Badge>
+                            <Badge variant="secondary" className="font-mono text-xs">{update.version_name}</Badge>
                           </div>
                         </TableCell>
-                        <TableCell className="font-mono text-xs">{update.version_code}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{formatFileSize(update.file_size)}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{update.created_at.split(' ')[0]}</TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">{update.version_code}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground hidden sm:table-cell">{formatFileSize(update.file_size)}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground hidden md:table-cell">{update.created_at.split(' ')[0]}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Button 
-                              variant="ghost" 
+                            <Button
+                              variant="ghost"
                               size="icon"
+                              className="h-8 w-8"
                               onClick={() => {
                                 setEditingUpdate(update);
                                 setIsFormOpen(true);
@@ -171,7 +172,7 @@ export default function FotaPage() {
                             >
                               <Edit2 className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
                               <a href={update.file_url} target="_blank" rel="noreferrer">
                                 <Download className="h-4 w-4" />
                               </a>

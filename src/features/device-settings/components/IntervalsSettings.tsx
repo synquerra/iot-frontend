@@ -1,23 +1,27 @@
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   updateDeviceCoreSettings,
   type LatestDeviceSettingsRecord,
 } from "@/features/device-settings/services/deviceSettingsService";
 import { useGlobalLoading } from "@/contexts/GlobalLoadingContext";
-import { Save, ShieldAlert, Activity } from "lucide-react";
+import {
+  Save,
+  Activity,
+  ShieldAlert,
+  Timer,
+  Zap,
+  Gauge,
+  Thermometer,
+  Battery,
+  Plane,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-type DeviceSettingsFormState = {
+type FormState = {
   NormalSendingInterval: string;
   SOSSendingInterval: string;
   NormalScanningInterval: string;
@@ -27,7 +31,7 @@ type DeviceSettingsFormState = {
   LowbatLimit: string;
 };
 
-const DEFAULT_VALUES: DeviceSettingsFormState = {
+const DEFAULTS: FormState = {
   NormalSendingInterval: "600",
   SOSSendingInterval: "60",
   NormalScanningInterval: "300",
@@ -37,66 +41,37 @@ const DEFAULT_VALUES: DeviceSettingsFormState = {
   LowbatLimit: "20",
 };
 
-function toStringValue(value: string | number | undefined, fallback: string) {
-  if (value === undefined || value === null || value === "") {
-    return fallback;
-  }
+function toStr(value: string | number | null | undefined, fallback: string) {
+  if (value === undefined || value === null || value === "") return fallback;
   return String(value);
 }
 
-type IntervalsSettingsProps = {
+type Props = {
   selectedImei: string;
   latestSettings: LatestDeviceSettingsRecord | null;
 };
 
-export function IntervalsSettings({
-  selectedImei,
-  latestSettings,
-}: IntervalsSettingsProps) {
-  const [values, setValues] = useState<DeviceSettingsFormState>(DEFAULT_VALUES);
+export function IntervalsSettings({ selectedImei, latestSettings }: Props) {
+  const [values, setValues] = useState<FormState>(DEFAULTS);
+  const [isDirty, setIsDirty] = useState(false);
   const { setIsLoading } = useGlobalLoading();
 
   useEffect(() => {
     setValues({
-      NormalSendingInterval: toStringValue(
-        latestSettings?.raw_NormalSendingInterval ?? undefined,
-        DEFAULT_VALUES.NormalSendingInterval,
-      ),
-      SOSSendingInterval: toStringValue(
-        latestSettings?.raw_SOSSendingInterval ?? undefined,
-        DEFAULT_VALUES.SOSSendingInterval,
-      ),
-      NormalScanningInterval: toStringValue(
-        latestSettings?.raw_NormalScanningInterval ?? undefined,
-        DEFAULT_VALUES.NormalScanningInterval,
-      ),
-      AirplaneInterval: toStringValue(
-        latestSettings?.raw_AirplaneInterval ?? undefined,
-        DEFAULT_VALUES.AirplaneInterval,
-      ),
-      TemperatureLimit: toStringValue(
-        latestSettings?.raw_temperature ?? undefined,
-        DEFAULT_VALUES.TemperatureLimit,
-      ),
-      SpeedLimit: toStringValue(
-        latestSettings?.raw_SpeedLimit ?? undefined,
-        DEFAULT_VALUES.SpeedLimit,
-      ),
-      LowbatLimit: toStringValue(
-        latestSettings?.raw_LowbatLimit ?? undefined,
-        DEFAULT_VALUES.LowbatLimit,
-      ),
+      NormalSendingInterval: toStr(latestSettings?.raw_NormalSendingInterval, DEFAULTS.NormalSendingInterval),
+      SOSSendingInterval: toStr(latestSettings?.raw_SOSSendingInterval, DEFAULTS.SOSSendingInterval),
+      NormalScanningInterval: toStr(latestSettings?.raw_NormalScanningInterval, DEFAULTS.NormalScanningInterval),
+      AirplaneInterval: toStr(latestSettings?.raw_AirplaneInterval, DEFAULTS.AirplaneInterval),
+      TemperatureLimit: toStr(latestSettings?.raw_temperature, DEFAULTS.TemperatureLimit),
+      SpeedLimit: toStr(latestSettings?.raw_SpeedLimit, DEFAULTS.SpeedLimit),
+      LowbatLimit: toStr(latestSettings?.raw_LowbatLimit, DEFAULTS.LowbatLimit),
     });
+    setIsDirty(false);
   }, [latestSettings]);
 
-  const handleChange = (
-    key: keyof DeviceSettingsFormState,
-    nextValue: string,
-  ) => {
-    setValues((current) => ({
-      ...current,
-      [key]: nextValue,
-    }));
+  const handleChange = (key: keyof FormState, v: string) => {
+    setValues((c) => ({ ...c, [key]: v }));
+    setIsDirty(true);
   };
 
   const handleSave = async () => {
@@ -104,10 +79,9 @@ export function IntervalsSettings({
       toast.error("Required device identifier missing.");
       return;
     }
-
     try {
-      setIsLoading(true, "Updating hardware settings...");
-      const payload = {
+      setIsLoading(true, "Applying configuration...");
+      const response = await updateDeviceCoreSettings({
         topic: latestSettings.topic,
         NormalSendingInterval: Number(values.NormalSendingInterval),
         SOSSendingInterval: Number(values.SOSSendingInterval),
@@ -116,14 +90,12 @@ export function IntervalsSettings({
         SpeedLimit: Number(values.SpeedLimit),
         LowbatLimit: Number(values.LowbatLimit),
         TemperatureLimit: Number(values.TemperatureLimit),
-      };
-
-      const response = await updateDeviceCoreSettings(payload);
-
+      });
       if (response.status === "success") {
-        toast.success(response.message || "Settings updated successfully");
+        toast.success(response.message || "Settings applied");
+        setIsDirty(false);
       } else {
-        toast.error(response.message || "Failed to update settings");
+        toast.error(response.message || "Failed to apply settings");
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "An error occurred");
@@ -134,100 +106,106 @@ export function IntervalsSettings({
 
   return (
     <Card className={cn(
-      "border-border shadow-sm transition-opacity duration-300 bg-card rounded-xl",
+      "border-border shadow-sm bg-card",
       !selectedImei && "opacity-50 grayscale pointer-events-none select-none"
     )}>
-      <CardHeader className="py-3 px-4 flex flex-col md:flex-row md:items-center justify-between gap-4 space-y-0 bg-muted/5 rounded-t-xl border-b border-border">
-        <div>
-          <CardTitle className="text-sm font-black uppercase tracking-tight">
-            Intervals & Limits
-          </CardTitle>
-          <CardDescription className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">
-            Telemetry timing and threshold controls
-          </CardDescription>
+      <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between gap-3 space-y-0">
+        <div className="flex items-center gap-2">
+          <Activity className="h-4 w-4 text-primary" />
+          <CardTitle className="text-xs font-bold uppercase tracking-wide">Intervals & Limits</CardTitle>
         </div>
-        <Button 
-          onClick={handleSave} 
+        <Button
+          onClick={handleSave}
           disabled={!selectedImei}
           size="sm"
-          className="h-10 px-6 font-black uppercase tracking-widest text-[11px] shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
+          variant={isDirty ? "default" : "outline"}
+          className="h-7 px-3 text-[10px] font-bold uppercase tracking-wide gap-1.5"
         >
-          <Save className="h-4 w-4 mr-2" />
-          Apply Configuration
+          <Save className="h-3 w-3" />
+          {isDirty ? "Apply" : "Saved"}
         </Button>
       </CardHeader>
 
       <CardContent className="p-0">
-        <div className="grid grid-cols-1 lg:grid-cols-2">
-          {/* Section 1: Intervals */}
-          <div className="p-6 space-y-6 border-b lg:border-b-0 lg:border-r border-border">
-            <div className="flex items-center gap-2 mb-2">
-              <Activity className="h-4 w-4 text-primary/60" />
-              <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">Transmission Intervals</h4>
-            </div>
-            
-            <div className="grid gap-4">
-              <SettingRow 
-                label="Normal Sending"
-                description="Regular packet transmission frequency"
-                value={values.NormalSendingInterval}
-                unit="SEC"
-                onChange={(v) => handleChange("NormalSendingInterval", v)}
-              />
-              <SettingRow 
-                label="SOS Sending"
-                description="Emergency transmission frequency"
-                value={values.SOSSendingInterval}
-                unit="SEC"
-                onChange={(v) => handleChange("SOSSendingInterval", v)}
-              />
-              <SettingRow 
-                label="Normal Scanning"
-                description="GPS location update frequency"
-                value={values.NormalScanningInterval}
-                unit="SEC"
-                onChange={(v) => handleChange("NormalScanningInterval", v)}
-              />
-              <SettingRow 
-                label="Airplane Interval"
-                description="Flight mode telemetry frequency"
-                value={values.AirplaneInterval}
-                unit="SEC"
-                onChange={(v) => handleChange("AirplaneInterval", v)}
-              />
-            </div>
+        {/* Intervals Section */}
+        <div className="px-4 pt-3 pb-2">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Timer className="h-3.5 w-3.5 text-primary/50" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70">Transmission</span>
           </div>
+          <div className="space-y-1">
+            <SettingRow
+              icon={Activity}
+              label="Normal Sending"
+              hint="Regular packet rate"
+              value={values.NormalSendingInterval}
+              unit="s"
+              onChange={(v) => handleChange("NormalSendingInterval", v)}
+            />
+            <SettingRow
+              icon={Zap}
+              label="SOS Sending"
+              hint="Emergency burst rate"
+              value={values.SOSSendingInterval}
+              unit="s"
+              iconColor="text-red-500"
+              onChange={(v) => handleChange("SOSSendingInterval", v)}
+            />
+            <SettingRow
+              icon={Activity}
+              label="GPS Scanning"
+              hint="Location update rate"
+              value={values.NormalScanningInterval}
+              unit="s"
+              onChange={(v) => handleChange("NormalScanningInterval", v)}
+            />
+            <SettingRow
+              icon={Plane}
+              label="Flight Mode"
+              hint="Airplane interval rate"
+              value={values.AirplaneInterval}
+              unit="s"
+              onChange={(v) => handleChange("AirplaneInterval", v)}
+            />
+          </div>
+        </div>
 
-          {/* Section 2: Limits */}
-          <div className="p-6 space-y-6">
-            <div className="flex items-center gap-2 mb-2">
-              <ShieldAlert className="h-4 w-4 text-orange-500/60" />
-              <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-orange-600">Safety Thresholds</h4>
-            </div>
+        <div className="mx-4 border-t border-dashed border-border/60" />
 
-            <div className="grid gap-4">
-              <SettingRow 
-                label="Thermal Limit"
-                description="Maximum operating temperature threshold"
-                value={values.TemperatureLimit}
-                unit="°C"
-                onChange={(v) => handleChange("TemperatureLimit", v)}
-              />
-              <SettingRow 
-                label="Speed Limit"
-                description="Movement velocity alert threshold"
-                value={values.SpeedLimit}
-                unit="KM/H"
-                onChange={(v) => handleChange("SpeedLimit", v)}
-              />
-              <SettingRow 
-                label="Critical Battery"
-                description="Power level alert threshold"
-                value={values.LowbatLimit}
-                unit="%"
-                onChange={(v) => handleChange("LowbatLimit", v)}
-              />
-            </div>
+        {/* Limits Section */}
+        <div className="px-4 pt-2 pb-3">
+          <div className="flex items-center gap-1.5 mb-2">
+            <ShieldAlert className="h-3.5 w-3.5 text-orange-500/60" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-orange-600/80">Safety Thresholds</span>
+          </div>
+          <div className="space-y-1">
+            <SettingRow
+              icon={Thermometer}
+              label="Temperature"
+              hint="Max hardware temp"
+              value={values.TemperatureLimit}
+              unit="°C"
+              iconColor="text-orange-500"
+              onChange={(v) => handleChange("TemperatureLimit", v)}
+            />
+            <SettingRow
+              icon={Gauge}
+              label="Speed Limit"
+              hint="Overspeed threshold"
+              value={values.SpeedLimit}
+              unit="km/h"
+              iconColor="text-amber-500"
+              onChange={(v) => handleChange("SpeedLimit", v)}
+            />
+            <SettingRow
+              icon={Battery}
+              label="Low Battery"
+              hint="Battery alert level"
+              value={values.LowbatLimit}
+              unit="%"
+              iconColor="text-red-500"
+              onChange={(v) => handleChange("LowbatLimit", v)}
+            />
           </div>
         </div>
       </CardContent>
@@ -235,40 +213,39 @@ export function IntervalsSettings({
   );
 }
 
-function SettingRow({ 
-  label, 
-  description, 
-  value, 
-  unit, 
-  onChange 
-}: { 
-  label: string; 
-  description: string; 
-  value: string; 
-  unit: string; 
+function SettingRow({
+  icon: Icon,
+  label,
+  hint,
+  value,
+  unit,
+  iconColor = "text-primary/60",
+  onChange,
+}: {
+  icon: React.ElementType;
+  label: string;
+  hint: string;
+  value: string;
+  unit: string;
+  iconColor?: string;
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-6 group">
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-bold uppercase tracking-tight text-foreground/90 group-hover:text-primary transition-colors">
-          {label}
-        </p>
-        <p className="text-[10px] text-muted-foreground/60 leading-tight truncate">
-          {description}
-        </p>
+    <div className="flex items-center gap-3 py-1.5 px-1 rounded-lg hover:bg-muted/30 transition-colors group">
+      <Icon className={cn("h-3.5 w-3.5 flex-shrink-0", iconColor)} />
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold text-foreground/90 leading-tight">{label}</p>
+        <p className="text-[10px] text-muted-foreground leading-tight">{hint}</p>
       </div>
-      <div className="flex items-center gap-2 bg-muted/30 border border-border rounded-lg p-1 hover:border-primary/30 transition-all w-[120px] shrink-0">
+      <div className="flex items-center gap-1 bg-muted/40 border border-border/60 group-hover:border-primary/30 rounded-lg px-2 py-1 transition-colors w-[90px] shrink-0">
         <Input
           type="number"
           min="0"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="border-0 focus-visible:ring-0 h-7 text-xs font-mono font-bold bg-transparent shadow-none text-right"
+          className="border-0 focus-visible:ring-0 h-5 w-full text-xs font-mono font-bold bg-transparent shadow-none text-right p-0"
         />
-        <span className="text-[9px] font-black text-muted-foreground/50 pr-2 shrink-0">
-          {unit}
-        </span>
+        <span className="text-[9px] font-bold text-muted-foreground/60 shrink-0">{unit}</span>
       </div>
     </div>
   );

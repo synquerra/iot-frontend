@@ -23,53 +23,59 @@ export function SiteHeader() {
   const location = useLocation()
   const pathname = location.pathname
   
-  const currentPath = pathConfigs.find(c => c.pattern.test(pathname)) || { label: "Command Center", icon: LayoutDashboard }
+  const currentPath = pathConfigs.find(c => c.pattern.test(pathname)) || { label: "Dashboard", icon: LayoutDashboard }
 
   return (
-    <header className="flex sticky top-0 z-50 w-full items-center border-b bg-background/80 backdrop-blur-md">
-      <div className="flex h-[--header-height] w-full items-center gap-4 px-4">
+    <header className="flex sticky top-0 z-50 w-full items-center border-b bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
+      <div className="flex h-[--header-height] w-full items-center gap-2 px-3 sm:gap-3 sm:px-4">
+        {/* Mobile: Menu toggle */}
         <Button
-          className="sm:hidden"
+          className="sm:hidden flex-shrink-0"
           variant="ghost"
           size="icon"
           onClick={toggleSidebar}
         >
-          <MenuIcon size={32} className="size-6" />
+          <MenuIcon className="size-5" />
         </Button>
 
-        <div className="hidden sm:inline-flex items-center justify-center rounded-xl border border-border/60 bg-slate-900 p-1 backdrop-blur-lg shadow-sm">
+        {/* Desktop: Logo */}
+        <div className="hidden sm:inline-flex items-center justify-center rounded-xl border border-border/60 bg-slate-900 p-1 backdrop-blur-lg shadow-sm flex-shrink-0">
           <img
             src="/images/logo.png"
-            alt="Company Logo"
-            className="max-h-10"
+            alt="Synquerra"
+            className="max-h-9"
           />
         </div>
 
+        {/* Desktop: Sidebar toggle */}
         <Button
-          className="hidden sm:flex"
+          className="hidden sm:flex flex-shrink-0"
           variant="ghost"
           size="icon"
           onClick={toggleSidebar}
         >
-          <MenuIcon size={32} className="size-6" />
+          <MenuIcon className="size-5" />
         </Button>
 
-        {/* Breadcrumb Section */}
-        <div className="flex items-center gap-2 overflow-hidden">
-          <div className="hidden md:flex h-4 w-px bg-border/60 mx-1" />
-          <div className="flex items-center gap-1.5 min-w-0">
-            <currentPath.icon className="h-4 w-4 text-primary/60 shrink-0" />
-            <div className="flex items-center gap-1.5 leading-none">
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 hidden xs:block">System</span>
-              <ChevronRight className="h-2.5 w-2.5 text-muted-foreground/20 hidden xs:block" />
-              <span className="text-[11px] font-black uppercase tracking-widest text-foreground truncate">
-                {currentPath.label}
-              </span>
-            </div>
+        {/* Divider */}
+        <div className="h-5 w-px bg-border/60 flex-shrink-0" />
+
+        {/* Breadcrumb — always visible */}
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+          <currentPath.icon className="h-3.5 w-3.5 text-primary/60 flex-shrink-0" />
+          <div className="flex items-center gap-1 min-w-0">
+            <span className="hidden xs:block text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 flex-shrink-0">
+              System
+            </span>
+            <ChevronRight className="hidden xs:block h-3 w-3 text-muted-foreground/30 flex-shrink-0" />
+            <span className="text-xs font-bold uppercase tracking-wide text-foreground truncate">
+              {currentPath.label}
+            </span>
           </div>
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        {/* Right: Theme toggle */}
+        <div className="ml-auto flex items-center gap-2 flex-shrink-0">
           <ThemeToggle />
         </div>
       </div>

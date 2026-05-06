@@ -142,29 +142,27 @@ export default function AlertsPage() {
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="mx-auto ">
-        <AlertsHeader 
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          isRefreshing={isRefreshing} 
-          onRefresh={() => fetchData(false)} 
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-        />
+    <div className="space-y-6">
+      <AlertsHeader 
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        isRefreshing={isRefreshing} 
+        onRefresh={() => fetchData(false)} 
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+      />
 
-        <SeverityOverview cards={cards} loading={loading} />
+      <SeverityOverview cards={cards} loading={loading} />
 
-        <AlertsHistory 
-          loading={loading}
-          filteredItems={filteredItems}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          isRefreshing={isRefreshing}
-          onAcknowledge={handleAcknowledge}
-          formatDate={formatDate}
-        />
-      </div>
+      <AlertsHistory 
+        loading={loading}
+        filteredItems={filteredItems}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        isRefreshing={isRefreshing}
+        onAcknowledge={handleAcknowledge}
+        formatDate={formatDate}
+      />
     </div>
   );
 }
