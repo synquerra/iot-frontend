@@ -3,6 +3,9 @@ import {
   XCircle,
   AlertTriangle,
   Info,
+  RefreshCw,
+  Search,
+  Filter,
 } from "lucide-react";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { getAlerts, getErrors, acknowledgeAlert, type AlertErrorItem } from "./services/alertsService";
@@ -10,9 +13,13 @@ import { useDevices } from "../devices/hooks/useDevices";
 import { toast } from "sonner";
 
 // Sub-components
-import { AlertsHeader } from "./components/AlertsHeader";
+import { PageHeader } from "@/components/PageHeader";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { SeverityOverview } from "./components/SeverityOverview";
 import { AlertsHistory } from "./components/AlertsHistory";
+import { cn } from "@/lib/utils";
 
 // Types
 import type { ViewMode, SeverityCard, HistoryItem } from "./types";
@@ -143,14 +150,44 @@ export default function AlertsPage() {
 
   return (
     <div className="space-y-6">
-      <AlertsHeader 
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        isRefreshing={isRefreshing} 
-        onRefresh={() => fetchData(false)} 
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-      />
+      <PageHeader
+        title="Alerts & Incidents"
+        description="Monitor system health and device status"
+        icon={AlertOctagon}
+      >
+        <div className="flex items-center gap-3">
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="hidden md:block">
+            <TabsList className="grid w-[200px] grid-cols-2 h-9 p-1 bg-muted/40 border border-border/50 rounded-xl">
+              <TabsTrigger value="errors" className="text-[10px] font-black uppercase tracking-widest gap-2 data-[state=active]:bg-background">
+                Errors
+              </TabsTrigger>
+              <TabsTrigger value="alerts" className="text-[10px] font-black uppercase tracking-widest gap-2 data-[state=active]:bg-background">
+                Alerts
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <div className="relative group hidden sm:block w-48">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
+            <Input 
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9 text-xs font-bold bg-muted/20 border-border/50 focus:bg-background transition-all rounded-xl"
+            />
+          </div>
+
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={() => fetchData(false)} 
+            disabled={isRefreshing}
+            className="h-10 w-10 rounded-xl"
+          >
+            <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin text-primary")} />
+          </Button>
+        </div>
+      </PageHeader>
 
       <SeverityOverview cards={cards} loading={loading} />
 

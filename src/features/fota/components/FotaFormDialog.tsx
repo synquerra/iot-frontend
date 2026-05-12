@@ -149,7 +149,7 @@ export function FotaFormDialog({ isOpen, onOpenChange, onSuccess, editData }: Fo
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="version_name">Version Name</Label>
+                <Label htmlFor="version_name">Version Name <span className="text-destructive">*</span></Label>
                 <Input
                   id="version_name"
                   placeholder="e.g. v1.0.2"
@@ -159,7 +159,7 @@ export function FotaFormDialog({ isOpen, onOpenChange, onSuccess, editData }: Fo
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="version_code">Version Code</Label>
+                <Label htmlFor="version_code">Version Code <span className="text-destructive">*</span></Label>
                 <Input
                   id="version_code"
                   type="number"
@@ -174,7 +174,7 @@ export function FotaFormDialog({ isOpen, onOpenChange, onSuccess, editData }: Fo
             <div className="grid gap-2">
               <Label className="flex items-center gap-2 mb-1">
                 <FileUp className="h-4 w-4 text-primary" />
-                Update file
+                Update file <span className="text-destructive">*</span>
               </Label>
               <div className="filepond-wrapper rounded-xl overflow-hidden border border-dashed border-primary/20 bg-primary/5 p-1">
                 <FilePond

@@ -14,7 +14,7 @@ const CONTEXT_EXPIRY_HOURS = 24;
 // Simple encryption key derivation (in production, use more secure methods)
 const ENCRYPTION_KEY = 'user-context-encryption-key-v1';
 
-type UserType = "PARENTS" | "ADMIN"
+type UserType = "admin" | "fota" | "testing"
 
 type AuthTokens = {
   accessToken: string
@@ -144,14 +144,14 @@ export function parseAuthResponse(response: AuthResponseInput): ParsedAuthContex
     throw new Error('Invalid auth response: missing uniqueId');
   }
 
-  // Handle missing userType - default to PARENTS for safety
-  let validatedUserType: UserType | undefined = userType as UserType | undefined;
+  // Handle missing userType - default to testing for safety if unknown
+  let validatedUserType: UserType | undefined = (userType as string)?.toLowerCase() as UserType | undefined;
   if (!userType) {
-    console.warn('Auth response missing userType, defaulting to PARENTS');
-    validatedUserType = 'PARENTS';
-  } else if (userType !== 'PARENTS' && userType !== 'ADMIN') {
-    console.warn(`Invalid userType "${userType}", defaulting to PARENTS`);
-    validatedUserType = 'PARENTS';
+    console.warn('Auth response missing userType, defaulting to testing');
+    validatedUserType = 'testing';
+  } else if (!['admin', 'fota', 'testing'].includes(validatedUserType || '')) {
+    console.warn(`Invalid userType "${userType}", defaulting to testing`);
+    validatedUserType = 'testing';
   }
 
   if (!email) {
@@ -194,7 +194,7 @@ export function parseAuthResponse(response: AuthResponseInput): ParsedAuthContex
     );
   }
 
-  const resolvedUserType: UserType = validatedUserType ?? "PARENTS"
+  const resolvedUserType: UserType = validatedUserType ?? "testing"
 
   // Return structured user context
   return {
@@ -352,7 +352,7 @@ function validateUserContext(context: ParsedAuthContext): boolean {
     return false;
   }
 
-  if (!context.userType || (context.userType !== 'PARENTS' && context.userType !== 'ADMIN')) {
+  if (!context.userType || !['admin', 'fota', 'testing'].includes(context.userType)) {
     return false;
   }
 
@@ -544,7 +544,7 @@ export function loadUserContext() {
     }
 
     // Validate userType
-    if (data.userType !== 'PARENTS' && data.userType !== 'ADMIN') {
+    if (!['admin', 'fota', 'testing'].includes(data.userType)) {
       console.error('Invalid userType in persisted data');
       clearPersistedContext();
       return null;

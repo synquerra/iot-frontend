@@ -2,6 +2,7 @@ import api from "@/lib/axios";
 import type { Device, DeviceOverview, AnalyticsHealth } from "@/types";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { getDeviceByImei } from "@/features/devices/services/deviceService";
 import { getLatestDeviceSettings, type LatestDeviceSettingsRecord } from "@/features/device-settings/services/deviceSettingsService";
 
 function useDeviceOverview(imei: string) {
@@ -24,38 +25,26 @@ function useDeviceOverview(imei: string) {
 
     const fetchDeviceData = async () => {
       try {
-        const res = await api.get("/device/list");
-        if (res.data?.status !== "success") throw new Error("Failed to fetch device list");
-        
-        const devices = Array.isArray(res.data.data) ? res.data.data : [];
-        const target = devices.find((d: any) => d.imei === imei);
+        const target = await getDeviceByImei(imei);
 
         if (target) {
-          // Normalize Device Object
-          setDevice({
-            topic: target.topic,
-            imei: target.imei,
-            studentName: target.student_name ?? null,
-            studentId: target.student_id ?? null,
-            geoid: target.geoid ?? null,
-            createdAt: target.createdAt ?? null,
-            interval: target.interval,
-          });
+          // Update local state with the normalized device object
+          setDevice(target);
           
           // Map Telemetry into Device Overview
           setDeviceOverview({
             id: target.topic,
             topic: target.topic,
             imei: target.imei,
-            latitude: parseFloat(target.latitude),
-            longitude: parseFloat(target.longitude),
-            speed: parseFloat(target.speed) || 0,
-            rawTemperature: parseFloat(target.temperature) || 0,
-            battery: parseInt(target.battery, 10) || 0,
-            signal: parseInt(target.signal, 10) || 0,
-            gps_strength: target.gps_strength,
-            timestamp: target.timestamp,
-            packet: target.packet,
+            latitude: parseFloat(target.latitude || "0"),
+            longitude: parseFloat(target.longitude || "0"),
+            speed: parseFloat(target.speed || "0") || 0,
+            rawTemperature: parseFloat(target.temperature || "0") || 0,
+            battery: parseInt(target.battery || "0", 10) || 0,
+            signal: parseInt(target.signal || "0", 10) || 0,
+            gps_strength: target.gps_strength || "Unknown",
+            timestamp: target.timestamp || null,
+            packet: (target as any).packet || null,
           });
 
           return target;

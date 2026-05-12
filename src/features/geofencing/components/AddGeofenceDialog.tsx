@@ -242,7 +242,7 @@ export function AddGeofenceDialog({
                   </SelectContent>
                 </Select>
                 <div className="space-y-2">
-                  <Label htmlFor="geofence-name">Geofence Name</Label>
+                  <Label htmlFor="geofence-name">Geofence Name <span className="text-destructive">*</span></Label>
                   <Input
                     id="geofence-name"
                     placeholder="Enter location name"

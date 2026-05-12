@@ -1,14 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useTelemetry } from "./hooks/useTelemetry";
 import { TelemetryTable } from "./components/TelemetryTable";
 import { TelemetryHeader } from "./components/TelemetryHeader";
 import { TelemetryFilters } from "./components/TelemetryFilters";
 import { TelemetryPagination } from "./components/TelemetryPagination";
-import { Activity } from "lucide-react";
+import { getDeviceByImei, type Device } from "@/features/devices/services/deviceService";
+import { RefreshCw, Activity } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function TelemetryPage() {
   const { imei } = useParams();
+  const [device, setDevice] = useState<Device | null>(null);
   
   // State for pagination and filtering
   const [skip, setSkip] = useState(0);
@@ -23,6 +28,12 @@ export default function TelemetryPage() {
     startDate: startDate ? new Date(startDate).toISOString() : undefined,
     endDate: endDate ? new Date(endDate).toISOString() : undefined,
   });
+
+  useEffect(() => {
+    if (imei) {
+      getDeviceByImei(imei).then(setDevice);
+    }
+  }, [imei]);
 
   const handleNextPage = () => setSkip(prev => prev + limit);
   const handlePrevPage = () => setSkip(prev => Math.max(0, prev - limit));
@@ -39,11 +50,21 @@ export default function TelemetryPage() {
 
   return (
     <div className="space-y-6 w-full min-w-0 mx-auto overflow-x-hidden pb-10">
-      <TelemetryHeader 
-        imei={imei} 
-        isLoading={isLoading} 
-        onRefresh={refresh} 
-      />
+      <PageHeader
+        title="Live Telemetry"
+        description={device ? `Real-time data stream for ${device.displayName}` : (imei ? `Real-time data stream for ${imei}` : "Real-time raw data transmission logs")}
+        icon={Activity}
+      >
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={refresh}
+          disabled={isLoading}
+          className="h-10 w-10 rounded-xl"
+        >
+          <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin text-primary")} />
+        </Button>
+      </PageHeader>
 
       <TelemetryFilters 
         startDate={startDate}

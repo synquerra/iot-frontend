@@ -15,6 +15,7 @@ import AlertsPage from "./features/alerts";
 import TelemetryPage from "./features/telemetry";
 import DeviceTesting from "./features/device-testing";
 import FotaPage from "./features/fota";
+import UsersPage from "./features/users";
 
 export const router = createBrowserRouter([
   {
@@ -69,6 +70,10 @@ export const router = createBrowserRouter([
           {
             path: "alerts",
             element: <AlertsPage />,
+          },
+          {
+            path: "users",
+            element: <UsersPage />,
           },
         ],
       },

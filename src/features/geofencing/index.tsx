@@ -10,10 +10,15 @@ import * as geofenceService from "./services/geofenceService";
 import * as deviceService from "@/features/devices/services/deviceService";
 import type { GeofenceRecord, GeofenceAssignment } from "./types";
 
+import { useParams } from "react-router-dom";
+import { PageHeader } from "@/components/PageHeader";
+import { MapPin } from "lucide-react";
+
 export default function GeofencingPage() {
+  const { imei: routeImei } = useParams();
   const [geofences, setGeofences] = useState<GeofenceRecord[]>([]);
   const [selectedGeofenceId, setSelectedGeofenceId] = useState<string | null>(null);
-  const [selectedImei, setSelectedImei] = useState<string>("");
+  const [selectedImei, setSelectedImei] = useState<string>(routeImei ?? "");
   const [devices, setDevices] = useState<deviceService.Device[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -32,10 +37,12 @@ export default function GeofencingPage() {
         setIsLoading(true);
         const deviceData = await deviceService.listDevices();
         setDevices(deviceData);
-        if (deviceData.length > 0) {
-          const firstImei = deviceData[0].imei;
-          setSelectedImei(firstImei);
-          const geofenceData = await geofenceService.listGeofences(firstImei);
+        
+        // Use routeImei if available, otherwise fallback to first device
+        const initialImei = routeImei || (deviceData.length > 0 ? deviceData[0].imei : "");
+        if (initialImei) {
+          setSelectedImei(initialImei);
+          const geofenceData = await geofenceService.listGeofences(initialImei);
           setGeofences(geofenceData.data || []);
         }
       } catch (error) {
@@ -45,7 +52,7 @@ export default function GeofencingPage() {
       }
     };
     loadInitialData();
-  }, []);
+  }, [routeImei]);
 
   // Fetch geofences and assignments when device selection changes
   useEffect(() => {
@@ -189,6 +196,11 @@ export default function GeofencingPage() {
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        title="Geofencing"
+        description="Define and manage safety zones for your devices"
+        icon={MapPin}
+      />
       <GeofenceDeviceHeader
         devices={devices}
         selectedImei={selectedImei}
