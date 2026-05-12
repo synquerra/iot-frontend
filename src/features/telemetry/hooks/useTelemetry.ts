@@ -68,7 +68,7 @@ export function useTelemetry({ imei, limit = 20, skip = 0, startDate, endDate }:
 
       console.log("useTelemetry: Dispatching inline GraphQL query", { query });
 
-      const res = await api.post('/analytics/analytics-query', { query });
+      const res = await api.post('analytics/analytics-query', { query });
       
       if (res.data?.errors) {
         const gqlError = res.data.errors[0]?.message || "GraphQL Error";

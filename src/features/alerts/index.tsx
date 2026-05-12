@@ -156,12 +156,18 @@ export default function AlertsPage() {
       >
         <div className="flex items-center gap-3">
           <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="hidden md:block">
-            <TabsList className="grid w-[200px] grid-cols-2 h-9 p-1 bg-muted/40 border border-border/50 rounded-xl">
-              <TabsTrigger value="errors" className="text-[10px] font-black uppercase tracking-widest gap-2 data-[state=active]:bg-background">
+            <TabsList className="grid w-[240px] grid-cols-2 h-10 p-1 bg-muted/40 border border-border/50 rounded-xl">
+              <TabsTrigger value="errors" className="text-[10px] font-black uppercase tracking-widest gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                 Errors
+                <span className="flex items-center justify-center h-4.5 min-w-[1.25rem] px-1.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 text-[9px] font-black border border-red-500/20">
+                  {errors.length}
+                </span>
               </TabsTrigger>
-              <TabsTrigger value="alerts" className="text-[10px] font-black uppercase tracking-widest gap-2 data-[state=active]:bg-background">
+              <TabsTrigger value="alerts" className="text-[10px] font-black uppercase tracking-widest gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                 Alerts
+                <span className="flex items-center justify-center h-4.5 min-w-[1.25rem] px-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[9px] font-black border border-amber-500/20">
+                  {alerts.length}
+                </span>
               </TabsTrigger>
             </TabsList>
           </Tabs>

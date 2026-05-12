@@ -61,7 +61,7 @@ function normalizeDevice(device: RawDevice): Device {
 }
 
 export async function listDevices(): Promise<Device[]> {
-  const { data } = await api.get("/device/list");
+  const { data } = await api.get("device/list");
   
   if (!data || data.status !== "success") {
     throw new Error(data?.message || "Failed to fetch device list");
@@ -89,11 +89,12 @@ export async function listDevices(): Promise<Device[]> {
       longitude: device.longitude ?? null,
       speed: device.speed ?? null,
       timestamp: device.timestamp ?? null,
+      interval: device.interval ?? null,
     };
   });
 }
 export async function listDeviceGeofences(imei: string): Promise<Geofence[]> {
-  const response = await api.get(`/list/${imei}`);
+  const response = await api.get("list", { params: { imei } });
 
 
   const deviceGeofences = Array.isArray(response.data.data) ? response.data.data : [];
@@ -139,7 +140,7 @@ export async function getDeviceByTopic(topic: string): Promise<Device | null> {
 }
 
 export async function toggleDeviceStatus(topic: string, isActive: boolean): Promise<void> {
-  const { data } = await api.post("/device/resync", {
+  const { data } = await api.post("device/resync", {
     topic,
     is_active: isActive,
   });
@@ -150,7 +151,8 @@ export async function toggleDeviceStatus(topic: string, isActive: boolean): Prom
 }
 
 export async function getDeviceByImei(imei: string): Promise<Device | null> {
-  const { data } = await api.get("/device", { params: { imei } });
+  const response = await api.get("device", { params: { imei } });
+  const { data } = response;
   
   if (!data || data.status !== "success") {
     return null;
@@ -176,5 +178,6 @@ export async function getDeviceByImei(imei: string): Promise<Device | null> {
     longitude: device.longitude ?? null,
     speed: device.speed ?? null,
     timestamp: device.timestamp ?? null,
+    interval: device.interval ?? null,
   };
 }

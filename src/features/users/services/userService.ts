@@ -8,26 +8,26 @@ import type {
 } from "../types";
 
 export const listUsers = async (): Promise<UserListResponse> => {
-  const response = await api.get("/user/list");
+  const response = await api.get("user/list");
   return response.data;
 };
 
 export const createUser = async (payload: CreateUserPayload): Promise<UserDetailResponse> => {
-  const response = await api.post("/user/add", payload);
+  const response = await api.post("user/add", payload);
   return response.data;
 };
 
 export const updateUser = async (payload: UpdateUserPayload): Promise<UserDetailResponse> => {
-  const response = await api.post("/user/update", payload);
+  const response = await api.post("user/update", payload);
   return response.data;
 };
 
-export const deleteUser = async (userId: string): Promise<GenericResponse> => {
-  const response = await api.delete(`/user/delete/${userId}`);
+export const deleteUser = async (user_id: string): Promise<GenericResponse> => {
+  const response = await api.delete("user/delete", { params: { user_id } });
   return response.data;
 };
 
-export const getUserById = async (userId: string): Promise<UserDetailResponse> => {
-  const response = await api.get(`/user/find-by-id/${userId}`);
+export const getUserById = async (user_id: string): Promise<UserDetailResponse> => {
+  const response = await api.get("user/find-by-id", { params: { user_id } });
   return response.data;
 };
