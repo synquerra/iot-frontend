@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useTelemetry } from "./hooks/useTelemetry";
 import { TelemetryTable } from "./components/TelemetryTable";
-import { TelemetryHeader } from "./components/TelemetryHeader";
+// import { TelemetryHeader } from "./components/TelemetryHeader";
 import { TelemetryFilters } from "./components/TelemetryFilters";
 import { TelemetryPagination } from "./components/TelemetryPagination";
 import { getDeviceByImei, type Device } from "@/features/devices/services/deviceService";

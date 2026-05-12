@@ -1,8 +1,8 @@
 import api from "@/lib/axios";
-import type { Device, DeviceOverview, AnalyticsHealth } from "@/types";
+import type { DeviceOverview, AnalyticsHealth } from "@/types";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { getDeviceByImei } from "@/features/devices/services/deviceService";
+import { getDeviceByImei, type Device } from "@/features/devices/services/deviceService";
 import { getLatestDeviceSettings, type LatestDeviceSettingsRecord } from "@/features/device-settings/services/deviceSettingsService";
 
 function useDeviceOverview(imei: string) {
@@ -43,7 +43,7 @@ function useDeviceOverview(imei: string) {
             battery: parseInt(target.battery || "0", 10) || 0,
             signal: parseInt(target.signal || "0", 10) || 0,
             gps_strength: target.gps_strength || "Unknown",
-            timestamp: target.timestamp || null,
+            timestamp: target.timestamp || undefined,
             packet: (target as any).packet || null,
           });
 

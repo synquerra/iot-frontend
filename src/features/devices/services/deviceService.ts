@@ -31,6 +31,7 @@ export type Device = {
   longitude?: string | null;
   speed?: string | null;
   timestamp?: string | null;
+  interval?: number | null;
 };
 
 async function graphqlRequest<T>(query: string): Promise<T> {

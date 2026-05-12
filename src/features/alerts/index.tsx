@@ -5,7 +5,6 @@ import {
   Info,
   RefreshCw,
   Search,
-  Filter,
 } from "lucide-react";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { getAlerts, getErrors, acknowledgeAlert, type AlertErrorItem } from "./services/alertsService";

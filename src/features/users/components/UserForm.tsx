@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { type User } from "../types";
+import { type User, type UserRole } from "../types";
 
 interface UserFormProps {
   open: boolean;
@@ -133,7 +133,7 @@ export function UserForm({ open, onOpenChange, user, onSubmit, isLoading }: User
               <Label htmlFor="user_type">User Type <span className="text-destructive">*</span></Label>
               <Select
                 value={formData.user_type}
-                onValueChange={(value) => setFormData((prev) => ({ ...prev, user_type: value }))}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, user_type: value as UserRole }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select type" />
