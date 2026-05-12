@@ -76,7 +76,7 @@ export function AddDeviceModal({ children }: { children?: React.ReactNode }) {
           <div className="grid gap-4 py-8">
             <div className="grid gap-2">
               <Label htmlFor="imei" className="font-semibold text-secondary-foreground">
-                IMEI Number
+                IMEI Number <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="imei"

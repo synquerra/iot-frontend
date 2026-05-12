@@ -33,7 +33,11 @@ api.interceptors.response.use(
     // 1. Handle 401 Unauthorized
     if (error.response?.status === 401) {
       localStorage.removeItem("accessToken");
-      localStorage.removeItem("auth_user");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user_context");
+      localStorage.removeItem("userEmail");
+      localStorage.removeItem("sessionExpiry");
+      sessionStorage.clear();
       window.location.href = "/auth/login";
       return Promise.reject(error);
     }
@@ -48,6 +52,22 @@ api.interceptors.response.use(
     // 3. Handle Other Server Errors (5xx, etc)
     if (error.response?.status >= 500) {
       error.message = "Internal Server Error";
+    }
+
+    // 4. Handle Validation Errors (422 - Pydantic/FastAPI)
+    if (error.response?.status === 422 && error.response.data?.detail) {
+      const details = error.response.data.detail;
+      if (Array.isArray(details)) {
+        const messages = details.map(d => {
+          const field = d.loc[d.loc.length - 1];
+          return `${field}: ${d.msg}`;
+        }).join(", ");
+        error.message = messages;
+        // Ensure the component catch blocks pick up this message
+        if (error.response.data && !error.response.data.message) {
+          error.response.data.message = messages;
+        }
+      }
     }
 
     return Promise.reject(error);

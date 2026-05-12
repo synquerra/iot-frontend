@@ -21,6 +21,8 @@ import { listDevices, type Device } from "@/features/devices/services/deviceServ
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
+import { PageHeader } from "@/components/PageHeader";
+
 export default function Dashboard() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,7 +108,23 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <PageHeader
+        title="Fleet Overview"
+        description="Real-time monitoring and analytics command center"
+        icon={TrendingUp}
+      >
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => loadDevices(true)}
+          disabled={refreshing}
+          className="h-10 w-10 rounded-xl"
+        >
+          <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin text-primary")} />
+        </Button>
+      </PageHeader>
+
       {/* Phase 2 Notice */}
       <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/15">
         <div className="flex-shrink-0 p-2 rounded-xl bg-primary/10">
@@ -135,7 +153,7 @@ export default function Dashboard() {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="text-[10px] font-semibold text-muted-foreground mb-0.5 uppercase tracking-wide">{card.label}</p>
-                      <p className="text-xl sm:text-2xl font-black text-foreground">{card.value}</p>
+                      <p className="text-base sm:text-lg font-bold text-foreground leading-none">{card.value}</p>
                       <p className="text-[10px] text-muted-foreground mt-0.5 hidden sm:block">{card.description}</p>
                     </div>
                     <div className={cn("p-2 rounded-lg flex-shrink-0", card.bg)}>

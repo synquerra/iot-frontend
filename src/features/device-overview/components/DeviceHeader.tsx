@@ -47,11 +47,11 @@ export function DeviceHeader({
     <header className="relative w-full overflow-hidden border-b bg-background pb-3">
       <div className="relative z-10">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary shadow-md shadow-primary/20 ring-1 ring-border/50">
-              <Smartphone className="h-6 w-6 text-white" />
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-primary/10 border border-primary/20 shadow-inner">
+              <Smartphone className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
             </div>
-            <div className="flex flex-col gap-1.5 pt-1">
+            <div className="flex flex-col gap-0.5 sm:gap-1 pt-0.5">
               <div className="flex flex-wrap items-center gap-3">
                 <Badge 
                   variant={status === "Online" ? "default" : "secondary"}

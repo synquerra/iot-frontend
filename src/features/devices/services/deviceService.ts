@@ -31,6 +31,7 @@ export type Device = {
   longitude?: string | null;
   speed?: string | null;
   timestamp?: string | null;
+  interval?: number | null;
 };
 
 async function graphqlRequest<T>(query: string): Promise<T> {
@@ -146,4 +147,34 @@ export async function toggleDeviceStatus(topic: string, isActive: boolean): Prom
   if (!data || data.status !== "success") {
     throw new Error(data?.message || "Failed to toggle device status");
   }
+}
+
+export async function getDeviceByImei(imei: string): Promise<Device | null> {
+  const { data } = await api.get("/device", { params: { imei } });
+  
+  if (!data || data.status !== "success") {
+    return null;
+  }
+
+  const device = data.data;
+  return {
+    topic: device.topic,
+    imei: device.imei,
+    displayName: device.student_name || device.topic || device.imei,
+    status: device.is_active ? "active" : "inactive",
+    studentName: device.student_name ?? null,
+    studentId: device.student_id ?? null,
+    geoid: device.geoid ?? null,
+    createdAt: device.createdAt ?? null,
+    battery: device.battery ?? null,
+    signal: device.signal ?? null,
+    gps_strength: device.gps_strength ?? null,
+    temperature: device.temperature ?? null,
+    currentMode: device.current_mode ?? null,
+    ledStatus: device.led_status ?? null,
+    latitude: device.latitude ?? null,
+    longitude: device.longitude ?? null,
+    speed: device.speed ?? null,
+    timestamp: device.timestamp ?? null,
+  };
 }

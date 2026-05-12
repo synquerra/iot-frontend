@@ -1,4 +1,4 @@
-import { listDevices, type Device } from "@/features/devices/services/deviceService";
+import { listDevices, getDeviceByImei, type Device } from "@/features/devices/services/deviceService";
 import {
   getLatestDeviceSettings,
   type LatestDeviceSettingsRecord,
@@ -23,7 +23,11 @@ import {
   Battery,
   CheckCircle2,
   Settings,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
+
+import { PageHeader } from "@/components/PageHeader";
 
 export default function DeviceSettings() {
   const { imei: routeImei } = useParams();
@@ -31,12 +35,19 @@ export default function DeviceSettings() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [isLoadingDevices, setIsLoadingDevices] = useState(true);
   const [selectedImei, setSelectedImei] = useState(routeImei ?? "");
+  const [selectedDeviceData, setSelectedDeviceData] = useState<Device | null>(null);
   const [latestSettings, setLatestSettings] = useState<LatestDeviceSettingsRecord | null>(null);
   const [isLoadingSettings, setIsLoadingSettings] = useState(false);
   const [isRefreshingSettings, setIsRefreshingSettings] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     setSelectedImei(routeImei ?? "");
+    if (routeImei) {
+      getDeviceByImei(routeImei).then(d => {
+        if (d) setSelectedDeviceData(d);
+      });
+    }
   }, [routeImei]);
 
   useEffect(() => {
@@ -49,7 +60,9 @@ export default function DeviceSettings() {
         setDevices(response);
         // Auto-select first device if no route IMEI
         if (!routeImei && response.length > 0) {
-          setSelectedImei(response[0].imei);
+          const firstImei = response[0].imei;
+          setSelectedImei(firstImei);
+          getDeviceByImei(firstImei).then(setSelectedDeviceData);
         }
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to load devices");
@@ -62,9 +75,10 @@ export default function DeviceSettings() {
   }, [routeImei]);
 
   const selectedDevice = useMemo(
-    () => devices.find((d) => d.imei === selectedImei) ?? null,
-    [devices, selectedImei],
+    () => selectedDeviceData || devices.find((d) => d.imei === selectedImei) || null,
+    [devices, selectedImei, selectedDeviceData],
   );
+
 
   const loadSettings = async (silent = false) => {
     if (!selectedDevice?.topic) {
@@ -97,9 +111,18 @@ export default function DeviceSettings() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 min-h-0">
+    <div className="space-y-6">
+      <PageHeader
+        title="Device Settings"
+        description="Configure unit parameters and system behavior"
+        icon={Settings}
+      />
+      <div className="flex flex-col lg:flex-row gap-4 min-h-0 relative">
       {/* ── Device Selector Panel ── */}
-      <aside className="w-full lg:w-64 xl:w-72 shrink-0">
+      <aside className={cn(
+        "shrink-0 transition-all duration-300 ease-in-out overflow-hidden",
+        isSidebarCollapsed ? "w-0 opacity-0" : "w-full lg:w-64 xl:w-72"
+      )}>
         <div className="bg-card border border-border rounded-xl overflow-hidden sticky top-0">
           {/* Panel header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
@@ -179,17 +202,31 @@ export default function DeviceSettings() {
 
         {/* Selected device context bar */}
         <div className={cn(
-          "bg-card border border-border rounded-xl px-4 py-3 flex items-center gap-3 transition-all",
+          "bg-card border border-border rounded-xl px-4 py-2.5 flex items-center gap-3 transition-all",
           !selectedDevice && "opacity-50"
         )}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0 hover:bg-primary/10 hover:text-primary transition-colors"
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            title={isSidebarCollapsed ? "Show device list" : "Hide device list"}
+          >
+            {isSidebarCollapsed ? (
+              <PanelLeftOpen className="h-4 w-4" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" />
+            )}
+          </Button>
+
           <div className={cn(
-            "h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0",
+            "h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0",
             selectedDevice?.status === "active"
               ? "bg-emerald-500/10 border border-emerald-500/20"
               : "bg-muted border border-border"
           )}>
             <Smartphone className={cn(
-              "h-4 w-4",
+              "h-3.5 w-3.5",
               selectedDevice?.status === "active" ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
             )} />
           </div>
@@ -293,5 +330,6 @@ export default function DeviceSettings() {
         )}
       </div>
     </div>
+  </div>
   );
 }

@@ -204,7 +204,7 @@ export function DeviceCard({
               </Badge>
             )}
           </div>
-          <h3 className="font-semibold text-sm tracking-tight truncate">{device.displayName}</h3>
+          <h3 className="font-bold text-[13px] tracking-tight truncate leading-none">{device.displayName}</h3>
         </div>
 
         {/* Info Grid */}
