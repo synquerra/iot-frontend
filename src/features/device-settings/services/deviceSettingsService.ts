@@ -60,7 +60,7 @@ function extractLatestRecord(payload: unknown): LatestDeviceSettingsRecord | nul
 export async function getLatestDeviceSettings(
   topicStr: string,
 ): Promise<LatestDeviceSettingsRecord | null> {
-  const response = await api.get(`/setting/get`, {
+  const response = await api.get(`setting/get`, {
     params: { topic: topicStr },
   });
 
@@ -78,12 +78,12 @@ export async function updateDeviceCoreSettings(
     TemperatureLimit: number;
   }
 ) {
-  const response = await api.put(`/setting/update-core`, payload);
+  const response = await api.put(`setting/update-core`, payload);
   return response.data;
 }
 
 export async function updateAirplaneMode(payload: { topic: string }) {
-  const response = await api.post(`/setting/airplane-mode`, payload);
+  const response = await api.post(`setting/airplane-mode`, payload);
   return response.data;
 }
 
@@ -91,7 +91,7 @@ export async function updateLedStatus(payload: {
   topic: string;
   LED: "SwitchOnLed" | "SwitchOffLed";
 }) {
-  const response = await api.post(`/setting/led-status`, payload);
+  const response = await api.post(`setting/led-status`, payload);
   return response.data;
 }
 
@@ -101,7 +101,7 @@ export async function updateDevicePhoneNumbers(payload: {
   phonenum2: string;
   controlroomnum: string;
 }) {
-  const response = await api.post(`/setting/update-phones`, payload);
+  const response = await api.post(`setting/update-phones`, payload);
   return response.data;
 }
 
@@ -110,7 +110,7 @@ export async function dispatchDeviceAction(payload: {
   action: string;
   params?: Record<string, any>;
 }) {
-  const response = await api.post(`/setting/raw`, {
+  const response = await api.post(`setting/raw`, {
     topic: payload.topic,
     command: payload.action,
     params: payload.params || {}
@@ -119,11 +119,11 @@ export async function dispatchDeviceAction(payload: {
 }
 
 export async function toggleIncomingCalls(payload: { imei: string; status: "Enable" | "Disable" }) {
-  const response = await api.post(`/setting/toggle-incoming-calls`, payload);
+  const response = await api.post(`setting/toggle-incoming-calls`, payload);
   return response.data;
 }
 
 export async function toggleAmbientListening(payload: { imei: string; status: "Enable" | "Disable" | "Stop" }) {
-  const response = await api.post(`/setting/toggle-ambient-listening`, payload);
+  const response = await api.post(`setting/toggle-ambient-listening`, payload);
   return response.data;
 }
