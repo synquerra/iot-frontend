@@ -8,6 +8,7 @@ import {
   PhoneIcon,
   PieChart,
   PinIcon,
+  Settings2,
   Users,
 } from "lucide-react";
 import * as React from "react";
@@ -82,6 +83,13 @@ const data = {
       path: "/users",
       end: "/users",
       icon: Users,
+      roles: ["admin"],
+    },
+    {
+      name: "Modes",
+      path: "/modes",
+      end: "/modes",
+      icon: Settings2,
       roles: ["admin"],
     },
   ],
