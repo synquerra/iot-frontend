@@ -14,7 +14,7 @@ const CONTEXT_EXPIRY_HOURS = 24;
 // Simple encryption key derivation (in production, use more secure methods)
 const ENCRYPTION_KEY = 'user-context-encryption-key-v1';
 
-type UserType = "admin" | "fota" | "testing"
+type UserType = "PARENTS" | "ADMIN"
 
 type AuthTokens = {
   accessToken: string
@@ -45,27 +45,16 @@ type PersistedEnvelope = {
 }
 
 type AuthResponseInput = {
-  uniqueId?: string;
-  unique_id?: string;
-  userType?: string;
-  user_type?: string;
-  imei?: string;
-  email?: string;
-  tokens?: {
-    accessToken?: string;
-    access_token?: string;
-    refreshToken?: string;
-    refresh_token?: string;
-  };
-  lastLoginAt?: string;
-  last_login_at?: string;
-  firstName?: string | null;
-  first_name?: string | null;
-  middleName?: string | null;
-  middle_name?: string | null;
-  lastName?: string | null;
-  last_name?: string | null;
-  mobile?: string | null;
+  uniqueId?: string
+  userType?: string
+  imei?: string
+  email?: string
+  tokens?: Partial<AuthTokens>
+  lastLoginAt?: string
+  firstName?: string | null
+  middleName?: string | null
+  lastName?: string | null
+  mobile?: string | null
 }
 
 /**
@@ -124,41 +113,40 @@ export function parseAuthResponse(response: AuthResponseInput): ParsedAuthContex
     throw new Error('Invalid auth response: response must be an object');
   }
 
-  // Extract fields (handle both camelCase and snake_case)
-  const uniqueId = response.unique_id || response.uniqueId;
-  const userType = response.user_type || response.userType;
-  const imei = response.imei;
-  const email = response.email;
-  const lastLoginAt = response.last_login_at || response.lastLoginAt;
-  const firstName = response.first_name || response.firstName;
-  const middleName = response.middle_name || response.middleName;
-  const lastName = response.last_name || response.lastName;
-  const mobile = response.mobile;
-
-  // Extract tokens (handle both camelCase and snake_case)
-  const accessToken = response.tokens?.access_token || response.tokens?.accessToken;
-  const refreshToken = response.tokens?.refresh_token || response.tokens?.refreshToken;
+  // Extract required fields
+  const {
+    uniqueId,
+    userType,
+    imei,
+    email,
+    tokens,
+    lastLoginAt,
+    firstName,
+    middleName,
+    lastName,
+    mobile,
+  } = response;
 
   // Validate required fields
   if (!uniqueId) {
     throw new Error('Invalid auth response: missing uniqueId');
   }
 
-  // Handle missing userType - default to testing for safety if unknown
-  let validatedUserType: UserType | undefined = (userType as string)?.toLowerCase() as UserType | undefined;
+  // Handle missing userType - default to PARENTS for safety
+  let validatedUserType: UserType | undefined = userType as UserType | undefined;
   if (!userType) {
-    console.warn('Auth response missing userType, defaulting to testing');
-    validatedUserType = 'testing';
-  } else if (!['admin', 'fota', 'testing'].includes(validatedUserType || '')) {
-    console.warn(`Invalid userType "${userType}", defaulting to testing`);
-    validatedUserType = 'testing';
+    console.warn('Auth response missing userType, defaulting to PARENTS');
+    validatedUserType = 'PARENTS';
+  } else if (userType !== 'PARENTS' && userType !== 'ADMIN') {
+    console.warn(`Invalid userType "${userType}", defaulting to PARENTS`);
+    validatedUserType = 'PARENTS';
   }
 
   if (!email) {
     throw new Error('Invalid auth response: missing email');
   }
 
-  if (!accessToken || !refreshToken) {
+  if (!tokens || !tokens.accessToken || !tokens.refreshToken) {
     throw new Error('Invalid auth response: missing or invalid tokens');
   }
 
@@ -194,7 +182,7 @@ export function parseAuthResponse(response: AuthResponseInput): ParsedAuthContex
     );
   }
 
-  const resolvedUserType: UserType = validatedUserType ?? "testing"
+  const resolvedUserType: UserType = validatedUserType ?? "PARENTS"
 
   // Return structured user context
   return {
@@ -207,8 +195,8 @@ export function parseAuthResponse(response: AuthResponseInput): ParsedAuthContex
     lastName: lastName || null,
     mobile: mobile || null,
     tokens: {
-      accessToken,
-      refreshToken,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
     },
     lastLoginAt: lastLoginAt || new Date().toISOString(),
   };
@@ -352,7 +340,7 @@ function validateUserContext(context: ParsedAuthContext): boolean {
     return false;
   }
 
-  if (!context.userType || !['admin', 'fota', 'testing'].includes(context.userType)) {
+  if (!context.userType || (context.userType !== 'PARENTS' && context.userType !== 'ADMIN')) {
     return false;
   }
 
@@ -544,7 +532,7 @@ export function loadUserContext() {
     }
 
     // Validate userType
-    if (!['admin', 'fota', 'testing'].includes(data.userType)) {
+    if (data.userType !== 'PARENTS' && data.userType !== 'ADMIN') {
       console.error('Invalid userType in persisted data');
       clearPersistedContext();
       return null;

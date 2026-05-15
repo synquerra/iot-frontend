@@ -17,8 +17,6 @@ type SavedGeofencesCardProps = {
   isAddingDisabled: boolean;
   onAddGeofence: () => void;
   onRemoveGeofence: (geofenceNumber: string) => void;
-  focusedGeofenceId?: string | null;
-  onGeofenceClick?: (geofenceNumber: string) => void;
 };
 
 const formatDate = (dateString?: string) => {
@@ -37,8 +35,6 @@ export function SavedGeofencesCard({
   isAddingDisabled,
   onAddGeofence,
   onRemoveGeofence,
-  focusedGeofenceId,
-  onGeofenceClick,
 }: SavedGeofencesCardProps) {
 
   return (
@@ -74,16 +70,10 @@ export function SavedGeofencesCard({
             const first = coords.length > 0 ? coords[0] : null;
             const last = coords.length > 0 ? coords[coords.length - 1] : null;
 
-            const geofenceId = String(geofence.id ?? geofence.geofence_number);
             return (
               <div
-                key={geofenceId}
-                onClick={() => onGeofenceClick?.(geofenceId)}
-                className={`flex items-start justify-between rounded-lg border p-4 cursor-pointer transition-colors hover:border-primary/50 hover:bg-muted/50 ${
-                  focusedGeofenceId === geofenceId 
-                    ? "border-primary bg-primary/5 dark:bg-primary/10 shadow-sm" 
-                    : ""
-                }`}
+                key={geofence.id}
+                className="flex items-start justify-between rounded-lg border p-4"
               >
                 <div className="space-y-1 text-sm">
                   <div className="flex gap-2">
@@ -112,10 +102,7 @@ export function SavedGeofencesCard({
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRemoveGeofence(geofence.geofence_number);
-                  }}
+                  onClick={() => onRemoveGeofence(geofence.geofence_number)}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

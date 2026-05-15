@@ -12,7 +12,7 @@ import { isTokenExpired } from "@/Pages/Auth/authService"
 
 /* ================= TYPES ================= */
 
-export type UserType = "admin" | "fota" | "testing" | null
+export type UserType = "PARENTS" | "ADMIN" | null
 
 export interface Tokens {
   accessToken: string | null
@@ -39,8 +39,7 @@ export interface UserContextState {
 
   // Helpers
   isAdmin: () => boolean
-  isFota: () => boolean
-  isTesting: () => boolean
+  isParent: () => boolean
 }
 
 export interface ParsedAuthContext {
@@ -61,7 +60,7 @@ export interface ParsedAuthContext {
 /* ================= INITIAL STATE ================= */
 
 const initialState: Omit<UserContextState,
-  "setUserContext" | "updateTokens" | "clearUserContext" | "isAdmin" | "isFota" | "isTesting"
+  "setUserContext" | "updateTokens" | "clearUserContext" | "isAdmin" | "isParent"
 > = {
   isAuthenticated: false,
   userType: null,
@@ -123,9 +122,8 @@ export const UserContextProvider = ({ children }: { children: ReactNode }) => {
   }, [])
 
   /* ---------- Helpers ---------- */
-  const isAdmin = useCallback(() => state.userType === "admin", [state.userType])
-  const isFota = useCallback(() => state.userType === "fota", [state.userType])
-  const isTesting = useCallback(() => state.userType === "testing", [state.userType])
+  const isAdmin = useCallback(() => state.userType === "ADMIN", [state.userType])
+  const isParent = useCallback(() => state.userType === "PARENTS", [state.userType])
 
   /* ---------- Restore on Mount ---------- */
   useEffect(() => {
@@ -184,8 +182,7 @@ export const UserContextProvider = ({ children }: { children: ReactNode }) => {
     updateTokens,
     clearUserContext,
     isAdmin,
-    isFota,
-    isTesting,
+    isParent,
   }
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>

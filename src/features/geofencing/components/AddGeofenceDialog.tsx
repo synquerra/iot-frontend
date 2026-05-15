@@ -27,11 +27,6 @@ import { Label } from "@/components/ui/label";
 import { DEFAULT_CENTER } from "../constants";
 import type { ActiveGeofence } from "../types";
 import type { GeofencePayload } from "../hooks/useGeofenceCommand";
-import { getDeviceCommandToastContent } from "@/helpers/deviceCommandHelper";
-import type {
-  DeviceCommandResponse,
-  PublishedDeviceCommandResult,
-} from "@/helpers/deviceCommandConstants";
 import {
   Select,
   SelectContent,
@@ -60,10 +55,7 @@ type AddGeofenceDialogProps = {
   isSaving: boolean;
   maxGeofences: number;
   maxVertices: number;
-  onSaveGeofence: (
-    imei: string,
-    payload: GeofencePayload,
-  ) => Promise<DeviceCommandResponse<PublishedDeviceCommandResult>>;
+  onSaveGeofence: (imei: string, payload: GeofencePayload) => Promise<unknown>;
 };
 
 function MapClickHandler({
@@ -177,7 +169,7 @@ export function AddGeofenceDialog({
     const nextIndex = activeDeviceGeofences.length;
 
     try {
-      const response = await onSaveGeofence(selectedImei, {
+      await onSaveGeofence(selectedImei, {
         geofence_number: draftNumber || `GEO${nextIndex + 1}`,
         geofence_id: draftName.trim(),
         coordinates: draftVertices.map(([lat, lng]) => ({
@@ -187,10 +179,7 @@ export function AddGeofenceDialog({
       });
 
       onOpenChange(false);
-      const toastContent = getDeviceCommandToastContent(response);
-      toast.success(toastContent.title, {
-        description: toastContent.description,
-      });
+      toast.success(`Geofence ${nextIndex + 1} saved for device ${selectedImei}.`);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to save geofence";
@@ -200,7 +189,7 @@ export function AddGeofenceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} >
-      <DialogContent className="max-h-[90vh] overflow-hidden p-0 sm:max-w-6xl ">
+      <DialogContent className="max-h-[90vh] overflow-hidden p-0 sm:max-w-6xl z-[999]">
         <div className="flex h-full max-h-[90vh] flex-col">
           <DialogHeader className="border-b px-6 py-4">
             <DialogTitle>Add Geofencing</DialogTitle>
@@ -242,7 +231,7 @@ export function AddGeofenceDialog({
                   </SelectContent>
                 </Select>
                 <div className="space-y-2">
-                  <Label htmlFor="geofence-name">Geofence Name <span className="text-destructive">*</span></Label>
+                  <Label htmlFor="geofence-name">Geofence Name</Label>
                   <Input
                     id="geofence-name"
                     placeholder="Enter location name"
@@ -306,7 +295,7 @@ export function AddGeofenceDialog({
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="h-[55vh] min-h-[420px] w-full bg-muted">
+                <div className="h-[55vh] min-h-[420px] w-full bg-slate-100 dark:bg-slate-900">
                   <MapContainer
                     center={DEFAULT_CENTER}
                     zoom={13}

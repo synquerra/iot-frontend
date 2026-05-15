@@ -1,17 +1,28 @@
 import { Input } from "@/components/ui/input"
+import {
+    Select,
+    SelectTrigger,
+    SelectValue,
+    SelectContent,
+    SelectItem,
+} from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { useDeviceTable } from "../context/DeviceTableContext"
-import { Search, X, RefreshCw, Plus } from "lucide-react"
-import { AddDeviceModal } from "./AddDeviceModal"
+import { Search, X, RefreshCw, Filter } from "lucide-react"
+import { useState } from "react"
 
 export function DeviceToolbar() {
     const {
         search,
         setSearch,
+        statusFilter,
+        setStatusFilter,
         refresh,
         selected,
         clearSelection,
     } = useDeviceTable()
+
+    const [showFilters, setShowFilters] = useState(false)
 
     return (
         <div className="space-y-3">
@@ -36,36 +47,66 @@ export function DeviceToolbar() {
                     )}
                 </div>
 
-                {/* Refresh and Add (mobile) */}
-                <div className="flex sm:hidden gap-2">
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={refresh}
-                    >
-                        <RefreshCw className="h-4 w-4" />
-                    </Button>
-                    <AddDeviceModal>
-                        <Button size="icon">
-                            <Plus className="h-4 w-4" />
-                        </Button>
-                    </AddDeviceModal>
-                </div>
+                {/* Filter toggle button (mobile) + refresh (all screens) */}
+                <Button
+                    variant="outline"
+                    size="icon"
+                    className="sm:hidden"
+                    onClick={() => setShowFilters(!showFilters)}
+                >
+                    <Filter className="h-4 w-4" />
+                </Button>
+
+                <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={refresh}
+                    className="sm:hidden"
+                >
+                    <RefreshCw className="h-4 w-4" />
+                </Button>
 
                 {/* Desktop buttons */}
                 <div className="hidden sm:flex gap-2">
+                    <Select
+                        value={statusFilter}
+                        onValueChange={setStatusFilter}
+                    >
+                        <SelectTrigger className="w-[140px]">
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                    </Select>
+
                     <Button variant="outline" onClick={refresh}>
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Refresh
                     </Button>
-                    <AddDeviceModal>
-                        <Button>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Device
-                        </Button>
-                    </AddDeviceModal>
                 </div>
             </div>
+
+            {/* Collapsible filter section (mobile) */}
+            {showFilters && (
+                <div className="sm:hidden">
+                    <Select
+                        value={statusFilter}
+                        onValueChange={setStatusFilter}
+                    >
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Filter by status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All devices</SelectItem>
+                            <SelectItem value="active">Active only</SelectItem>
+                            <SelectItem value="inactive">Inactive only</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            )}
 
             {/* Selection bar */}
             {selected.length > 0 && (

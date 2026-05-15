@@ -5,20 +5,19 @@ import { Outlet } from "react-router-dom";
 
 export default function AppLayout() {
     return (
-        <div className="[--header-height:calc(theme(spacing.14))] overflow-hidden">
-            <SidebarProvider className="flex flex-col h-screen">
+        <div className="[--header-height:calc(theme(spacing.14))]">
+            <SidebarProvider className="flex flex-col">
                 <SiteHeader />
-
-                <div className="flex flex-1 overflow-hidden">
+                <div className="flex flex-1">
                     <AppSidebar />
-
-                    <SidebarInset className="flex-1 min-w-0 overflow-hidden">
-                        <main className="h-full w-full min-w-0 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-5">
+                    <SidebarInset>
+                        <main className="p-4">
                             <Outlet />
                         </main>
                     </SidebarInset>
                 </div>
             </SidebarProvider>
+
         </div>
     );
 }

@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
 
 import Dashboard from "@/Pages/Dashboard";
 import AppLayout from "./layouts/AppLayout";
@@ -8,15 +8,9 @@ import LoginPage from "./Pages/Auth/login";
 
 import DeviceSettings from "./features/device-settings";
 import GeofencingPage from "./features/geofencing";
-import DeviceOverviewPage from "./features/device-overview";
-import MapPage from "./features/device-overview/MapPage";
+import DeviceTelemetryPage from "./features/device-telemetry";
 import DevicesPage from "./features/devices";
 import AlertsPage from "./features/alerts";
-import TelemetryPage from "./features/telemetry";
-import DeviceTesting from "./features/device-testing";
-import FotaPage from "./features/fota";
-import UsersPage from "./features/users";
-import ModesPage from "./features/modes/components/ModeManagement";
 
 export const router = createBrowserRouter([
   {
@@ -44,41 +38,17 @@ export const router = createBrowserRouter([
               },
               {
                 path: ":imei",
-                element: <DeviceOverviewPage />, // /devices/:imei
-              },
-              {
-                path: "map/:imei",
-                element: <MapPage />, // /devices/map/:imei
-              },
-              {
-                path: "telemetry/:imei?",
-                element: <TelemetryPage />, // /devices/telemetry/:imei
+                element: <DeviceTelemetryPage />, // /devices/:imei
               },
               {
                 path: "settings/:imei?",
                 element: <DeviceSettings />, // /devices/settings
-              },
-              {
-                path: "testing/:imei?",
-                element: <DeviceTesting />, // /devices/testing
-              },
-              {
-                path: "fota",
-                element: <FotaPage />, // /devices/fota
               },
             ],
           },
           {
             path: "alerts",
             element: <AlertsPage />,
-          },
-          {
-            path: "users",
-            element: <UsersPage />,
-          },
-          {
-            path: "modes",
-            element: <ModesPage />,
           },
         ],
       },
@@ -94,8 +64,4 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  {
-    path: "*",
-    element: <Navigate to="/" replace />
-  }
 ]);
