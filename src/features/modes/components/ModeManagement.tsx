@@ -122,12 +122,6 @@ export default function ModeManagement() {
     setShowMobileSidebar(false);
   };
 
-  const handleDuplicate = (data: CreateModePayload) => {
-    setSelectedModeId(null);
-    setSelectedMode(null); // This triggers ModeForm to reset, but we want it to stay with the new data
-    // We'll need to change ModeForm to accept an initialData prop or handle this better
-  };
-
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-4rem)] w-full overflow-hidden bg-background">
       {/* Sidebar - Hidden on mobile when a mode is selected, collapsible on desktop */}
@@ -165,13 +159,13 @@ export default function ModeManagement() {
             mode={selectedMode}
             onSave={handleSave}
             onDelete={handleDelete}
-            onDuplicate={(data) => {
+            onDuplicate={() => {
               setSelectedModeId(null);
+              // We don't set selectedMode to null here because ModeForm needs it 
+              // to know it's currently showing duplicated data.
+              // Wait, handleSave will use selectedMode to decide between update/create.
+              // So we SHOULD set selectedMode to null so it creates a new one.
               setSelectedMode(null);
-              // We'll pass the duplicated data to the form
-              // Since we're setting selectedMode to null, the form will reset.
-              // To avoid this, we can use a separate state for initialFormData or 
-              // just let ModeForm handle its own state and NOT reset if it's already in "duplicate" mode.
             }}
             onCancel={() => {
               if (selectedModeId) {

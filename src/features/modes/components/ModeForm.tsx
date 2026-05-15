@@ -1,30 +1,29 @@
 import { useState, useEffect } from "react";
 import {
-  Save,
-  Trash2,
-  X,
-  Copy,
-  Settings2,
-  Wifi,
-  ShieldAlert,
-  Gauge,
-  Thermometer,
-  BatteryLow,
-  ChevronLeft,
-  PanelLeftClose,
-  PanelLeftOpen,
   Activity,
   Zap,
-  Timer,
   Plane,
-  Info
+  Thermometer,
+  Gauge,
+  BatteryLow,
+  Save,
+  X,
+  Trash2,
+  ChevronLeft,
+  Info,
+  Timer,
+  ShieldAlert,
+  Settings2,
+  PanelLeftOpen,
+  PanelLeftClose,
+  Copy,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { DeviceMode, CreateModePayload } from "../types";
 
@@ -43,7 +42,7 @@ interface ModeFormProps {
 const initialValues: CreateModePayload = {
   name: "",
   description: "",
-  normal_sending_intervalm: 30,
+  normal_sending_interval: 30,
   sos_sending_interval: 4,
   normal_scanning_interval: 300,
   airplane_interval: 30,
@@ -93,7 +92,6 @@ export function ModeForm({
       });
       setNoTimeout(mode.watch_time === 0);
     } else {
-      // Only reset if we're not currently in the middle of a duplication
       if (!isDuplicating) {
         setFormData(initialValues);
         setNoTimeout(true);
@@ -115,7 +113,6 @@ export function ModeForm({
       name: `${prev.name} (Copy)`,
       is_system_mode: false,
     }));
-    // Inform parent to clear selection so the next save is a "Create"
     if (onDuplicate) onDuplicate();
   };
 
@@ -162,9 +159,9 @@ export function ModeForm({
               <div className="flex items-center gap-2 min-w-0">
                 <Settings2 className="h-3.5 w-3.5 text-primary shrink-0" />
                 <CardTitle className="text-[10px] font-black uppercase tracking-widest truncate">
-                  {mode ? `Profile: ${mode.name}` : "New Profile Configuration"}
+                  {mode && !isDuplicating ? `Profile: ${mode.name}` : "New Profile Configuration"}
                 </CardTitle>
-                {mode && (
+                {mode && !isDuplicating && (
                   <Badge variant="outline" className="hidden lg:flex shrink-0 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest border-primary/20 bg-primary/5 text-primary">
                     ID: {mode.id.split('-')[0]}...
                   </Badge>
@@ -173,7 +170,7 @@ export function ModeForm({
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
-              {mode && !mode.is_system_mode && (
+              {mode && !mode.is_system_mode && !isDuplicating && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -185,7 +182,7 @@ export function ModeForm({
                   <Trash2 className="h-4 w-4" />
                 </Button>
               )}
-
+              
               <Button
                 type="button"
                 variant="ghost"
@@ -232,7 +229,7 @@ export function ModeForm({
                   <Info className="h-3.5 w-3.5 text-primary/50" />
                   <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70">General Information</span>
                 </div>
-
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-1">
                   <div className="space-y-1.5">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Mode Name *</Label>
@@ -265,7 +262,7 @@ export function ModeForm({
                     <Checkbox
                       checked={formData.is_system_mode}
                       onCheckedChange={(v) => handleChange("is_system_mode", !!v)}
-                      disabled={!!mode}
+                      disabled={!!mode && !isDuplicating}
                       className="rounded border-border/60 data-[disabled=true]:opacity-50 data-[disabled=true]:cursor-not-allowed"
                     />
                   </div>
@@ -311,7 +308,7 @@ export function ModeForm({
                     hint="Regular packet transmission rate"
                     value={formData.normal_sending_interval}
                     unit="min"
-                    onChange={(v) => handleChange("normal_sending_intervalm", parseInt(v))}
+                    onChange={(v) => handleChange("normal_sending_interval", parseInt(v))}
                   />
                   <SettingRow
                     icon={Zap}
@@ -413,7 +410,7 @@ function SettingRow({
       disabled ? "opacity-40 grayscale-[0.5]" : "hover:bg-muted/30"
     )}>
       <div className={cn(
-        "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 bg-muted/40 transition-colors",
+        "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 bg-muted/40 transition-colors", 
         !disabled && "group-hover:bg-background",
         iconColor.replace('text-', 'bg-').replace('500', '500/10')
       )}>
@@ -425,8 +422,8 @@ function SettingRow({
       </div>
       <div className={cn(
         "flex items-center gap-1 border rounded-lg px-2 py-1 transition-colors w-[100px] shrink-0",
-        disabled
-          ? "bg-muted/20 border-dashed border-border/40"
+        disabled 
+          ? "bg-muted/20 border-dashed border-border/40" 
           : "bg-muted/40 border-border/60 group-hover:border-primary/30"
       )}>
         <Input
