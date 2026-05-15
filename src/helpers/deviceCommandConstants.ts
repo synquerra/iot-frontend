@@ -76,3 +76,12 @@ export interface DeviceCommandResponse<TData = unknown> {
   message?: string;
   data: TData;
 }
+
+export interface PublishedDeviceCommandResult {
+  status?: string;
+  note?: string;
+  imei?: string;
+  command?: string;
+  qos?: number;
+  created_at?: string;
+}

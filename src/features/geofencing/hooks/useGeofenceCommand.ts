@@ -1,6 +1,12 @@
 import { useCallback, useState } from "react";
 
-import { COMMANDS, type GeofenceCoordinate, type GeofencePayloadCoordinate } from "@/helpers/deviceCommandConstants";
+import {
+  COMMANDS,
+  type DeviceCommandResponse,
+  type GeofenceCoordinate,
+  type GeofencePayloadCoordinate,
+  type PublishedDeviceCommandResult,
+} from "@/helpers/deviceCommandConstants";
 import { sendDeviceCommand } from "@/helpers/deviceCommandHelper";
 import { listDeviceGeofences } from "@/features/devices/services/deviceService";
 import type { Geofence } from "@/types";
@@ -57,11 +63,11 @@ export function useGeofenceCommand() {
       setError(null);
 
       try {
-        const response = await sendDeviceCommand(
+        const response = await sendDeviceCommand<PublishedDeviceCommandResult>(
           imei,
           COMMANDS.SET_GEOFENCE,
           payload
-        );
+        ) as DeviceCommandResponse<PublishedDeviceCommandResult>;
 
         const nextGeofence: GeofenceCommandRecord = {
           geofenceNumber: payload.geofence_number,

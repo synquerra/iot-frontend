@@ -53,28 +53,8 @@ export function checkAuthAndLogout() {
 }
 
 export async function authenticateUser(email: string, password: string) {
-  const query = `
-    mutation {
-      signin(input: { email: "${email}", password: "${password}" }) {
-        uniqueId
-        firstName
-        lastName
-        email
-        imei
-        userType
-        mobile
-        tokens {
-          accessToken
-          refreshToken
-        }
-        lastLoginAt
-        message
-      }
-    }
-  `;
-
   try {
-    const res = await api.post("/auth/signin-query", { query });
+    const res = await api.post("/auth/signin", { email, password });
     const data = res.data;
 
     if (data.status === "success" && data.data?.tokens) {

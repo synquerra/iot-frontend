@@ -128,19 +128,19 @@ export default function LoginPage() {
                 <CardContent className="w-full sm:w-1/3 p-4 lg:p-6">
 
                     {/* Logo */}
-                    <div className="text-center mb-10">
-                        <div className="mb-6 inline-flex items-center justify-center rounded-xl border border-border/60 bg-card/80 p-2 backdrop-blur-lg shadow-sm">
+                    <div className="text-center mb-6">
+                        <div className="mb-4 inline-flex items-center justify-center rounded-xl border border-border/60 bg-slate-900 p-2 backdrop-blur-lg shadow-sm">
                             <img
                                 src="/images/logo.png"
                                 alt="Company Logo"
-                                className="w-48"
+                                className="w-36"
                             />
                         </div>
 
-                        <h1 className="mb-1 text-3xl font-bold text-foreground">
+                        <h1 className="mb-1 text-xl font-bold text-foreground tracking-tight">
                             Welcome Back
                         </h1>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest opacity-60">
                             Sign in to your account
                         </p>
                     </div>
@@ -159,10 +159,10 @@ export default function LoginPage() {
 
                         {/* Email */}
                         <div className="space-y-2">
-                            <Label>Email Address</Label>
+                            <Label>Email Address <span className="text-destructive">*</span></Label>
                             <Input
                                 type="email"
-                                placeholder="you@company.com"
+                                placeholder="Email Address"
                                 value={email}
                                 onChange={(e) => {
                                     setEmail(e.target.value)
@@ -174,7 +174,7 @@ export default function LoginPage() {
 
                         {/* Password */}
                         <div className="space-y-2">
-                            <Label>Password</Label>
+                            <Label>Password <span className="text-destructive">*</span></Label>
                             <div className="relative">
                                 <Input
                                     type={showPassword ? "text" : "password"}

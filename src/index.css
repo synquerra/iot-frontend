@@ -1,80 +1,104 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    /* DEPTH: Base background is a very subtle gray/blue tint, making pure white cards "pop" */
+    --background: 240 20% 98%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 142.1 76.2% 36.3%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+
+    /* Slightly softened text for less eye strain */
+    --foreground: 240 10% 12%;
+    --card-foreground: 240 10% 12%;
+    --popover-foreground: 240 10% 12%;
+
+    /* Your primary blue - untouched for brand consistency */
+    --primary: 243 75% 59%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Softer muted backgrounds for secondary elements */
+    --secondary: 240 6% 94%;
+    --secondary-foreground: 240 10% 15%;
+    --muted: 240 6% 94%;
+    --muted-foreground: 240 5% 45%;
+
+    --accent: 240 6% 94%;
+    --accent-foreground: 240 10% 15%;
+
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 142.1 76.2% 36.3%;
-    --radius: 0.5rem;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Softer, more elegant borders */
+    --border: 240 6% 88%;
+    --input: 240 6% 88%;
+    --ring: 243 75% 59%;
+
+    /* DEPTH: Slightly rounded corners look more modern and catch shadows better */
+    --radius: 0.75rem;
+
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --sidebar-background: 0 0% 98%;
+
+    --sidebar-background: 240 20% 98%;
     --sidebar-foreground: 222 47% 11%;
-
-    --sidebar-primary: 245 58% 51%;
+    --sidebar-primary: 243 75% 59%;
     --sidebar-primary-foreground: 0 0% 100%;
-
-    --sidebar-accent: 142 60% 92%;
-    --sidebar-accent-foreground: 142 60% 25%;
-
+    --sidebar-accent: 243 75% 92%;
+    --sidebar-accent-foreground: 243 75% 25%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 245 58% 51%;
+    --sidebar-ring: 243 75% 59%;
   }
 
   .dark {
-    --background: 20 14.3% 4.1%;
-    --foreground: 0 0% 95%;
-    --card: 24 9.8% 10%;
-    --card-foreground: 0 0% 95%;
-    --popover: 0 0% 9%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 142.1 70.6% 45.3%;
-    --primary-foreground: 144.9 80.4% 10%;
-    --secondary: 240 3.7% 15.9%;
+    /* DEPTH: Very deep background, elevated cards, highest elevation for popovers */
+    --background: 240 10% 4%;
+    --card: 240 10% 8%;
+    --popover: 240 10% 12%;
+
+    --foreground: 0 0% 98%;
+    --card-foreground: 0 0% 98%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 243 75% 65%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 5% 14%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 12 6.5% 15.1%;
+    --muted: 240 5% 14%;
+    --muted-foreground: 240 5% 65%;
+
+    --accent: 240 5% 14%;
     --accent-foreground: 0 0% 98%;
+
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 85.7% 97.3%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 142.4 71.8% 29.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Deeper, richer dark borders */
+    --border: 240 5% 16%;
+    --input: 240 5% 16%;
+    --ring: 243 75% 65%;
+
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
-    --sidebar-background: 24 10% 8%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 142.1 70.6% 45.3%;
-    --sidebar-primary-foreground: 144.9 80.4% 10%;
-    --sidebar-accent: 24 6% 14%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 24 6% 15%;
-    --sidebar-ring: 142.4 71.8% 29.2%;
+
+    --sidebar-background: 240 10% 4%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 243 75% 65%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 5% 14%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 5% 16%;
+    --sidebar-ring: 243 75% 65%;
   }
 }
 
@@ -84,6 +108,39 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    /* Apply font, background, and smooth anti-aliasing */
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   }
+}
+
+.leaflet-container {
+  z-index: 0 !important;
+}
+
+.dark .leaflet-tile-pane {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
+.leaflet-pane {
+  z-index: 0 !important;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 0 !important;
+}
+
+/* Hide scrollbar but allow scrolling */
+.scroll-container {
+  overflow: auto;
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+}
+
+/* Chrome, Safari, Opera */
+.scroll-container::-webkit-scrollbar {
+  display: none;
 }

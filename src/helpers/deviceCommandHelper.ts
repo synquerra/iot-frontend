@@ -4,6 +4,7 @@ import type {
   DeviceCommandError,
   DeviceCommandRequest,
   DeviceCommandParams,
+  PublishedDeviceCommandResult,
   DeviceCommandResponse,
 } from "./deviceCommandConstants";
 import api from "@/lib/axios";
@@ -121,4 +122,41 @@ export async function sendDeviceCommand<TData = unknown>(
   const payload = createRequest(imei, command, params);
   const response = await sendRequest<TData>(payload);
   return normalizeResponse<TData>(response);
+}
+
+function formatCommandTime(createdAt?: string) {
+  if (!createdAt) {
+    return null;
+  }
+
+  const parsedDate = new Date(createdAt);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return createdAt;
+  }
+
+  return parsedDate.toLocaleString("en-IN", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+}
+
+export function getDeviceCommandToastContent(
+  response: DeviceCommandResponse<PublishedDeviceCommandResult>,
+) {
+  const details = response.data;
+  const title = details.note ?? response.message ?? "Device command sent.";
+  const descriptionParts = [
+    details.status ? `Status: ${details.status}` : null,
+    details.created_at ? `Time: ${formatCommandTime(details.created_at)}` : null,
+  ].filter(Boolean);
+
+  return {
+    title,
+    description: descriptionParts.join("\n"),
+  };
 }
