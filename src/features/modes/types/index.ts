@@ -16,6 +16,7 @@ export interface DeviceMode {
   priority: number;
   watch_time: number;
   is_system_mode: boolean;
+  allow_user_conditions: boolean;
   is_active: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -37,4 +38,41 @@ export interface SingleModeResponse {
   status: "success" | "error";
   message?: string;
   data: DeviceMode;
+}
+export interface ModeCondition {
+  id: string;
+  mode_id: string;
+  device_id: string | null;
+  organization_id: string | null;
+  condition_type: string;
+  trigger: string;
+  config: Record<string, any>;
+  enabled: boolean;
+  created_at?: string;
+}
+
+export interface CreateModeConditionPayload {
+  mode_id: string;
+  device_id?: string | null;
+  organization_id?: string | null;
+  condition_type: string;
+  trigger: string;
+  config: Record<string, any>;
+  enabled?: boolean;
+}
+
+export interface UpdateModeConditionPayload extends CreateModeConditionPayload {
+  id: string;
+}
+
+export interface ModeConditionResponse {
+  status: "success" | "error";
+  message?: string;
+  data: ModeCondition[];
+}
+
+export interface SingleModeConditionResponse {
+  status: "success" | "error";
+  message?: string;
+  data: ModeCondition;
 }

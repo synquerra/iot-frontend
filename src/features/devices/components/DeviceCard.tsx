@@ -25,10 +25,12 @@ import {
   Activity,
   Power,
   RefreshCw,
+  Layers,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { toggleDeviceStatus } from "../services/deviceService";
+import { SwitchModeDialog } from "./SwitchModeDialog";
 
 type Props = {
   device: {
@@ -44,6 +46,7 @@ type Props = {
     signal?: string | null;
     gps_strength?: string | null;
     temperature?: string | null;
+    currentMode?: string | null;
   };
   onClick?: () => void;
   onView?: () => void;
@@ -52,6 +55,7 @@ type Props = {
   onSettings?: () => void;
   onRemove?: () => void;
   onStatusToggle?: () => void;
+  onSwitchMode?: () => void;
 };
 
 export function DeviceCard({
@@ -63,8 +67,10 @@ export function DeviceCard({
   onSettings,
   onRemove,
   onStatusToggle,
+  onSwitchMode,
 }: Props) {
   const [isToggling, setIsToggling] = useState(false);
+  const [switchModeOpen, setSwitchModeOpen] = useState(false);
 
   const formattedDate = device.createdAt
     ? new Date(device.createdAt).toLocaleString("en-US", {
@@ -106,8 +112,9 @@ export function DeviceCard({
   const isActive = device.status === "active";
 
   return (
-    <Card
-      onClick={handleCardClick}
+    <>
+      <Card
+        onClick={handleCardClick}
       className={cn(
         "cursor-pointer transition-all duration-200 relative group hover:shadow-md border-border",
         !isActive && "opacity-75"
@@ -159,6 +166,19 @@ export function DeviceCard({
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onTelemetry?.(); }} className="cursor-pointer">
                 <Activity className="h-4 w-4 mr-2" />
                 <span>Telemetry</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onClick={(e) => { e.stopPropagation(); setSwitchModeOpen(true); }}
+                className="cursor-pointer"
+              >
+                <Layers className="h-4 w-4 mr-2 text-primary" />
+                <div className="flex flex-col text-left">
+                  <span>Switch Mode</span>
+                  <span className="text-xs text-muted-foreground">
+                    {device.currentMode ? `Current: ${device.currentMode}` : "Change active mode"}
+                  </span>
+                </div>
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
@@ -306,5 +326,14 @@ export function DeviceCard({
         </div>
       </CardContent>
     </Card>
+
+    <SwitchModeDialog
+      open={switchModeOpen}
+      onOpenChange={setSwitchModeOpen}
+      imei={device.imei}
+      currentModeName={device.currentMode}
+      onSwitched={() => { onSwitchMode?.(); onStatusToggle?.(); }}
+    />
+    </>
   );
 }

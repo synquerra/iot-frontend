@@ -89,6 +89,9 @@ export default function DeviceOverviewPage() {
           lastUpdate={data.lastUpdate}
           onRefresh={handleRefresh}
           refreshing={refreshing}
+          currentModeName={device?.currentMode ?? null}
+          onModeSwitch={handleRefresh}
+          deviceTopic={device?.topic ?? null}
         />
 
         <main className="space-y-6">

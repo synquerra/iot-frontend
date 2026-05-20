@@ -116,13 +116,48 @@ export function AddGeofenceDialog({
   const [draftVertices, setDraftVertices] = useState<LatLngTuple[]>([]);
   const [draftName, setDraftName] = useState("");
   const [draftNumber, setDraftNumber] = useState("");
+  const [localCoords, setLocalCoords] = useState<{ lat: string; lng: string }[]>(
+    Array.from({ length: 5 }, () => ({ lat: "", lng: "" }))
+  );
 
   useEffect(() => {
     if (!open) {
       setDraftVertices([]);
       setDraftName("");
+      setLocalCoords(Array.from({ length: 5 }, () => ({ lat: "", lng: "" })));
     }
   }, [open]);
+
+  useEffect(() => {
+    setLocalCoords((current) =>
+      Array.from({ length: 5 }, (_, i) => {
+        const v = draftVertices[i];
+        return {
+          lat: v ? v[0].toString() : current[i]?.lat || "",
+          lng: v ? v[1].toString() : current[i]?.lng || "",
+        };
+      })
+    );
+  }, [draftVertices]);
+
+  const handleLocalCoordChange = (index: number, field: "lat" | "lng", val: string) => {
+    const newLocal = [...localCoords];
+    newLocal[index] = {
+      ...newLocal[index],
+      [field]: val
+    };
+    setLocalCoords(newLocal);
+
+    const validPoints: LatLngTuple[] = [];
+    for (const item of newLocal) {
+      const lat = parseFloat(item.lat);
+      const lng = parseFloat(item.lng);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        validPoints.push([lat, lng]);
+      }
+    }
+    setDraftVertices(validPoints);
+  };
 
   const addDraftVertex = (point: LatLngTuple) => {
     if (!selectedImei) {
@@ -147,6 +182,7 @@ export function AddGeofenceDialog({
 
   const clearDraft = () => {
     setDraftVertices([]);
+    setLocalCoords(Array.from({ length: 5 }, () => ({ lat: "", lng: "" })));
   };
 
   const undoLastVertex = () => {
@@ -250,6 +286,46 @@ export function AddGeofenceDialog({
                     onChange={(event) => setDraftName(event.target.value)}
                     disabled={!selectedImei || isSaving}
                   />
+                </div>
+
+                {/* Section: 5-Point Coordinates */}
+                <div className="space-y-3 pt-2 border-t border-border/50">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-foreground/80">
+                      Coordinates (5-Point Polygon)
+                    </Label>
+                    <span className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-wider">
+                      Map Click or Type
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
+                    {localCoords.map((c, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2 rounded-xl bg-card border border-border shadow-sm group hover:border-primary/40 transition-all duration-200">
+                        <span className="w-7 h-7 rounded-lg flex items-center justify-center bg-primary/10 border border-primary/20 text-[9px] font-black text-primary uppercase shrink-0">
+                          P{i + 1}
+                        </span>
+                        <div className="grid grid-cols-2 gap-2 flex-1">
+                          <Input
+                            type="text"
+                            placeholder="Latitude"
+                            className="h-8 text-xs font-bold font-mono bg-background border-border text-foreground hover:border-primary/40 focus:border-primary focus:ring-1 focus:ring-primary focus:bg-background transition-all"
+                            value={c.lat}
+                            onChange={(e) => handleLocalCoordChange(i, "lat", e.target.value)}
+                            disabled={!selectedImei || isSaving}
+                          />
+                          <Input
+                            type="text"
+                            placeholder="Longitude"
+                            className="h-8 text-xs font-bold font-mono bg-background border-border text-foreground hover:border-primary/40 focus:border-primary focus:ring-1 focus:ring-primary focus:bg-background transition-all"
+                            value={c.lng}
+                            onChange={(e) => handleLocalCoordChange(i, "lng", e.target.value)}
+                            disabled={!selectedImei || isSaving}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">

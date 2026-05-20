@@ -90,13 +90,30 @@ export default function GeofencingPage() {
 
   const handleUpdateAssignment = (slot: "GEO1" | "GEO2" | "GEO3", geofenceId: string | null) => {
     setAssignments(prev => {
+      const existing = prev.find(a => a.geofence_number === slot);
       const filtered = prev.filter(a => a.geofence_number !== slot);
-      if (geofenceId === null) return filtered;
+      
+      if (geofenceId === null) {
+        // If it was already active on the device, we staging a desync request
+        if (existing && existing.status === "ACTIVE") {
+          return [...filtered, {
+            imei: selectedImei,
+            geofence_id: `desync-${existing.geofence_id}`,
+            geofence_number: slot,
+            status: "PENDING"
+          } as any];
+        }
+        return filtered;
+      }
+      
+      // Check if this geofence was originally active in this slot to restore ACTIVE status on undo
+      const originalGeofence = geofences.find(g => g.geofence_id === geofenceId && g.geofence_number === slot);
+      
       return [...filtered, {
         imei: selectedImei,
         geofence_id: geofenceId,
         geofence_number: slot,
-        status: "PENDING"
+        status: originalGeofence ? "ACTIVE" : "PENDING"
       } as any];
     });
   };
@@ -106,8 +123,21 @@ export default function GeofencingPage() {
       setIsSyncing(true);
       const response = await geofenceService.assignGeofences(selectedImei, assignments);
       toast.success(response.message || "Geofence assignments processed");
+      
       const geofenceData = await geofenceService.listGeofences(selectedImei);
-      setGeofences(geofenceData.data || []);
+      const freshGeofences = geofenceData.data || [];
+      setGeofences(freshGeofences);
+      
+      // Refresh assignments state so that drafted/pending indicators disappear and match synced records
+      const freshAssignments = freshGeofences
+        .filter((g: any) => g.geofence_number)
+        .map((g: any) => ({
+          imei: selectedImei,
+          geofence_id: String(g.geofence_id),
+          geofence_number: g.geofence_number,
+          status: "ACTIVE" as const
+        }));
+      setAssignments(freshAssignments);
     } catch (error) {
       toast.error("Failed to synchronize with device");
     } finally {

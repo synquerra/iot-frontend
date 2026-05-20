@@ -181,3 +181,11 @@ export async function getDeviceByImei(imei: string): Promise<Device | null> {
     interval: device.interval ?? null,
   };
 }
+
+export async function switchDeviceMode(imei: string, modeId: string): Promise<{ status: string; message: string }> {
+  const { data } = await api.post("device/switch-mode", { imei, mode_id: modeId });
+  if (!data || data.status !== "success") {
+    throw new Error(data?.error_description || data?.message || "Failed to switch device mode");
+  }
+  return data;
+}
