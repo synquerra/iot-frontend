@@ -32,9 +32,8 @@ export async function getGeofenceDetails(imei: string, geofenceId: string): Prom
 }
 
 export async function assignGeofences(imei: string, assignments: { geofence_id: string; geofence_number: string }[]): Promise<{ status: string; message: string; data: any[] }> {
-  // Ensure we only send the fields the API expects based on the example payload
   const formattedAssignments = assignments.map(a => ({
-    geofence_id: a.geofence_id,
+    geofence_id: a.geofence_id.startsWith("desync-") ? "desync" : a.geofence_id,
     geofence_number: a.geofence_number
   }));
   

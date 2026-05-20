@@ -78,7 +78,7 @@ export function MetricsGrid({
   return (
     <div className="grid gap-6 lg:grid-cols-12 items-stretch">
       {/* 8-column section for stats cards */}
-      <div className="lg:col-span-8 grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
+      <div className="lg:col-span-8 grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           icon={Move}
           label="Movement"
@@ -115,7 +115,7 @@ export function MetricsGrid({
       {/* 4-column section for Live Map */}
       <Card 
         onClick={() => imei && (window.location.href = `/devices/map/${imei}`)}
-        className="lg:col-span-4 group hover:shadow-xl transition-all duration-500 overflow-hidden flex flex-col h-full min-h-[120px] border-border bg-card rounded-xl cursor-pointer hover:border-primary/50 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className="lg:col-span-4 group hover:shadow-xl transition-all duration-500 overflow-hidden flex flex-col h-full min-h-[250px] lg:min-h-[120px] border-border bg-card rounded-xl cursor-pointer hover:border-primary/50 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         <CardContent className="p-0 flex-1 relative">
           <MapContainer

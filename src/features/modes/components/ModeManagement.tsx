@@ -9,6 +9,7 @@ import {
   deleteMode,
   getModeById
 } from "../services/modeService";
+import { addModeCondition } from "../services/modeConditionService";
 import type { DeviceMode, CreateModePayload, UpdateModePayload } from "../types";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -66,7 +67,10 @@ export default function ModeManagement() {
     }
   }, [selectedModeId, fetchModeDetails]);
 
-  const handleSave = async (data: CreateModePayload | UpdateModePayload) => {
+  const handleSave = async (
+    data: CreateModePayload | UpdateModePayload,
+    localConditions?: any[]
+  ) => {
     setIsSaving(true);
     const toastId = toast.loading(selectedMode ? "Updating mode..." : "Creating mode...");
     try {
@@ -78,6 +82,18 @@ export default function ModeManagement() {
       }
 
       if (res.status === "success") {
+        // Save local conditions if there are any
+        if (localConditions && localConditions.length > 0) {
+          const promises = localConditions.map((c) => {
+            const { id, ...payload } = c;
+            return addModeCondition({
+              ...payload,
+              mode_id: res.data.id,
+            });
+          });
+          await Promise.all(promises);
+        }
+
         toast.success(selectedMode ? "Mode updated" : "Mode created", { id: toastId });
         fetchModes(res.data.id);
       } else {
