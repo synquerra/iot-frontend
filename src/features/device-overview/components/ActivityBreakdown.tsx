@@ -61,7 +61,7 @@ export function ActivityBreakdown({
   ];
 
   return (
-    <Card radius="xl" withBorder padding={0} shadow="sm" className="overflow-hidden bg-card border-border">
+    <Card radius="md" withBorder padding={0} shadow="sm" className="overflow-hidden bg-card border-border">
       <Box className="p-4 border-b border-border bg-muted/5">
         <Group gap="sm" wrap="nowrap">
           <Box className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">

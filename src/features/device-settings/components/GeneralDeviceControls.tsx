@@ -196,7 +196,7 @@ export function GeneralDeviceControls({ selectedDevice, latestSettings }: Props)
           <Card
             key={ctrl.id}
             withBorder
-            radius="lg"
+            radius="md"
             padding="sm"
             className={cn(
               "bg-card flex flex-col gap-3 transition-all shadow-sm",

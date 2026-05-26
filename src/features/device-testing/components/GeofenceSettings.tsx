@@ -181,7 +181,7 @@ export function GeofenceSettings({ topic, selectedImei, deviceLocation }: Geofen
 
       <Box className="pt-4 p-4 space-y-5 flex-1 scroll-container overflow-y-auto max-h-[600px]">
         {/* Existing Assignment / Sync Section */}
-        <Card padding="md" radius="lg" withBorder className="space-y-3 bg-muted/20 border-border">
+        <Card padding="md" radius="md" withBorder className="space-y-3 bg-muted/20 border-border">
           <div className="flex items-center gap-2 mb-1">
              <Share2 className="h-3 w-3 text-primary" />
              <span className="text-[10px] font-black uppercase tracking-widest text-foreground">Sync to Device</span>
@@ -290,7 +290,7 @@ export function GeofenceSettings({ topic, selectedImei, deviceLocation }: Geofen
           </Text>
         }
         size="1000px"
-        radius="lg"
+        radius="md"
         styles={{ body: { padding: 0 } }}
       >
         <div style={{ height: '70vh' }} className="relative">

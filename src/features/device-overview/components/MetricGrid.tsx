@@ -114,7 +114,7 @@ export function MetricsGrid({
 
       {/* 4-column section for Live Map */}
       <Card 
-        radius="xl"
+        radius="md"
         withBorder
         padding={0}
         onClick={() => imei && (window.location.href = `/devices/map/${imei}`)}

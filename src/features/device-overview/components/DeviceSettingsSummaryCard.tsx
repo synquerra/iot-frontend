@@ -63,7 +63,7 @@ export function DeviceSettingsSummaryCard({
   temperatureLimit = "N/A",
 }: DeviceSettingsSummaryProps) {
   return (
-    <Card radius="xl" withBorder padding={0} shadow="sm" className="bg-card hover:shadow-md transition-all duration-300 overflow-hidden border-border">
+    <Card radius="md" withBorder padding={0} shadow="sm" className="bg-card hover:shadow-md transition-all duration-300 overflow-hidden border-border">
       <Box className="pb-4 border-b bg-muted/5 p-4">
         <Group justify="space-between" align="center" wrap="nowrap">
           <Group gap="sm" wrap="nowrap">

@@ -72,7 +72,7 @@ export function SavedGeofencesCard({
               <Card
                 key={geofenceId}
                 withBorder
-                radius="lg"
+                radius="md"
                 padding="md"
                 onClick={() => onGeofenceClick?.(geofenceId)}
                 className={`flex flex-row items-start justify-between cursor-pointer transition-all duration-150 hover:border-primary/50 hover:bg-muted/50 ${

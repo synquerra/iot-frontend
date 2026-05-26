@@ -12,7 +12,7 @@ export function DeviceGrid() {
     return (
       <Box className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {Array(6).fill(0).map((_, i) => (
-          <Skeleton key={i} height={144} radius="xl" />
+          <Skeleton key={i} height={144} radius="md" />
         ))}
       </Box>
     );
@@ -20,7 +20,7 @@ export function DeviceGrid() {
 
   if (filteredDevices.length === 0) {
     return (
-      <Box className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-border rounded-2xl">
+      <Box className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-border rounded-xl">
         <Cpu className="h-12 w-12 text-muted-foreground/20 mb-4" />
         <Text size="md" fw={600} c="dimmed">No devices found</Text>
         <Text size="sm" c="dimmed" mt={4}>Try adjusting your search or add a new device</Text>

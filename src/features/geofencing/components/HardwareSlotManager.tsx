@@ -157,7 +157,7 @@ export function HardwareSlotManager({
   };
 
   return (
-    <Card shadow="sm" radius="xl" withBorder className="bg-card/50 backdrop-blur-sm">
+    <Card shadow="sm" radius="md" withBorder className="bg-card/50 backdrop-blur-sm">
       <Box className="flex flex-col lg:flex-row items-stretch lg:items-center gap-6">
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md" className="flex-1">
           {renderSlot("GEO1 Node", "GEO1")}

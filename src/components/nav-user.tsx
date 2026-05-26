@@ -50,12 +50,12 @@ export function NavUser({
             backgroundColor: "transparent",
           }}
         >
-          <Group wrap="nowrap" gap="sm" justify={collapsed ? "center" : "flex-start"}>
+          <Group wrap="nowrap" gap="sm" justify={(collapsed || compact) ? "center" : "flex-start"}>
             <Avatar color="indigo" radius="md">
               {displayName.slice(0, 2).toUpperCase()}
             </Avatar>
 
-            {!collapsed && (
+            {!collapsed && !compact && (
               <>
                 <Box style={{ flex: 1, overflow: "hidden" }}>
                   <Text size="sm" fw={600} truncate>

@@ -16,7 +16,7 @@ import { Notifications } from "@mantine/notifications";
 const theme = createTheme({
   primaryColor: "indigo",
   fontFamily: "Plus Jakarta Sans, system-ui, sans-serif",
-  defaultRadius: "md",
+  defaultRadius: "sm",
   headings: {
     fontFamily: "Plus Jakarta Sans, system-ui, sans-serif",
   },

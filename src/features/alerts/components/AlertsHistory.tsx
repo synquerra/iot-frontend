@@ -27,7 +27,7 @@ export function AlertsHistory({
       {loading ? (
         <Stack gap="sm">
           {Array(3).fill(0).map((_, i) => (
-            <Skeleton key={i} h={64} radius="xl" />
+            <Skeleton key={i} h={64} radius="md" />
           ))}
         </Stack>
       ) : filteredItems.length > 0 ? (
@@ -43,7 +43,7 @@ export function AlertsHistory({
           ))}
         </Stack>
       ) : (
-        <Center py={64} className="flex-col bg-muted/10 rounded-3xl border border-dashed border-border/50 text-center">
+        <Center py={64} className="flex-col bg-muted/10 rounded-xl border border-dashed border-border/50 text-center">
           <div className="rounded-full bg-muted/40 p-5 mb-4 border border-border/50">
             <CheckCircle2 size="2rem" className="text-muted-foreground opacity-40" />
           </div>

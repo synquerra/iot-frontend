@@ -61,14 +61,14 @@ export function SiteHeader({
 
       <Paper
         visibleFrom="sm"
-        p={6}
+        p={4}
         radius="md"
         shadow="xs"
         withBorder
         bg="dark.8"
         style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
       >
-        <Image src="/images/logo.png" alt="Synquerra" h={28} w="auto" fit="contain" />
+        <Image src="/images/logo.png" alt="Synquerra" h={40} w="auto" fit="contain" />
       </Paper>
 
       <Burger opened={!collapsed} onClick={onCollapseToggle} visibleFrom="sm" size="sm" />

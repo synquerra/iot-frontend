@@ -104,7 +104,7 @@ export function DeviceCard({
     <>
       <Card
         shadow="sm"
-        radius="xl"
+        radius="md"
         withBorder
         onClick={handleCardClick}
         className={cn(
