@@ -1,5 +1,5 @@
 import axios from "axios";
-import { toast } from "sonner";
+import { notifications } from '@mantine/notifications';
 
 const baseUrl: string = import.meta.env.VITE_API_BASE_URL;
 
@@ -25,7 +25,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => {
     if (response.data?.note) {
-      toast(response.data.note, { id: response.data.note });
+      notifications.show({
+        id: response.data.note,
+        message: response.data.note,
+        color: 'teal',
+      });
     }
     return response;
   },

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { ActivityBreakdown } from "./components/ActivityBreakdown";
 import { listGeofences } from "../geofencing/services/geofenceService";
 import type { GeofenceRecord } from "../geofencing/types";
@@ -12,6 +11,7 @@ import { MetricsGrid } from "./components/MetricGrid";
 import { MetricCardSkeleton } from "./components/SkeletonItems";
 import { DeviceAlertsHistory } from "./components/DeviceAlertsHistory";
 import useDeviceOverview from "./hooks/useDeviceOverview";
+import { Box } from "@mantine/core";
 
 export default function DeviceOverviewPage() {
   const { imei } = useParams();
@@ -80,77 +80,73 @@ export default function DeviceOverviewPage() {
   }
 
   return (
-    <TooltipProvider>
-      <div className="space-y-6 pb-6">
-        <DeviceHeader
+    <Box className="space-y-6 pb-6">
+      <DeviceHeader
+        name={data.name}
+        imei={data.imei}
+        status={data.status}
+        lastUpdate={data.lastUpdate}
+        onRefresh={handleRefresh}
+        refreshing={refreshing}
+        currentModeName={device?.currentMode ?? null}
+        onModeSwitch={handleRefresh}
+        deviceTopic={device?.topic ?? null}
+      />
+
+      <Box component="main" className="space-y-6">
+        <MetricsGrid
+          speed={data.speed}
+          latitude={data.latitude}
+          longitude={data.longitude}
+          battery={data.battery}
+          signal={data.signal}
+          temperature={data.temperature}
+          geoid={data.geoid}
           name={data.name}
           imei={data.imei}
-          status={data.status}
           lastUpdate={data.lastUpdate}
-          onRefresh={handleRefresh}
-          refreshing={refreshing}
-          currentModeName={device?.currentMode ?? null}
-          onModeSwitch={handleRefresh}
-          deviceTopic={device?.topic ?? null}
+          lowBatLimit={data.settingsLowBattery !== "N/A" ? parseInt(data.settingsLowBattery) : 30}
+          tempLimit={data.settingsTempLimit !== "N/A" ? parseInt(data.settingsTempLimit) : 50}
+          geofences={geofences.filter(g => g.coordinates) as any}
         />
 
-        <main className="space-y-6">
-          <MetricsGrid
-            speed={data.speed}
-            latitude={data.latitude}
-            longitude={data.longitude}
-            battery={data.battery}
-            signal={data.signal}
-            temperature={data.temperature}
-            geoid={data.geoid}
-            name={data.name}
-            imei={data.imei}
-            lastUpdate={data.lastUpdate}
-            lowBatLimit={data.settingsLowBattery !== "N/A" ? parseInt(data.settingsLowBattery) : 30}
-            tempLimit={data.settingsTempLimit !== "N/A" ? parseInt(data.settingsTempLimit) : 50}
-            geofences={geofences.filter(g => g.coordinates) as any}
-          />
+        <Box className="grid gap-8 lg:grid-cols-12 items-start">
 
-          <div className="grid gap-8 lg:grid-cols-12 items-start">
+          {/* Left Column - Tactical Live Map */}
+          <Box className="lg:col-span-8 flex flex-col gap-8">
+            <ActivityBreakdown
+              crawling={data.crawling}
+              stationary={data.stationary}
+              overspeeding={data.overspeeding}
+            />
+            <DeviceAlertsHistory imei={data.imei} deviceName={data.name} />
 
-            {/* Left Column - Tactical Live Map */}
-            <div className="lg:col-span-8 flex flex-col gap-8">
-              <ActivityBreakdown
-                crawling={data.crawling}
-                stationary={data.stationary}
-                overspeeding={data.overspeeding}
-              />
-              <DeviceAlertsHistory imei={data.imei} deviceName={data.name} />
+          </Box>
 
+          <Box className="lg:col-span-4 flex flex-col gap-8">
+            <DeviceSettingsSummaryCard
+              normalInterval={data.settingsNormalInterval}
+              sosInterval={data.settingsSosInterval}
+              speedLimit={data.settingsSpeedLimit}
+              lowBattery={data.settingsLowBattery}
+              airplaneInterval={data.settingsAirplaneInterval}
+              temperatureLimit={data.settingsTempLimit}
+            />
 
-            </div>
+            <NetworkPerformanceCard
+              gpsSignal={data.gpsSignal}
+              gpsSignalRaw={data.gpsSignalRaw}
+              signal={data.signal}
+            />
 
-            <div className="lg:col-span-4 flex flex-col gap-8">
-              <DeviceSettingsSummaryCard
-                normalInterval={data.settingsNormalInterval}
-                sosInterval={data.settingsSosInterval}
-                speedLimit={data.settingsSpeedLimit}
-                lowBattery={data.settingsLowBattery}
-                airplaneInterval={data.settingsAirplaneInterval}
-                temperatureLimit={data.settingsTempLimit}
-              />
+            <GuardiansList
+              guardian1Phone={data.guardian1Phone}
+              guardian2Phone={data.guardian2Phone}
+            />
+          </Box>
+        </Box>
 
-              <NetworkPerformanceCard
-                gpsSignal={data.gpsSignal}
-                gpsSignalRaw={data.gpsSignalRaw}
-                signal={data.signal}
-              />
-
-              <GuardiansList
-                guardian1Phone={data.guardian1Phone}
-                guardian2Phone={data.guardian2Phone}
-              />
-            </div>
-          </div>
-
-
-        </main>
-      </div>
-    </TooltipProvider>
+      </Box>
+    </Box>
   );
 }

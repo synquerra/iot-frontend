@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge, Box, Text, Group } from "@mantine/core";
 
 interface DeviceSettingsHeaderProps {
   title?: string;
@@ -7,22 +7,22 @@ interface DeviceSettingsHeaderProps {
 
 export function DeviceSettingsHeader({ title = "Device Settings", currentMode }: DeviceSettingsHeaderProps) {
   return (
-    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-      <div>
-        <h1 className="text-lg font-bold tracking-tight text-foreground uppercase">
+    <Group justify="space-between" align="center" className="flex-col gap-4 md:flex-row">
+      <Box>
+        <Text size="lg" fw={700} tt="uppercase" className="tracking-tight text-foreground">
           {title}
-        </h1>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+        </Text>
+        <Text size="0.6rem" fw={700} tt="uppercase" className="tracking-widest" c="dimmed">
           Operational Control Panel
-        </p>
-      </div>
-      <div className="flex items-center gap-2">
+        </Text>
+      </Box>
+      <Group gap="xs" align="center">
         {currentMode && (
-          <Badge variant="secondary" className="px-3 py-1 font-mono text-[11px] font-bold tracking-tight bg-slate-100 text-slate-600 border border-slate-200 uppercase">
+          <Badge variant="light" color="slate" size="lg" className="px-3 py-1 font-mono text-[11px] font-bold tracking-tight uppercase">
             Mode: {currentMode}
           </Badge>
         )}
-      </div>
-    </div>
+      </Group>
+    </Group>
   );
 }

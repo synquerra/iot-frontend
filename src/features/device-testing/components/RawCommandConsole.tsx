@@ -1,8 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, Button, Group, Text, Box } from "@mantine/core";
 import { Terminal, Send, AlertCircle, Info } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useGlobalLoading } from "@/contexts/GlobalLoadingContext";
 import api from "@/lib/axios";
 
@@ -26,8 +25,6 @@ export function RawCommandConsole({ topic }: RawCommandConsoleProps) {
       
       setIsLoading(true, "Sending raw command...");
       
-      // We'll use a generic endpoint or a fallback for testing
-      // The user wants to test "raw/new commands"
       const response = await api.post("/setting/raw", {
         topic,
         ...parsed
@@ -51,31 +48,32 @@ export function RawCommandConsole({ topic }: RawCommandConsoleProps) {
   };
 
   return (
-    <Card className="border-primary/10 shadow-sm flex flex-col h-full">
-      <CardHeader className="pb-4 border-b border-primary/5 flex flex-row items-center justify-between space-y-0 text-left">
+    <Card className="border-primary/10 shadow-sm flex flex-col h-full p-0">
+      <Group justify="space-between" align="center" className="pb-4 p-4 border-b border-primary/5 text-left">
         <div className="flex-1">
-          <CardTitle className="flex items-center gap-2">
+          <Text size="sm" fw={700} className="flex items-center gap-2 text-foreground">
             <Terminal className="h-5 w-5 text-primary" />
             Raw Command Console
-          </CardTitle>
-          <CardDescription className="flex items-center gap-2">
-            Directly publish MQTT payloads
+          </Text>
+          <div className="flex items-center gap-2 mt-1">
+            <Text size="xs" className="text-muted-foreground">Directly publish MQTT payloads</Text>
             <span className="hidden md:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 text-[10px] font-bold text-primary border border-primary/10 uppercase tracking-tighter">
               <AlertCircle size={10} />
               Target: {topic || "None"}
             </span>
-          </CardDescription>
+          </div>
         </div>
         <Button 
           onClick={handleSend}
           size="sm"
-          className="bg-primary hover:bg-primary/90 text-white gap-2 font-bold px-4 shadow-lg shadow-primary/20"
+          color="blue"
+          className="text-white gap-2 font-bold px-4 shadow-lg"
         >
-          <Send className="h-3.5 w-3.5" />
+          <Send className="h-3.5 w-3.5 mr-1" />
           Dispatch
         </Button>
-      </CardHeader>
-      <CardContent className="space-y-4 flex-1 flex flex-col pt-6">
+      </Group>
+      <Box className="space-y-4 flex-1 flex flex-col pt-6 p-4">
         <div className="relative flex-1 min-h-[300px]">
           <textarea
             value={command}
@@ -87,7 +85,7 @@ export function RawCommandConsole({ topic }: RawCommandConsoleProps) {
              <Info className="h-5 w-5 text-emerald-600" />
           </div>
         </div>
-      </CardContent>
+      </Box>
     </Card>
   );
 }

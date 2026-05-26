@@ -1,15 +1,24 @@
 import { useEffect, useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import { toast } from "sonner"
+import { toast } from "@/lib/toast";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Button,
+  Checkbox,
+  TextInput,
+  PasswordInput,
+  Alert,
+  Text,
+  Title,
+  Box,
+  Image,
+  Group,
+  Stack,
+  Center,
+  Paper,
+} from "@mantine/core"
 
-import { Eye, EyeOff, AlertCircle } from "lucide-react"
+import { AlertCircle } from "lucide-react"
 
 import { useUserContext } from "@/contexts/UserContext"
 
@@ -26,7 +35,6 @@ export default function LoginPage() {
     const [rememberMe, setRememberMe] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [showPassword, setShowPassword] = useState(false)
 
     // Handle success message from signup
     useEffect(() => {
@@ -119,133 +127,111 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-background to-blue-50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 flex items-center justify-center p-4">
+        <Box className="min-h-screen bg-gradient-to-br from-slate-50 via-background to-blue-50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 flex items-center justify-center p-4">
+            <Paper className="w-full max-w-7xl overflow-hidden rounded-3xl border border-border/60 shadow-2xl backdrop-blur" bg="var(--mantine-color-body)">
+                <Group wrap="nowrap" align="stretch" gap={0}>
+                    {/* LEFT PANEL */}
+                    <Box className="w-full sm:w-1/3 p-4 lg:p-8 flex flex-col justify-center">
+                        {/* Logo */}
+                        <Center mb="xl" className="flex-col">
+                            <Box className="mb-4 inline-flex items-center justify-center rounded-xl border border-border/60 bg-slate-900 p-2 backdrop-blur-lg shadow-sm">
+                                <Image
+                                    src="/images/logo.png"
+                                    alt="Company Logo"
+                                    w={144}
+                                />
+                            </Box>
 
+                            <Title order={1} size="h3" className="mb-1 text-foreground tracking-tight">
+                                Welcome Back
+                            </Title>
+                            <Text size="xs" fw={500} c="dimmed" tt="uppercase" className="tracking-widest opacity-60">
+                                Sign in to your account
+                            </Text>
+                        </Center>
 
-            <Card className="w-full flex flex-row max-w-7xl overflow-hidden rounded-3xl border-border/60 bg-card/90 shadow-2xl backdrop-blur">
+                        <form onSubmit={handleLogin} className="max-w-md mx-auto w-full">
+                            <Stack gap="md">
+                                {/* Error Alert */}
+                                {error && (
+                                    <Alert variant="light" color="red" icon={<AlertCircle size="1rem" />}>
+                                        {error}
+                                    </Alert>
+                                )}
 
-                {/* LEFT PANEL */}
-                <CardContent className="w-full sm:w-1/3 p-4 lg:p-6">
-
-                    {/* Logo */}
-                    <div className="text-center mb-6">
-                        <div className="mb-4 inline-flex items-center justify-center rounded-xl border border-border/60 bg-slate-900 p-2 backdrop-blur-lg shadow-sm">
-                            <img
-                                src="/images/logo.png"
-                                alt="Company Logo"
-                                className="w-36"
-                            />
-                        </div>
-
-                        <h1 className="mb-1 text-xl font-bold text-foreground tracking-tight">
-                            Welcome Back
-                        </h1>
-                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest opacity-60">
-                            Sign in to your account
-                        </p>
-                    </div>
-
-                    <form
-                        onSubmit={handleLogin}
-                        className="space-y-6 max-w-md mx-auto"
-                    >
-                        {/* Error Alert */}
-                        {error && (
-                            <Alert variant="destructive">
-                                <AlertCircle className="h-4 w-4" />
-                                <AlertDescription>{error}</AlertDescription>
-                            </Alert>
-                        )}
-
-                        {/* Email */}
-                        <div className="space-y-2">
-                            <Label>Email Address <span className="text-destructive">*</span></Label>
-                            <Input
-                                type="email"
-                                placeholder="Email Address"
-                                value={email}
-                                onChange={(e) => {
-                                    setEmail(e.target.value)
-                                    setError(null) // Clear error on input change
-                                }}
-                                disabled={loading}
-                            />
-                        </div>
-
-                        {/* Password */}
-                        <div className="space-y-2">
-                            <Label>Password <span className="text-destructive">*</span></Label>
-                            <div className="relative">
-                                <Input
-                                    type={showPassword ? "text" : "password"}
-                                    placeholder="••••••••"
-                                    value={password}
+                                {/* Email */}
+                                <TextInput
+                                    label="Email Address"
+                                    withAsterisk
+                                    type="email"
+                                    placeholder="Email Address"
+                                    value={email}
                                     onChange={(e) => {
-                                        setPassword(e.target.value)
-                                        setError(null) // Clear error on input change
+                                        setEmail(e.currentTarget.value)
+                                        setError(null)
                                     }}
                                     disabled={loading}
                                 />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-3.5 text-muted-foreground hover:text-foreground transition-colors"
+
+                                {/* Password */}
+                                <PasswordInput
+                                    label="Password"
+                                    withAsterisk
+                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) => {
+                                        setPassword(e.currentTarget.value)
+                                        setError(null)
+                                    }}
                                     disabled={loading}
+                                />
+
+                                {/* Remember */}
+                                <Checkbox
+                                    label="Keep me signed in"
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.currentTarget.checked)}
+                                    disabled={loading}
+                                    mt="xs"
+                                />
+
+                                {/* Submit */}
+                                <Button
+                                    type="submit"
+                                    loading={loading}
+                                    fullWidth
+                                    mt="md"
+                                    size="md"
                                 >
-                                    {showPassword ? (
-                                        <EyeOff className="h-4 w-4" />
-                                    ) : (
-                                        <Eye className="h-4 w-4" />
-                                    )}
-                                </button>
-                            </div>
-                        </div>
+                                    Sign In
+                                </Button>
+                            </Stack>
+                        </form>
 
-                        {/* Remember */}
-                        <div className="flex items-center space-x-2">
-                            <Checkbox
-                                id="remember"
-                                checked={rememberMe}
-                                onCheckedChange={(v) => setRememberMe(Boolean(v))}
-                                disabled={loading}
-                            />
-                            <Label htmlFor="remember" className="text-sm">
-                                Keep me signed in
-                            </Label>
-                        </div>
+                        {/* Footer */}
+                        <Box className="mt-12 pt-8 border-t border-border text-center">
+                            <Text size="sm" c="dimmed">
+                                Powered by{" "}
+                                <span className="font-semibold text-foreground">
+                                    Synquerra
+                                </span>
+                            </Text>
+                            <Text size="xs" c="dimmed" mt={4}>
+                                © {new Date().getFullYear()} • Privacy • Terms
+                            </Text>
+                        </Box>
+                    </Box>
 
-                        {/* Submit */}
-                        <Button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full"
-                        >
-                            {loading ? "Signing in..." : "Sign In"}
-                        </Button>
-                    </form>
-
-                    {/* Footer */}
-                    <div className="mt-12 pt-8 border-t text-center text-sm text-muted-foreground">
-                        Powered by{" "}
-                        <span className="font-semibold text-foreground">
-                            Synquerra
-                        </span>
-                        <div className="text-xs mt-1">
-                            © {new Date().getFullYear()} • Privacy • Terms
-                        </div>
-                    </div>
-                </CardContent>
-
-                {/* RIGHT PANEL */}
-                <div className="hidden sm:block sm:w-2/3 items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800">
-                    <img
-                        src="/images/loginbg.png"
-                        alt="Login Illustration"
-                        className="h-full object-fill"
-                    />
-                </div>
-
-            </Card>
-        </div>
+                    {/* RIGHT PANEL */}
+                    <Box className="hidden sm:flex sm:w-2/3 items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800 relative">
+                        <img
+                            src="/images/loginbg.png"
+                            alt="Login Illustration"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                    </Box>
+                </Group>
+            </Paper>
+        </Box>
     )
 }

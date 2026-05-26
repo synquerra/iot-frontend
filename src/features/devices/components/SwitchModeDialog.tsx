@@ -1,17 +1,8 @@
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { Button, Modal, Badge, Group, Box, Text, Loader, ActionIcon } from "@mantine/core";
 import { cn } from "@/lib/utils";
-import { Layers, Loader2, CheckCircle2, Lock, Zap } from "lucide-react";
-import { toast } from "sonner";
+import { Layers, CheckCircle2, Lock, Zap } from "lucide-react";
+import { toast } from "@/lib/toast";
 import { listModes } from "@/features/modes/services/modeService";
 import type { DeviceMode } from "@/features/modes/types";
 import { switchDeviceMode } from "../services/deviceService";
@@ -65,134 +56,111 @@ export function SwitchModeDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-2xl">
-        <DialogHeader>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-              <Layers className="h-4 w-4 text-primary" />
-            </div>
-            <DialogTitle className="text-sm font-black uppercase tracking-widest">
-              Switch Device Mode
-            </DialogTitle>
-          </div>
-          <DialogDescription className="text-xs text-muted-foreground">
-            Select a mode to push to <span className="font-bold font-mono text-foreground">{imei}</span>.
-            {currentModeName && (
-              <span className="ml-1">
-                Current mode:{" "}
-                <span className="font-bold text-primary">{currentModeName}</span>
-              </span>
-            )}
-          </DialogDescription>
-        </DialogHeader>
+    <Modal
+      opened={open}
+      onClose={() => onOpenChange(false)}
+      title={
+        <Group gap="xs">
+          <ActionIcon variant="light" color="blue" size="md" radius="md">
+            <Layers size="1.2rem" />
+          </ActionIcon>
+          <Text fw={900} tt="uppercase" className="tracking-widest" size="sm">
+            Switch Device Mode
+          </Text>
+        </Group>
+      }
+      centered
+      radius="xl"
+      size="md"
+      overlayProps={{ backgroundOpacity: 0.55, blur: 3 }}
+    >
+      <Box mb="md">
+        <Text size="xs" c="dimmed">
+          Select a mode to push to <Text component="span" fw={700} ff="monospace" c="dark">{imei}</Text>.
+          {currentModeName && (
+            <Text component="span" ml={4}>
+              Current mode: <Text component="span" fw={700} c="blue">{currentModeName}</Text>
+            </Text>
+          )}
+        </Text>
+      </Box>
 
-        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-          {loadingModes ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
-          ) : modes.length === 0 ? (
-            <p className="text-xs text-center text-muted-foreground py-8 font-semibold">
-              No modes found. Create one in the Modes section.
-            </p>
-          ) : (
-            modes.map((mode) => {
-              const isSelected = selectedModeId === mode.id;
-              const isCurrent =
-                currentModeName?.toLowerCase() === mode.name.toLowerCase();
-              return (
-                <button
-                  key={mode.id}
-                  type="button"
-                  disabled={isCurrent}
-                  onClick={() => setSelectedModeId(mode.id)}
+      <Box className="space-y-2 max-h-72 overflow-y-auto pr-1">
+        {loadingModes ? (
+          <Group justify="center" py={40}>
+            <Loader color="gray" type="dots" />
+          </Group>
+        ) : modes.length === 0 ? (
+          <Text size="xs" c="dimmed" ta="center" py={32} fw={600}>
+            No modes found. Create one in the Modes section.
+          </Text>
+        ) : (
+          modes.map((mode) => {
+            const isSelected = selectedModeId === mode.id;
+            const isCurrent = currentModeName?.toLowerCase() === mode.name.toLowerCase();
+            
+            return (
+              <Box
+                key={mode.id}
+                component="button"
+                disabled={isCurrent}
+                onClick={() => setSelectedModeId(mode.id)}
+                className={cn(
+                  "w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all duration-150",
+                  isSelected
+                    ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm"
+                    : "border-border bg-muted/10 hover:bg-muted/30 hover:border-border/80",
+                  isCurrent && "opacity-60 cursor-not-allowed"
+                )}
+              >
+                <Box
                   className={cn(
-                    "w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all duration-150",
-                    isSelected
-                      ? "border-primary bg-primary/5 shadow-sm"
-                      : "border-border bg-muted/10 hover:bg-muted/30 hover:border-border/80",
-                    isCurrent && "opacity-60 cursor-not-allowed"
+                    "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
+                    isSelected ? "bg-blue-500 text-white" : "bg-muted text-muted-foreground"
                   )}
                 >
-                  <div
-                    className={cn(
-                      "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
-                      isSelected
-                        ? "bg-primary text-white"
-                        : "bg-muted text-muted-foreground"
+                  {mode.is_system_mode ? <Lock size="1rem" /> : <Zap size="1rem" />}
+                </Box>
+                
+                <Box className="flex-1 min-w-0">
+                  <Group gap="xs" wrap="nowrap">
+                    <Text size="sm" fw={700} className="truncate">{mode.name}</Text>
+                    {isCurrent && (
+                      <Badge size="xs" variant="light" color="teal" className="tracking-widest uppercase">
+                        Current
+                      </Badge>
                     )}
-                  >
-                    {mode.is_system_mode ? (
-                      <Lock className="h-4 w-4" />
-                    ) : (
-                      <Zap className="h-4 w-4" />
+                    {mode.is_system_mode && !isCurrent && (
+                      <Badge size="xs" variant="outline" color="gray" className="tracking-widest uppercase">
+                        System
+                      </Badge>
                     )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-[13px] font-bold truncate">{mode.name}</p>
-                      {isCurrent && (
-                        <Badge
-                          variant="outline"
-                          className="text-[9px] px-1.5 h-4 font-black uppercase tracking-widest border-emerald-400/40 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20"
-                        >
-                          Current
-                        </Badge>
-                      )}
-                      {mode.is_system_mode && !isCurrent && (
-                        <Badge
-                          variant="outline"
-                          className="text-[9px] px-1.5 h-4 font-black uppercase tracking-widest"
-                        >
-                          System
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-                      {mode.description || `Priority ${mode.priority} · Interval ${mode.normal_sending_interval}s`}
-                    </p>
-                  </div>
-                  {isSelected && (
-                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                  )}
-                </button>
-              );
-            })
-          )}
-        </div>
+                  </Group>
+                  <Text size="0.65rem" c="dimmed" className="truncate mt-0.5">
+                    {mode.description || `Priority ${mode.priority} · Interval ${mode.normal_sending_interval}s`}
+                  </Text>
+                </Box>
+                
+                {isSelected && <CheckCircle2 className="h-4 w-4 text-blue-500 shrink-0" />}
+              </Box>
+            );
+          })
+        )}
+      </Box>
 
-        <DialogFooter className="gap-2 pt-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onOpenChange(false)}
-            className="flex-1 rounded-xl"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            disabled={!selectedModeId || switching}
-            onClick={handleSwitch}
-            className="flex-1 rounded-xl bg-primary hover:bg-primary/90"
-          >
-            {switching ? (
-              <>
-                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                Switching…
-              </>
-            ) : (
-              <>
-                <Layers className="h-3.5 w-3.5 mr-1.5" />
-                Apply Mode
-              </>
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <Group justify="flex-end" gap="sm" mt="xl" grow>
+        <Button variant="default" onClick={() => onOpenChange(false)}>
+          Cancel
+        </Button>
+        <Button
+          disabled={!selectedModeId}
+          loading={switching}
+          onClick={handleSwitch}
+          leftSection={!switching && <Layers size="1rem" />}
+        >
+          Apply Mode
+        </Button>
+      </Group>
+    </Modal>
   );
 }

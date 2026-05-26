@@ -9,16 +9,13 @@ import {
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { getAlerts, getErrors, acknowledgeAlert, type AlertErrorItem } from "./services/alertsService";
 import { useDevices } from "../devices/hooks/useDevices";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 // Sub-components
 import { PageHeader } from "@/components/PageHeader";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Tabs, TextInput, ActionIcon, Stack, Group, Badge } from "@mantine/core";
 import { SeverityOverview } from "./components/SeverityOverview";
 import { AlertsHistory } from "./components/AlertsHistory";
-import { cn } from "@/lib/utils";
 
 // Types
 import type { ViewMode, SeverityCard, HistoryItem } from "./types";
@@ -81,9 +78,9 @@ export default function AlertsPage() {
     
     const getColor = (severity: string) => {
       const s = severity.toLowerCase();
-      if (s === "critical" || s === "danger") return "rose"; // Red
-      if (s === "warning" || s === "caution") return "orange"; // Orangeish red
-      return "amber"; // Yellowish red (Advisory/Notice)
+      if (s === "critical" || s === "danger") return "red";
+      if (s === "warning" || s === "caution") return "orange";
+      return "blue";
     };
 
     return rawItems.map((item): HistoryItem => ({
@@ -148,50 +145,55 @@ export default function AlertsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <Stack gap="lg">
       <PageHeader
         title="Alerts & Incidents"
         description="Monitor system health and device status"
         icon={AlertOctagon}
       >
-        <div className="flex items-center gap-3">
-          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="hidden md:block">
-            <TabsList className="grid w-[240px] grid-cols-2 h-10 p-1 bg-muted/40 border border-border/50 rounded-xl">
-              <TabsTrigger value="errors" className="text-[10px] font-black uppercase tracking-widest gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
+        <Group gap="sm">
+          <Tabs value={viewMode} onChange={(v) => setViewMode(v as ViewMode)} className="hidden md:block">
+            <Tabs.List>
+              <Tabs.Tab 
+                value="errors"
+                rightSection={
+                  <Badge size="xs" color="red" variant="light" className="px-1.5 min-w-[1.25rem]">
+                    {errors.length}
+                  </Badge>
+                }
+              >
                 Errors
-                <span className="flex items-center justify-center h-4.5 min-w-[1.25rem] px-1.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 text-[9px] font-black border border-red-500/20">
-                  {errors.length}
-                </span>
-              </TabsTrigger>
-              <TabsTrigger value="alerts" className="text-[10px] font-black uppercase tracking-widest gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
+              </Tabs.Tab>
+              <Tabs.Tab 
+                value="alerts"
+                rightSection={
+                  <Badge size="xs" color="orange" variant="light" className="px-1.5 min-w-[1.25rem]">
+                    {alerts.length}
+                  </Badge>
+                }
+              >
                 Alerts
-                <span className="flex items-center justify-center h-4.5 min-w-[1.25rem] px-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[9px] font-black border border-amber-500/20">
-                  {alerts.length}
-                </span>
-              </TabsTrigger>
-            </TabsList>
+              </Tabs.Tab>
+            </Tabs.List>
           </Tabs>
 
-          <div className="relative group hidden sm:block w-48">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
-            <Input 
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 text-xs font-bold bg-muted/20 border-border/50 focus:bg-background transition-all rounded-xl"
-            />
-          </div>
+          <TextInput
+            placeholder="Search..."
+            leftSection={<Search size="0.8rem" />}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.currentTarget.value)}
+            className="hidden sm:block w-48"
+          />
 
-          <Button 
-            variant="outline" 
-            size="icon" 
+          <ActionIcon 
+            variant="default" 
+            size="lg" 
             onClick={() => fetchData(false)} 
-            disabled={isRefreshing}
-            className="h-10 w-10 rounded-xl"
+            loading={isRefreshing}
           >
-            <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin text-primary")} />
-          </Button>
-        </div>
+            <RefreshCw size="1.1rem" />
+          </ActionIcon>
+        </Group>
       </PageHeader>
 
       <SeverityOverview cards={cards} loading={loading} />
@@ -205,6 +207,6 @@ export default function AlertsPage() {
         onAcknowledge={handleAcknowledge}
         formatDate={formatDate}
       />
-    </div>
+    </Stack>
   );
 }

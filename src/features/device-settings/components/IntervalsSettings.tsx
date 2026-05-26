@@ -1,6 +1,4 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Button, Card, Box, Text, TextInput, Group } from "@mantine/core";
 import {
   updateDeviceCoreSettings,
   type LatestDeviceSettingsRecord,
@@ -18,7 +16,7 @@ import {
   Plane,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 type FormState = {
@@ -105,35 +103,35 @@ export function IntervalsSettings({ selectedImei, latestSettings }: Props) {
   };
 
   return (
-    <Card className={cn(
-      "border-border shadow-sm bg-card",
+    <Card shadow="sm" radius="md" withBorder padding={0} className={cn(
+      "bg-card",
       !selectedImei && "opacity-50 grayscale pointer-events-none select-none"
     )}>
-      <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between gap-3 space-y-0">
-        <div className="flex items-center gap-2">
+      <Group justify="space-between" align="center" className="py-3 px-4 border-b border-border">
+        <Group gap="sm" align="center">
           <Activity className="h-4 w-4 text-primary" />
-          <CardTitle className="text-xs font-bold uppercase tracking-wide">Intervals & Limits</CardTitle>
-        </div>
+          <Text size="xs" fw={700} tt="uppercase" className="tracking-wide">Intervals & Limits</Text>
+        </Group>
         <Button
           onClick={handleSave}
           disabled={!selectedImei}
-          size="sm"
-          variant={isDirty ? "default" : "outline"}
-          className="h-7 px-3 text-[10px] font-bold uppercase tracking-wide gap-1.5"
+          size="xs"
+          variant={isDirty ? "filled" : "outline"}
+          leftSection={<Save className="h-3 w-3" />}
+          className="font-bold uppercase tracking-wide"
         >
-          <Save className="h-3 w-3" />
           {isDirty ? "Apply" : "Saved"}
         </Button>
-      </CardHeader>
+      </Group>
 
-      <CardContent className="p-0">
+      <Box className="p-0">
         {/* Intervals Section */}
-        <div className="px-4 pt-3 pb-2">
-          <div className="flex items-center gap-1.5 mb-2">
+        <Box className="px-4 pt-3 pb-2">
+          <Group gap="sm" align="center" className="mb-2">
             <Timer className="h-3.5 w-3.5 text-primary/50" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70">Transmission</span>
-          </div>
-          <div className="space-y-1">
+            <Text size="0.6rem" fw={900} tt="uppercase" c="dimmed" className="tracking-widest">Transmission</Text>
+          </Group>
+          <Box className="space-y-1">
             <SettingRow
               icon={Activity}
               label="Normal Sending"
@@ -167,18 +165,18 @@ export function IntervalsSettings({ selectedImei, latestSettings }: Props) {
               unit="s"
               onChange={(v) => handleChange("AirplaneInterval", v)}
             />
-          </div>
-        </div>
+          </Box>
+        </Box>
 
-        <div className="mx-4 border-t border-dashed border-border/60" />
+        <Box className="mx-4 border-t border-dashed border-border/60" />
 
         {/* Limits Section */}
-        <div className="px-4 pt-2 pb-3">
-          <div className="flex items-center gap-1.5 mb-2">
+        <Box className="px-4 pt-2 pb-3">
+          <Group gap="sm" align="center" className="mb-2">
             <ShieldAlert className="h-3.5 w-3.5 text-orange-500/60" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-orange-600/80">Safety Thresholds</span>
-          </div>
-          <div className="space-y-1">
+            <Text size="0.6rem" fw={900} tt="uppercase" className="tracking-widest text-orange-600/80">Safety Thresholds</Text>
+          </Group>
+          <Box className="space-y-1">
             <SettingRow
               icon={Thermometer}
               label="Temperature"
@@ -206,9 +204,9 @@ export function IntervalsSettings({ selectedImei, latestSettings }: Props) {
               iconColor="text-red-500"
               onChange={(v) => handleChange("LowbatLimit", v)}
             />
-          </div>
-        </div>
-      </CardContent>
+          </Box>
+        </Box>
+      </Box>
     </Card>
   );
 }
@@ -231,22 +229,26 @@ function SettingRow({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="flex items-center gap-3 py-1.5 px-1 rounded-lg hover:bg-muted/30 transition-colors group">
-      <Icon className={cn("h-3.5 w-3.5 flex-shrink-0", iconColor)} />
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-semibold text-foreground/90 leading-tight">{label}</p>
-        <p className="text-[10px] text-muted-foreground leading-tight">{hint}</p>
-      </div>
-      <div className="flex items-center gap-1 bg-muted/40 border border-border/60 group-hover:border-primary/30 rounded-lg px-2 py-1 transition-colors w-[90px] shrink-0">
-        <Input
+    <Group justify="space-between" align="center" wrap="nowrap" className="py-1.5 px-1 rounded-lg hover:bg-muted/30 transition-colors group">
+      <Group gap="md" align="center" wrap="nowrap">
+        <Icon className={cn("h-3.5 w-3.5 flex-shrink-0", iconColor)} />
+        <Box className="flex-1 min-w-0">
+          <Text size="xs" fw={700} className="leading-tight">{label}</Text>
+          <Text size="0.65rem" c="dimmed" className="leading-tight">{hint}</Text>
+        </Box>
+      </Group>
+      <Group gap={4} align="center" wrap="nowrap" className="bg-muted/40 border border-border/60 group-hover:border-primary/30 rounded-lg px-2 py-1 transition-colors w-[90px] shrink-0">
+        <TextInput
           type="number"
-          min="0"
+          min={0}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="border-0 focus-visible:ring-0 h-5 w-full text-xs font-mono font-bold bg-transparent shadow-none text-right p-0"
+          onChange={(e) => onChange(e.currentTarget.value)}
+          variant="unstyled"
+          styles={{ input: { height: '1.25rem', padding: 0, textAlign: 'right', fontSize: '0.75rem', fontFamily: 'monospace', fontWeight: 900 } }}
+          className="w-full"
         />
-        <span className="text-[9px] font-bold text-muted-foreground/60 shrink-0">{unit}</span>
-      </div>
-    </div>
+        <Text size="0.6rem" fw={900} c="dimmed" className="shrink-0">{unit}</Text>
+      </Group>
+    </Group>
   );
 }

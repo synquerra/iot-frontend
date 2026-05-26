@@ -9,24 +9,11 @@ import {
   Edit2,
   Search
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import { Button, Card, Table, Badge, Skeleton, ActionIcon, Stack, Group, Text, Center, TextInput, Box, Title } from "@mantine/core";
+import { toast } from "@/lib/toast";
 import { listFotaUpdates } from "./services/fotaService";
 import type { FotaUpdate } from "./types";
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 import { FotaFormDialog } from "./components/FotaFormDialog";
-
 import { PageHeader } from "@/components/PageHeader";
 
 export default function FotaPage() {
@@ -66,147 +53,147 @@ export default function FotaPage() {
   );
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <Stack gap="lg" className="animate-in fade-in duration-500">
       <PageHeader
         title="FOTA Updates"
         description="Available firmware updates and historical versions"
         icon={Package}
       >
-        <div className="flex items-center gap-2">
+        <Group gap="sm">
             {/* Version Search */}
-            <div className="relative group hidden md:block w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
-              <input 
-                placeholder="Search versions..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 h-9 text-xs font-bold bg-muted/20 border border-border/50 focus:bg-background focus:ring-1 focus:ring-primary/20 transition-all rounded-xl outline-none"
-              />
-            </div>
+            <TextInput
+              placeholder="Search versions..."
+              leftSection={<Search size="0.8rem" />}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.currentTarget.value)}
+              className="hidden md:block w-64"
+            />
 
-            <Button 
+            <ActionIcon 
               onClick={fetchUpdates} 
-              disabled={isLoading}
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 rounded-xl"
+              loading={isLoading}
+              variant="default"
+              size="lg"
             >
-              <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin text-primary")} />
-            </Button>
+              <RefreshCw size="1.1rem" />
+            </ActionIcon>
             
             <Button 
               onClick={() => {
                 setEditingUpdate(null);
                 setIsFormOpen(true);
               }}
-              className="gap-2 rounded-xl h-10 px-3 sm:px-4 shadow-lg shadow-primary/20"
+              leftSection={<Plus size="1rem" />}
             >
-              <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">Add Firmware</span>
             </Button>
-        </div>
+        </Group>
       </PageHeader>
 
       {/* Latest Release Banner */}
       {updates.length > 0 && (
-        <Card className="shadow-sm border-primary/20 bg-primary/5 overflow-hidden">
-          <div className="flex flex-col md:flex-row md:items-center gap-4 py-3 px-4 bg-muted/5 border-b border-border">
-            <div className="flex items-center gap-2">
-              <History className="h-4 w-4 text-primary" />
-              <CardTitle className="text-xs font-bold uppercase tracking-tight whitespace-nowrap">
+        <Card shadow="sm" radius="md" withBorder className="bg-primary/5 border-primary/20">
+          <Group justify="space-between" mb="xs">
+            <Group gap="xs">
+              <History size="1rem" className="text-primary" />
+              <Title order={6} tt="uppercase" className="tracking-tight">
                 Latest Release Note
-              </CardTitle>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 md:ml-auto">
-              <Badge className="bg-primary text-white font-black hover:bg-primary shadow-sm">{updates[0].version_name}</Badge>
-              <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
+              </Title>
+            </Group>
+            <Group gap="xs">
+              <Badge color="blue" fw={900}>{updates[0].version_name}</Badge>
+              <Text size="xs" fw={700} c="dimmed" tt="uppercase" className="flex items-center gap-1">
+                <Calendar size="0.8rem" />
                 {updates[0].created_at}
-              </span>
-            </div>
-          </div>
-          <CardContent className="py-4">
-            <p className="text-sm leading-relaxed font-medium italic text-foreground/80">
-              "{updates[0].release_notes}"
-            </p>
-          </CardContent>
+              </Text>
+            </Group>
+          </Group>
+          <Text size="sm" fs="italic" c="dimmed" fw={500}>
+            "{updates[0].release_notes}"
+          </Text>
         </Card>
       )}
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between px-1">
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-tight text-foreground">
-              Firmware Registry
-            </h3>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">Available updates and historical versions</p>
-          </div>
-        </div>
+      <Stack gap="sm">
+        <Box px={4}>
+          <Text size="xs" fw={800} tt="uppercase" className="tracking-tight">
+            Firmware Registry
+          </Text>
+          <Text size="xs" c="dimmed" tt="uppercase" className="tracking-widest opacity-50">
+            Available updates and historical versions
+          </Text>
+        </Box>
 
         {isLoading ? (
-          <div className="space-y-3">
+          <Stack gap="sm">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-12 w-full rounded-lg" />
+              <Skeleton key={i} h={48} radius="md" />
             ))}
-          </div>
+          </Stack>
         ) : filteredUpdates.length > 0 ? (
-          <div className="rounded-xl border border-border/50 bg-card/50 overflow-hidden shadow-sm overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50 border-b border-border/50 hover:bg-muted/50">
-                  <TableHead className="font-bold whitespace-nowrap h-10">Version</TableHead>
-                  <TableHead className="font-bold whitespace-nowrap h-10">Build Code</TableHead>
-                  <TableHead className="font-bold whitespace-nowrap hidden sm:table-cell h-10">Size</TableHead>
-                  <TableHead className="font-bold whitespace-nowrap hidden md:table-cell h-10">Released</TableHead>
-                  <TableHead className="text-right font-bold h-10">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+          <Box className="rounded-xl border border-border shadow-sm overflow-hidden" bg="var(--mantine-color-body)">
+            <Table verticalSpacing="sm" horizontalSpacing="md" striped highlightOnHover>
+              <Table.Thead className="bg-slate-50 dark:bg-slate-900">
+                <Table.Tr>
+                  <Table.Th className="text-xs uppercase tracking-wider text-muted-foreground">Version</Table.Th>
+                  <Table.Th className="text-xs uppercase tracking-wider text-muted-foreground">Build Code</Table.Th>
+                  <Table.Th className="text-xs uppercase tracking-wider text-muted-foreground hidden sm:table-cell">Size</Table.Th>
+                  <Table.Th className="text-xs uppercase tracking-wider text-muted-foreground hidden md:table-cell">Released</Table.Th>
+                  <Table.Th className="text-right text-xs uppercase tracking-wider text-muted-foreground">Actions</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
                 {filteredUpdates.map((update) => (
-                  <TableRow key={update.id} className="hover:bg-muted/30 transition-colors border-b border-border/50 last:border-0">
-                    <TableCell className="py-3">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="font-mono text-[10px] h-5">{update.version_name}</Badge>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-mono text-[10px] text-muted-foreground py-3">{update.version_code}</TableCell>
-                    <TableCell className="text-[10px] text-muted-foreground hidden sm:table-cell py-3">{formatFileSize(update.file_size)}</TableCell>
-                    <TableCell className="text-[10px] text-muted-foreground hidden md:table-cell py-3">{update.created_at.split(' ')[0]}</TableCell>
-                    <TableCell className="text-right py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
+                  <Table.Tr key={update.id}>
+                    <Table.Td>
+                      <Badge variant="light" color="gray" ff="monospace" size="sm">{update.version_name}</Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="xs" c="dimmed" ff="monospace">{update.version_code}</Text>
+                    </Table.Td>
+                    <Table.Td className="hidden sm:table-cell">
+                      <Text size="xs" c="dimmed">{formatFileSize(update.file_size)}</Text>
+                    </Table.Td>
+                    <Table.Td className="hidden md:table-cell">
+                      <Text size="xs" c="dimmed">{update.created_at.split(' ')[0]}</Text>
+                    </Table.Td>
+                    <Table.Td className="text-right">
+                      <Group justify="flex-end" gap="xs">
+                        <ActionIcon
+                          variant="subtle"
+                          color="gray"
                           onClick={() => {
                             setEditingUpdate(update);
                             setIsFormOpen(true);
                           }}
                         >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary" asChild>
-                          <a href={update.file_url} target="_blank" rel="noreferrer">
-                            <Download className="h-4 w-4" />
-                          </a>
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                          <Edit2 size="1rem" />
+                        </ActionIcon>
+                        <ActionIcon 
+                          variant="subtle" 
+                          color="gray" 
+                          component="a" 
+                          href={update.file_url} 
+                          target="_blank" 
+                          rel="noreferrer"
+                        >
+                          <Download size="1rem" />
+                        </ActionIcon>
+                      </Group>
+                    </Table.Td>
+                  </Table.Tr>
                 ))}
-              </TableBody>
+              </Table.Tbody>
             </Table>
-          </div>
+          </Box>
         ) : (
-          <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed rounded-xl bg-muted/5">
-             <History className="h-12 w-12 text-muted-foreground/20 mb-4" />
-             <h3 className="font-bold text-lg">No Firmware Found</h3>
-             <p className="text-sm text-muted-foreground max-w-[200px]">The FOTA update registry is currently empty.</p>
-          </div>
+          <Center py={48} className="flex-col border-2 border-dashed border-border rounded-xl bg-muted/5">
+             <History size="3rem" className="text-muted-foreground opacity-20 mb-4" />
+             <Text fw={700} size="lg">No Firmware Found</Text>
+             <Text size="sm" c="dimmed">The FOTA update registry is currently empty.</Text>
+          </Center>
         )}
-      </div>
-
-
+      </Stack>
 
       <FotaFormDialog 
         isOpen={isFormOpen}
@@ -214,6 +201,6 @@ export default function FotaPage() {
         onSuccess={fetchUpdates}
         editData={editingUpdate}
       />
-    </div>
+    </Stack>
   );
 }

@@ -1,5 +1,6 @@
 import React from "react";
 import type { LucideIcon } from "lucide-react";
+import { Group, Text, Title, ThemeIcon, Box } from "@mantine/core";
 
 interface PageHeaderProps {
   title: string;
@@ -10,26 +11,26 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, icon: Icon, children }: PageHeaderProps) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="flex items-center gap-2 sm:gap-2.5">
-        <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shadow-inner">
-          <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-sm sm:text-base font-bold tracking-tight">{title}</h1>
+    <Group justify="space-between" align="center" wrap="nowrap" mb="md">
+      <Group gap="sm" wrap="nowrap">
+        <ThemeIcon size="lg" variant="light" radius="md">
+          <Icon size="1.2rem" strokeWidth={1.5} />
+        </ThemeIcon>
+        <Box>
+          <Title order={3} size="h4">{title}</Title>
           {description && (
-            <p className="hidden sm:block text-[9px] text-muted-foreground font-semibold uppercase tracking-wider opacity-70">
+            <Text size="xs" c="dimmed" tt="uppercase" fw={600} className="hidden sm:block">
               {description}
-            </p>
+            </Text>
           )}
-        </div>
-      </div>
+        </Box>
+      </Group>
 
       {children && (
-        <div className="flex items-center gap-2">
+        <Group gap="xs">
           {children}
-        </div>
+        </Group>
       )}
-    </div>
+    </Group>
   );
 }

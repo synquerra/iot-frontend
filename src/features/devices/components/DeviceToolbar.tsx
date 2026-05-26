@@ -1,5 +1,4 @@
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+import { TextInput, Button, ActionIcon, Group, Box, Text } from "@mantine/core"
 import { useDeviceTable } from "../context/DeviceTableContext"
 import { Search, X, RefreshCw, Plus } from "lucide-react"
 import { AddDeviceModal } from "./AddDeviceModal"
@@ -14,76 +13,65 @@ export function DeviceToolbar() {
     } = useDeviceTable()
 
     return (
-        <div className="space-y-3">
+        <Box className="space-y-3">
             {/* Top row - always visible */}
-            <div className="flex gap-2">
+            <Group justify="space-between" align="center" gap="sm">
                 {/* Search - takes most space */}
-                <div className="relative flex-1">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Search..."
+                <Box className="flex-1 max-w-md">
+                    <TextInput
+                        placeholder="Search devices..."
                         value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-8 pr-8"
+                        onChange={(e) => setSearch(e.currentTarget.value)}
+                        leftSection={<Search size="0.9rem" className="text-muted-foreground" />}
+                        rightSection={search ? (
+                            <ActionIcon variant="subtle" color="gray" onClick={() => setSearch("")}>
+                                <X size="0.9rem" />
+                            </ActionIcon>
+                        ) : null}
                     />
-                    {search && (
-                        <button
-                            onClick={() => setSearch("")}
-                            className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
-                        >
-                            <X className="h-4 w-4" />
-                        </button>
-                    )}
-                </div>
+                </Box>
 
-                {/* Refresh and Add (mobile) */}
-                <div className="flex sm:hidden gap-2">
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={refresh}
-                    >
-                        <RefreshCw className="h-4 w-4" />
-                    </Button>
+                {/* Mobile buttons */}
+                <Group gap="xs" className="sm:hidden">
+                    <ActionIcon variant="default" size="lg" onClick={refresh}>
+                        <RefreshCw size="1rem" />
+                    </ActionIcon>
                     <AddDeviceModal>
-                        <Button size="icon">
-                            <Plus className="h-4 w-4" />
-                        </Button>
+                        <ActionIcon variant="filled" color="blue" size="lg">
+                            <Plus size="1rem" />
+                        </ActionIcon>
                     </AddDeviceModal>
-                </div>
+                </Group>
 
                 {/* Desktop buttons */}
-                <div className="hidden sm:flex gap-2">
-                    <Button variant="outline" onClick={refresh}>
-                        <RefreshCw className="h-4 w-4 mr-2" />
+                <Group gap="sm" className="hidden sm:flex">
+                    <Button variant="default" onClick={refresh} leftSection={<RefreshCw size="1rem" />}>
                         Refresh
                     </Button>
                     <AddDeviceModal>
-                        <Button>
-                            <Plus className="h-4 w-4 mr-2" />
+                        <Button leftSection={<Plus size="1rem" />}>
                             Add Device
                         </Button>
                     </AddDeviceModal>
-                </div>
-            </div>
+                </Group>
+            </Group>
 
             {/* Selection bar */}
             {selected.length > 0 && (
-                <div className="flex items-center justify-between bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
-                    <span className="text-sm text-destructive font-medium">
+                <Group justify="space-between" className="bg-red-500/10 border border-red-500/20 rounded-md px-3 py-2">
+                    <Text size="sm" c="red" fw={500}>
                         {selected.length} selected
-                    </span>
+                    </Text>
                     <Button
-                        variant="destructive"
-                        size="sm"
+                        color="red"
+                        size="xs"
                         onClick={clearSelection}
-                        className="h-8"
+                        leftSection={<X size="0.8rem" />}
                     >
-                        <X className="h-4 w-4 sm:mr-2" />
-                        <span className="sm:inline">Clear</span>
+                        Clear
                     </Button>
-                </div>
+                </Group>
             )}
-        </div>
+        </Box>
     )
 }

@@ -1,9 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Activity,
   Battery,
@@ -18,10 +14,25 @@ import {
   Clock,
 } from "lucide-react";
 import { listDevices, type Device } from "@/features/devices/services/deviceService";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { PageHeader } from "@/components/PageHeader";
+import {
+  Button,
+  Card,
+  Text,
+  Badge,
+  Skeleton,
+  SimpleGrid,
+  Grid,
+  Group,
+  Stack,
+  ThemeIcon,
+  Progress,
+  ActionIcon,
+  Box,
+  UnstyledButton,
+} from "@mantine/core";
 
 export default function Dashboard() {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -77,291 +88,301 @@ export default function Dashboard() {
       label: "Total Devices",
       value: stats.total,
       icon: Cpu,
-      color: "text-primary",
-      bg: "bg-primary/10",
+      color: "blue",
       description: "Registered in fleet",
     },
     {
       label: "Active",
       value: stats.active,
       icon: Activity,
-      color: "text-emerald-600 dark:text-emerald-400",
-      bg: "bg-emerald-500/10",
+      color: "teal",
       description: "Currently transmitting",
     },
     {
       label: "Inactive",
       value: stats.inactive,
       icon: Signal,
-      color: "text-muted-foreground",
-      bg: "bg-muted",
+      color: "gray",
       description: "Not transmitting",
     },
     {
       label: "Low Battery",
       value: stats.lowBattery,
       icon: Battery,
-      color: "text-red-500",
-      bg: "bg-red-500/10",
+      color: "red",
       description: "Below 20% charge",
     },
   ];
 
   return (
-    <div className="space-y-6">
+    <Stack gap="lg">
       <PageHeader
         title="Fleet Overview"
         description="Real-time monitoring and analytics command center"
         icon={TrendingUp}
       >
-        <Button
-          variant="outline"
-          size="icon"
+        <ActionIcon
+          variant="light"
+          size="lg"
           onClick={() => loadDevices(true)}
-          disabled={refreshing}
-          className="h-10 w-10 rounded-xl"
+          loading={refreshing}
         >
-          <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin text-primary")} />
-        </Button>
+          <RefreshCw size="1.2rem" />
+        </ActionIcon>
       </PageHeader>
 
       {/* Phase 2 Notice */}
-      <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/15">
-        <div className="flex-shrink-0 p-2 rounded-xl bg-primary/10">
-          <TrendingUp className="h-4 w-4 text-primary" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-foreground">Analytics Center — Coming in Phase 2</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            Trip history, heat maps, and custom reporting will be available in the next major update.
-          </p>
-        </div>
-        <Badge variant="secondary" className="flex-shrink-0 text-[9px] font-bold uppercase tracking-wider bg-primary/10 text-primary border-0">
-          Phase 2
-        </Badge>
-      </div>
+      <Card withBorder padding="sm" radius="md" bg="blue.0" className="dark:bg-blue-900/20">
+        <Group wrap="nowrap" align="center">
+          <ThemeIcon size="lg" variant="light" color="blue" radius="md">
+            <TrendingUp size="1.2rem" />
+          </ThemeIcon>
+          <Box flex={1}>
+            <Text size="sm" fw={700} c="blue.9" className="dark:text-blue-200">
+              Analytics Center — Coming in Phase 2
+            </Text>
+            <Text size="xs" c="blue.8" className="dark:text-blue-300 mt-0.5">
+              Trip history, heat maps, and custom reporting will be available in the next major update.
+            </Text>
+          </Box>
+          <Badge variant="light" color="blue">Phase 2</Badge>
+        </Group>
+      </Card>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <SimpleGrid cols={{ base: 2, lg: 4 }} spacing="md">
         {loading
-          ? Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)
+          ? Array(4).fill(0).map((_, i) => <Skeleton key={i} height={110} radius="md" />)
           : statCards.map((card) => {
             const Icon = card.icon;
             return (
-              <Card key={card.label} className="border-border shadow-sm hover:shadow-md transition-shadow">
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-[10px] font-semibold text-muted-foreground mb-0.5 uppercase tracking-wide">{card.label}</p>
-                      <p className="text-base sm:text-lg font-bold text-foreground leading-none">{card.value}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5 hidden sm:block">{card.description}</p>
-                    </div>
-                    <div className={cn("p-2 rounded-lg flex-shrink-0", card.bg)}>
-                      <Icon className={cn("h-4 w-4", card.color)} />
-                    </div>
+              <Card key={card.label} withBorder radius="md" padding="md" shadow="sm">
+                <Group justify="space-between" align="flex-start" wrap="nowrap">
+                  <div>
+                    <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb={4}>
+                      {card.label}
+                    </Text>
+                    <Text size="xl" fw={700} lh={1}>
+                      {card.value}
+                    </Text>
+                    <Text size="xs" c="dimmed" mt={4} className="hidden sm:block">
+                      {card.description}
+                    </Text>
                   </div>
-                </CardContent>
+                  <ThemeIcon variant="light" color={card.color} size="lg" radius="md">
+                    <Icon size="1.2rem" />
+                  </ThemeIcon>
+                </Group>
               </Card>
             );
           })}
-      </div>
+      </SimpleGrid>
 
       {/* Main Content Grid */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      <Grid>
         {/* Recent Devices */}
-        <div className="lg:col-span-2">
-          <Card className="border-border shadow-sm h-full">
-            <CardHeader className="flex flex-row items-center justify-between py-3 px-4 border-b">
-              <CardTitle className="text-xs font-bold uppercase tracking-wide flex items-center gap-2">
-                <Wifi className="h-3.5 w-3.5 text-primary" />
-                Recent Activity
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
+        <Grid.Col span={{ base: 12, lg: 8 }}>
+          <Card withBorder radius="md" shadow="sm" h="100%" p={0}>
+            <Group justify="space-between" p="md" className="border-b border-border">
+              <Group gap="xs">
+                <Wifi size="1.2rem" className="text-blue-500" />
+                <Text size="sm" fw={700} tt="uppercase">
+                  Recent Activity
+                </Text>
+              </Group>
+              <Group gap="xs">
+                <ActionIcon
+                  variant="subtle"
                   onClick={() => loadDevices(true)}
-                  disabled={refreshing}
+                  loading={refreshing}
                 >
-                  <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin text-primary")} />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs font-bold"
-                  onClick={() => navigate("/devices/list")}
-                >
+                  <RefreshCw size="1.1rem" />
+                </ActionIcon>
+                <Button variant="light" size="xs" onClick={() => navigate("/devices/list")}>
                   View All
                 </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
+              </Group>
+            </Group>
+
+            <Box>
               {loading ? (
-                <div className="p-5 space-y-3">
-                  {Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}
-                </div>
+                <Stack p="md" gap="sm">
+                  {Array(4).fill(0).map((_, i) => <Skeleton key={i} height={50} radius="md" />)}
+                </Stack>
               ) : recentDevices.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                  <Cpu className="h-10 w-10 opacity-20 mb-3" />
-                  <p className="text-sm font-medium">No devices registered yet</p>
-                </div>
+                <Stack align="center" justify="center" py="xl" c="dimmed">
+                  <Cpu size="2.5rem" opacity={0.2} />
+                  <Text size="sm" fw={500}>No devices registered yet</Text>
+                </Stack>
               ) : (
-                <div className="divide-y divide-border">
+                <Stack gap={0} className="divide-y divide-border">
                   {recentDevices.map((device) => (
-                    <button
+                    <UnstyledButton
                       key={device.imei}
                       onClick={() => navigate(`/devices/${device.imei}`)}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted/40 transition-colors text-left group"
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group"
                     >
-                      <div className={cn(
-                        "h-2.5 w-2.5 rounded-full flex-shrink-0",
-                        device.status === "active" ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/30"
-                      )} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold truncate">{device.displayName}</p>
-                        <div className="flex items-center gap-3 mt-0.5">
-                          <span className="text-[10px] font-mono text-muted-foreground">{device.imei}</span>
+                      <Box
+                        w={10}
+                        h={10}
+                        className={`rounded-full flex-shrink-0 ${
+                          device.status === "active" ? "bg-teal-500 animate-pulse" : "bg-gray-300 dark:bg-gray-600"
+                        }`}
+                      />
+                      <Box flex={1} style={{ overflow: "hidden" }}>
+                        <Text size="sm" fw={600} truncate>
+                          {device.displayName}
+                        </Text>
+                        <Group gap="md" mt={2}>
+                          <Text size="xs" ff="monospace" c="dimmed">
+                            {device.imei}
+                          </Text>
                           {device.battery && (
-                            <span className={cn(
-                              "text-[10px] font-bold flex items-center gap-0.5",
-                              Number(device.battery) < 20 ? "text-red-500" : "text-muted-foreground"
-                            )}>
-                              <Battery className="h-3 w-3" />{device.battery}%
-                            </span>
+                            <Group gap={2}>
+                              <Battery size="0.8rem" className={Number(device.battery) < 20 ? "text-red-500" : "text-gray-400"} />
+                              <Text size="xs" fw={700} c={Number(device.battery) < 20 ? "red" : "dimmed"}>
+                                {device.battery}%
+                              </Text>
+                            </Group>
                           )}
                           {device.geoid && device.geoid !== "10" && device.geoid !== "11" && (
-                            <span className="text-[10px] font-bold text-primary flex items-center gap-0.5">
-                              <MapPin className="h-3 w-3" />{device.geoid}
-                            </span>
+                            <Group gap={2}>
+                              <MapPin size="0.8rem" className="text-blue-500" />
+                              <Text size="xs" fw={700} c="blue">
+                                {device.geoid}
+                              </Text>
+                            </Group>
                           )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                        </Group>
+                      </Box>
+                      <Group gap="sm" wrap="nowrap">
                         {device.timestamp && (
-                          <span className="text-[10px] text-muted-foreground hidden sm:flex items-center gap-1">
-                            <Clock className="h-3 w-3" />{formatTime(device.timestamp)}
-                          </span>
+                          <Group gap={4} className="hidden sm:flex text-gray-400">
+                            <Clock size="0.8rem" />
+                            <Text size="xs">{formatTime(device.timestamp)}</Text>
+                          </Group>
                         )}
-                        <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary transition-colors" />
-                      </div>
-                    </button>
+                        <ChevronRight size="1rem" className="text-gray-300 group-hover:text-blue-500 transition-colors" />
+                      </Group>
+                    </UnstyledButton>
                   ))}
-                </div>
+                </Stack>
               )}
-            </CardContent>
+            </Box>
           </Card>
-        </div>
+        </Grid.Col>
 
         {/* Fleet Overview Panel */}
-        <div className="space-y-4">
-          {/* Status Breakdown */}
-          <Card className="border-border shadow-sm">
-            <CardHeader className="py-3 px-4 border-b">
-              <CardTitle className="text-xs font-bold uppercase tracking-wide flex items-center gap-2">
-                <AlertCircle className="h-3.5 w-3.5 text-primary" />
-                Fleet Status
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 space-y-3">
-              {loading ? (
-                <div className="space-y-3">
-                  {Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-8 rounded" />)}
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                        <span className="text-sm font-medium">Active</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold">{stats.active}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}%
-                        </span>
-                      </div>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-1.5">
-                      <div
-                        className="bg-emerald-500 h-1.5 rounded-full transition-all duration-700"
-                        style={{ width: stats.total > 0 ? `${(stats.active / stats.total) * 100}%` : "0%" }}
+        <Grid.Col span={{ base: 12, lg: 4 }}>
+          <Stack gap="md">
+            {/* Status Breakdown */}
+            <Card withBorder radius="md" shadow="sm" p={0}>
+              <Box p="md" className="border-b border-border">
+                <Group gap="xs">
+                  <AlertCircle size="1.2rem" className="text-blue-500" />
+                  <Text size="sm" fw={700} tt="uppercase">
+                    Fleet Status
+                  </Text>
+                </Group>
+              </Box>
+              <Stack p="md" gap="md">
+                {loading ? (
+                  Array(3).fill(0).map((_, i) => <Skeleton key={i} height={30} radius="sm" />)
+                ) : (
+                  <>
+                    <Box>
+                      <Group justify="space-between" mb={4}>
+                        <Group gap="xs">
+                          <Box w={8} h={8} className="rounded-full bg-teal-500" />
+                          <Text size="sm" fw={500}>Active</Text>
+                        </Group>
+                        <Group gap="xs">
+                          <Text size="sm" fw={700}>{stats.active}</Text>
+                          <Text size="xs" c="dimmed">
+                            {stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}%
+                          </Text>
+                        </Group>
+                      </Group>
+                      <Progress
+                        value={stats.total > 0 ? (stats.active / stats.total) * 100 : 0}
+                        color="teal"
+                        size="sm"
                       />
-                    </div>
-                  </div>
+                    </Box>
 
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-muted-foreground/30" />
-                        <span className="text-sm font-medium">Inactive</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold">{stats.inactive}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {stats.total > 0 ? Math.round((stats.inactive / stats.total) * 100) : 0}%
-                        </span>
-                      </div>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-1.5">
-                      <div
-                        className="bg-muted-foreground/40 h-1.5 rounded-full transition-all duration-700"
-                        style={{ width: stats.total > 0 ? `${(stats.inactive / stats.total) * 100}%` : "0%" }}
+                    <Box>
+                      <Group justify="space-between" mb={4}>
+                        <Group gap="xs">
+                          <Box w={8} h={8} className="rounded-full bg-gray-400" />
+                          <Text size="sm" fw={500}>Inactive</Text>
+                        </Group>
+                        <Group gap="xs">
+                          <Text size="sm" fw={700}>{stats.inactive}</Text>
+                          <Text size="xs" c="dimmed">
+                            {stats.total > 0 ? Math.round((stats.inactive / stats.total) * 100) : 0}%
+                          </Text>
+                        </Group>
+                      </Group>
+                      <Progress
+                        value={stats.total > 0 ? (stats.inactive / stats.total) * 100 : 0}
+                        color="gray"
+                        size="sm"
                       />
-                    </div>
-                  </div>
+                    </Box>
 
-                  {stats.lowBattery > 0 && (
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-red-500/5 border border-red-500/15">
-                      <div className="flex items-center gap-2">
-                        <Battery className="h-4 w-4 text-red-500" />
-                        <span className="text-sm font-medium text-red-600 dark:text-red-400">Low Battery Alert</span>
-                      </div>
-                      <Badge variant="destructive" className="text-xs font-bold">
-                        {stats.lowBattery} device{stats.lowBattery !== 1 ? "s" : ""}
-                      </Badge>
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
+                    {stats.lowBattery > 0 && (
+                      <Group justify="space-between" p="sm" bg="red.0" className="rounded-md border border-red-200 dark:bg-red-900/20 dark:border-red-900/30">
+                        <Group gap="xs">
+                          <Battery size="1rem" className="text-red-500" />
+                          <Text size="sm" fw={500} c="red.7" className="dark:text-red-400">
+                            Low Battery Alert
+                          </Text>
+                        </Group>
+                        <Badge color="red" variant="filled">
+                          {stats.lowBattery} device{stats.lowBattery !== 1 ? "s" : ""}
+                        </Badge>
+                      </Group>
+                    )}
+                  </>
+                )}
+              </Stack>
+            </Card>
 
-          {/* Quick Navigation */}
-          <Card className="border-border shadow-sm">
-            <CardHeader className="py-3 px-4 border-b">
-              <CardTitle className="text-xs font-bold uppercase tracking-wide">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="p-2 space-y-0.5">
-              {[
-                { label: "Manage Devices", desc: "View and configure fleet", path: "/devices/list", icon: Cpu },
-                { label: "Device Settings", desc: "Configure telemetry params", path: "/devices/settings", icon: Signal },
-                { label: "Geofencing", desc: "Manage zone boundaries", path: "/devices/geofencing", icon: MapPin },
-                { label: "Alerts & Errors", desc: "Review system events", path: "/alerts", icon: AlertCircle },
-              ].map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.path}
-                    onClick={() => navigate(item.path)}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-muted/50 transition-colors text-left group"
-                  >
-                    <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors">
-                      <Icon className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold">{item.label}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">{item.desc}</p>
-                    </div>
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-primary transition-colors flex-shrink-0" />
-                  </button>
-                );
-              })}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
+            {/* Quick Navigation */}
+            <Card withBorder radius="md" shadow="sm" p={0}>
+              <Box p="md" className="border-b border-border">
+                <Text size="sm" fw={700} tt="uppercase">Quick Actions</Text>
+              </Box>
+              <Stack p="xs" gap="xs">
+                {[
+                  { label: "Manage Devices", desc: "View and configure fleet", path: "/devices/list", icon: Cpu },
+                  { label: "Device Settings", desc: "Configure telemetry params", path: "/devices/settings", icon: Signal },
+                  { label: "Geofencing", desc: "Manage zone boundaries", path: "/devices/geofencing", icon: MapPin },
+                  { label: "Alerts & Errors", desc: "Review system events", path: "/alerts", icon: AlertCircle },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <UnstyledButton
+                      key={item.path}
+                      onClick={() => navigate(item.path)}
+                      className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group"
+                    >
+                      <ThemeIcon variant="light" color="gray" size="lg" className="group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20">
+                        <Icon size="1.1rem" className="text-gray-500 group-hover:text-blue-500 transition-colors" />
+                      </ThemeIcon>
+                      <Box flex={1}>
+                        <Text size="sm" fw={700}>{item.label}</Text>
+                        <Text size="xs" c="dimmed" truncate>{item.desc}</Text>
+                      </Box>
+                      <ChevronRight size="1rem" className="text-gray-300 group-hover:text-blue-500 transition-colors" />
+                    </UnstyledButton>
+                  );
+                })}
+              </Stack>
+            </Card>
+          </Stack>
+        </Grid.Col>
+      </Grid>
+    </Stack>
   );
 }

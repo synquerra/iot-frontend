@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { TextInput, Text } from "@mantine/core";
 import type { GeofenceRecord } from "../types";
 
 interface GeofenceEditorFormProps {
@@ -64,31 +63,32 @@ export function GeofenceEditorForm({
       {/* Section: Basic Info */}
       <div className="space-y-4">
         <div className="space-y-1.5">
-          <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+          <Text size="xs" fw={700} tt="uppercase" className="tracking-widest text-muted-foreground">
             Geofence Name
-          </Label>
-          <Input
+          </Text>
+          <TextInput
             placeholder="Enter geofence name"
-            className="h-9 text-sm border-border bg-muted/20 focus:bg-background transition-colors"
+            styles={{ input: { height: '2.25rem', fontSize: '0.75rem', fontWeight: 700, borderRadius: '0.5rem' } }}
             value={formData.geofence_name || ""}
             onChange={(e) => handleChange("geofence_name", e.target.value)}
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+          <Text size="xs" fw={700} tt="uppercase" className="tracking-widest text-muted-foreground">
             Display Color
-          </Label>
+          </Text>
           <div className="flex items-center gap-2">
-            <Input
+            <input
               type="color"
-              className="h-9 w-12 p-0.5 border-border bg-muted/20 cursor-pointer"
+              className="h-9 w-12 p-0.5 border border-border/85 bg-muted/20 cursor-pointer rounded-lg focus:outline-none"
               value={formData.color || "#4f46e5"}
               onChange={(e) => handleChange("color", e.target.value)}
             />
-            <Input
+            <TextInput
               placeholder="#4f46e5"
-              className="h-9 text-sm border-border bg-muted/20 font-mono"
+              styles={{ input: { height: '2.25rem', fontSize: '0.75rem', fontWeight: 700, borderRadius: '0.5rem', fontFamily: 'monospace' } }}
+              className="flex-1"
               value={formData.color || ""}
               onChange={(e) => handleChange("color", e.target.value)}
             />
@@ -99,12 +99,12 @@ export function GeofenceEditorForm({
       {/* Section: 5-Point Coordinates */}
       <div className="space-y-4 pt-3 border-t border-border/50">
         <div className="flex items-center justify-between px-0.5">
-          <Label className="text-[10px] font-black uppercase tracking-widest text-foreground/80">
+          <Text size="xs" fw={900} tt="uppercase" className="tracking-widest text-foreground/80">
             Coordinates (5-Point Polygon)
-          </Label>
-          <span className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-wider">
+          </Text>
+          <Text size="0.55rem" fw={700} className="text-muted-foreground/50 uppercase tracking-wider">
             Map click or Type
-          </span>
+          </Text>
         </div>
 
         <div className="space-y-2">
@@ -114,17 +114,17 @@ export function GeofenceEditorForm({
                 P{i + 1}
               </span>
               <div className="grid grid-cols-2 gap-2 flex-1">
-                <Input
+                <TextInput
                   type="text"
                   placeholder="Latitude"
-                  className="h-8 text-xs font-bold font-mono bg-background border-border text-foreground hover:border-primary/40 focus:border-primary focus:ring-1 focus:ring-primary focus:bg-background transition-all"
+                  styles={{ input: { height: '2rem', fontSize: '0.7rem', fontWeight: 700, borderRadius: '0.375rem', fontFamily: 'monospace' } }}
                   value={c.lat}
                   onChange={(e) => handleCoordChange(i, "lat", e.target.value)}
                 />
-                <Input
+                <TextInput
                   type="text"
                   placeholder="Longitude"
-                  className="h-8 text-xs font-bold font-mono bg-background border-border text-foreground hover:border-primary/40 focus:border-primary focus:ring-1 focus:ring-primary focus:bg-background transition-all"
+                  styles={{ input: { height: '2rem', fontSize: '0.7rem', fontWeight: 700, borderRadius: '0.375rem', fontFamily: 'monospace' } }}
                   value={c.lng}
                   onChange={(e) => handleCoordChange(i, "lng", e.target.value)}
                 />
@@ -138,23 +138,23 @@ export function GeofenceEditorForm({
       <div className="space-y-4 pt-2 border-t border-border/50">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+            <Text size="xs" fw={700} tt="uppercase" className="tracking-widest text-muted-foreground">
               Entry Delay (s)
-            </Label>
-            <Input
+            </Text>
+            <TextInput
               type="number"
-              className="h-9 text-sm border-border bg-muted/20"
+              styles={{ input: { height: '2.25rem', fontSize: '0.75rem', fontWeight: 700, borderRadius: '0.5rem' } }}
               value={formData.entry_alert_delay || 0}
               onChange={(e) => handleChange("entry_alert_delay", parseInt(e.target.value) || 0)}
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+            <Text size="xs" fw={700} tt="uppercase" className="tracking-widest text-muted-foreground">
               Exit Delay (s)
-            </Label>
-            <Input
+            </Text>
+            <TextInput
               type="number"
-              className="h-9 text-sm border-border bg-muted/20"
+              styles={{ input: { height: '2.25rem', fontSize: '0.75rem', fontWeight: 700, borderRadius: '0.5rem' } }}
               value={formData.exit_alert_delay || 0}
               onChange={(e) => handleChange("exit_alert_delay", parseInt(e.target.value) || 0)}
             />

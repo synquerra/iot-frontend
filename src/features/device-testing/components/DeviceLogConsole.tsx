@@ -1,7 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, Button, Group, Text, Box } from "@mantine/core";
 import { Terminal, Trash2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
 
 interface LogEntry {
   id: string;
@@ -25,20 +24,20 @@ export function DeviceLogConsole() {
   const clearLogs = () => setLogs([]);
 
   return (
-    <Card className="border-primary/10 shadow-sm flex flex-col h-[500px]">
-      <CardHeader className="pb-4 border-b border-primary/5 flex flex-row items-center justify-between space-y-0">
+    <Card className="border-primary/10 shadow-sm flex flex-col h-[500px] p-0">
+      <Group justify="space-between" align="center" className="pb-4 p-4 border-b border-primary/5">
         <div>
-          <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+          <Text size="sm" fw={700} className="flex items-center gap-2 text-foreground">
             <Terminal className="h-5 w-5 text-primary" />
             Device Live Logs
-          </CardTitle>
-          <CardDescription className="text-xs">Real-time simulation of incoming device telemetry</CardDescription>
+          </Text>
+          <Text size="xs" className="text-muted-foreground">Real-time simulation of incoming device telemetry</Text>
         </div>
-        <Button variant="ghost" size="icon" onClick={clearLogs} className="h-8 w-8 text-muted-foreground hover:text-destructive">
+        <Button variant="subtle" color="gray" onClick={clearLogs} className="h-8 w-8 text-muted-foreground hover:text-destructive p-0">
           <Trash2 className="h-4 w-4" />
         </Button>
-      </CardHeader>
-      <CardContent className="flex-1 p-0 overflow-hidden relative">
+      </Group>
+      <Box className="flex-1 p-0 overflow-hidden relative">
         <div className="h-full w-full bg-slate-950 p-4 font-mono text-xs overflow-auto custom-scrollbar">
           <div ref={scrollRef} className="space-y-1">
             {logs.length === 0 && (
@@ -60,7 +59,7 @@ export function DeviceLogConsole() {
           </div>
         </div>
         <div className="absolute bottom-4 right-4 animate-ping h-2 w-2 rounded-full bg-emerald-500 opacity-75" />
-      </CardContent>
+      </Box>
     </Card>
   );
 }

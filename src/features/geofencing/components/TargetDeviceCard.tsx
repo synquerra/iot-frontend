@@ -1,17 +1,4 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Card, Select, Text, Box } from "@mantine/core";
 import type { Device } from "@/features/devices/services/deviceService";
 
 type TargetDeviceCardProps = {
@@ -32,46 +19,41 @@ export function TargetDeviceCard({
   onSelectImei,
 }: TargetDeviceCardProps) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Target Device</CardTitle>
-        <CardDescription>
+    <Card className="p-0 border-border">
+      <div className="p-4 border-b border-border">
+        <Text size="sm" fw={700} className="text-foreground">Target Device</Text>
+        <Text size="xs" className="text-muted-foreground mt-1">
           {routeImei
             ? "This page was opened for a specific device."
             : "Pick a device before adding a geofence."}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+        </Text>
+      </div>
+      <Box className="p-4 space-y-4">
         {routeImei ? (
-          <div className="rounded-lg border bg-muted/30 p-3">
+          <Card padding="sm" radius="md" withBorder className="bg-muted/30 border-border">
             <div className="text-sm font-medium">
               {selectedDevice?.displayName ?? "Selected device"}
             </div>
             <div className="mt-1 font-mono text-sm text-muted-foreground">
               {selectedImei}
             </div>
-          </div>
+          </Card>
         ) : (
           <Select
             value={selectedImei}
-            onValueChange={onSelectImei}
+            onChange={(val) => onSelectImei(val || "")}
             disabled={isLoadingDevices}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a device" />
-            </SelectTrigger>
-            <SelectContent>
-              {devices.map((device) => (
-                <SelectItem key={device.imei} value={device.imei}>
-                  {device.displayName} ({device.imei})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            placeholder="Select a device"
+            data={devices.map((device) => ({
+              value: device.imei,
+              label: `${device.displayName} (${device.imei})`
+            }))}
+            styles={{ input: { height: '2.25rem', fontSize: '0.8rem', fontWeight: 700 } }}
+          />
         )}
 
         {selectedDevice && (
-          <div className="rounded-lg border p-3 text-sm">
+          <Card padding="sm" radius="md" withBorder className="text-sm border-border">
             <div className="font-medium">{selectedDevice.displayName}</div>
             <div className="mt-1 text-muted-foreground">
               Student: {selectedDevice.studentName ?? "Unassigned"}
@@ -79,9 +61,9 @@ export function TargetDeviceCard({
             <div className="font-mono text-muted-foreground">
               IMEI: {selectedDevice.imei}
             </div>
-          </div>
+          </Card>
         )}
-      </CardContent>
+      </Box>
     </Card>
   );
 }

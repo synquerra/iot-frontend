@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, Box } from "@mantine/core";
 import { cn } from "@/lib/utils";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { MetricCard } from "./MetricCard";
 import { useEffect, useRef } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 interface MetricsGridProps {
   speed: number;
@@ -114,10 +114,13 @@ export function MetricsGrid({
 
       {/* 4-column section for Live Map */}
       <Card 
+        radius="xl"
+        withBorder
+        padding={0}
         onClick={() => imei && (window.location.href = `/devices/map/${imei}`)}
-        className="lg:col-span-4 group hover:shadow-xl transition-all duration-500 overflow-hidden flex flex-col h-full min-h-[250px] lg:min-h-[120px] border-border bg-card rounded-xl cursor-pointer hover:border-primary/50 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className="lg:col-span-4 group hover:shadow-xl transition-all duration-500 overflow-hidden flex flex-col h-full min-h-[250px] lg:min-h-[120px] border-border bg-card cursor-pointer hover:border-primary/50 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
-        <CardContent className="p-0 flex-1 relative">
+        <Box className="p-0 flex-1 relative h-full min-h-[120px]">
           <MapContainer
             center={[latitude, longitude]}
             zoom={14}
@@ -165,7 +168,7 @@ export function MetricsGrid({
                Open Live Map
              </span>
           </div>
-        </CardContent>
+        </Box>
       </Card>
     </div>
   );

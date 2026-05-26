@@ -3,10 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { LiveMap } from "./components/LiveMap";
 import useDeviceOverview from "./hooks/useDeviceOverview";
 import { useLiveLocation } from "./hooks/useLiveLocation";
-import { Button } from "@/components/ui/button";
+import { ActionIcon, Badge, Box, Group, Text } from "@mantine/core";
 import { ArrowLeft, Wifi, Battery, Activity } from "lucide-react";
 import { MetricCardSkeleton } from "./components/SkeletonItems";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { listGeofences } from "../geofencing/services/geofenceService";
 import type { GeofenceRecord } from "../geofencing/types";
@@ -46,53 +45,52 @@ export default function MapPage() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
+    <Box className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
       {/* Dynamic Header HUD */}
-      <div className="absolute top-4 left-4 right-4 z-[1001] flex items-center justify-between pointer-events-none">
-        <div className="flex items-center gap-4 pointer-events-auto">
-          <Button 
-            variant="secondary" 
-            size="icon" 
+      <Box className="absolute top-4 left-4 right-4 z-[1001] flex items-center justify-between pointer-events-none">
+        <Group gap="md" className="pointer-events-auto">
+          <ActionIcon 
+            variant="default" 
+            size="xl" 
+            radius="xl"
             onClick={() => navigate(`/devices/overview/${imei}`)} 
-            className="rounded-xl shadow-2xl bg-slate-950/80 backdrop-blur-xl border border-white/10 hover:bg-slate-900 text-white pointer-events-auto"
+            className="shadow-2xl bg-slate-950/80 backdrop-blur-xl border border-white/10 hover:bg-slate-900 text-white"
           >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+            <ArrowLeft size="1.2rem" />
+          </ActionIcon>
           
-          <div className="bg-slate-950/80 backdrop-blur-xl border border-white/10 p-2.5 rounded-xl flex items-center gap-4 shadow-2xl ring-1 ring-white/5">
-            <div className="flex flex-col">
-              <h2 className="text-white text-sm font-black tracking-tight uppercase leading-none">{data.name}</h2>
-            </div>
-            <div className="h-8 w-px bg-white/10" />
-            <div className="flex items-center gap-3">
-              <div className="flex flex-col items-center">
+          <Box className="bg-slate-950/80 backdrop-blur-xl border border-white/10 p-2.5 rounded-xl flex items-center gap-4 shadow-2xl ring-1 ring-white/5">
+            <Box className="flex flex-col">
+              <Text c="white" size="sm" fw={900} tt="uppercase" className="tracking-tight leading-none">{data.name}</Text>
+            </Box>
+            <Box className="h-8 w-px bg-white/10" />
+            <Group gap="sm" align="center">
+              <Box className="flex flex-col items-center">
                  <Wifi className={cn("h-3.5 w-3.5 mb-1", data.signal > 50 ? "text-emerald-400" : "text-orange-400")} />
-                 <span className="text-[9px] font-mono text-white/60">{data.signal}%</span>
-              </div>
-              <div className="flex flex-col items-center">
+                 <Text size="0.55rem" ff="monospace" c="dimmed" className="text-white/60">{data.signal}%</Text>
+              </Box>
+              <Box className="flex flex-col items-center">
                  <Battery className={cn("h-3.5 w-3.5 mb-1", data.battery > 30 ? "text-emerald-400" : "text-red-400")} />
-                 <span className="text-[9px] font-mono text-white/60">{data.battery}%</span>
-              </div>
-            </div>
-          </div>
-        </div>
+                 <Text size="0.55rem" ff="monospace" c="dimmed" className="text-white/60">{data.battery}%</Text>
+              </Box>
+            </Group>
+          </Box>
+        </Group>
 
-        <div className="hidden md:flex items-center gap-3 pointer-events-auto">
+        <Group className="hidden md:flex pointer-events-auto" gap="sm">
            {error ? (
-              <Badge variant="destructive" className="bg-red-500/20 text-red-400 border-red-500/50 px-4 py-1.5 rounded-full font-black text-[10px] tracking-widest gap-2">
-                <Activity className="h-3 w-3 animate-pulse" />
+              <Badge variant="filled" color="red" size="lg" className="bg-red-500/20 text-red-400 border border-red-500/50 px-4 font-black tracking-widest" leftSection={<Activity size="0.8rem" className="animate-pulse" />}>
                 SIGNAL LOST
               </Badge>
            ) : (
-              <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/50 px-4 py-1.5 rounded-full font-black text-[10px] tracking-widest gap-2">
-                <div className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+              <Badge variant="filled" color="green" size="lg" className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 px-4 font-black tracking-widest" leftSection={<Box className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />}>
                 LIVE TRACKING
               </Badge>
            )}
-        </div>
-      </div>
+        </Group>
+      </Box>
 
-      <div className="flex-1 w-full h-full relative">
+      <Box className="flex-1 w-full h-full relative">
         {!isNaN(data.latitude) && !isNaN(data.longitude) && (data.latitude !== 0 || data.longitude !== 0) ? (
           <LiveMap
             latitude={data.latitude}
@@ -103,12 +101,12 @@ export default function MapPage() {
             geofences={geofences.filter(g => g.coordinates) as any}
           />
         ) : (
-          <div className="h-full w-full flex flex-col items-center justify-center bg-slate-900 text-white gap-4">
-             <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-             <p className="font-black text-xs uppercase tracking-widest opacity-50">Synchronizing Global Coordinates...</p>
-          </div>
+          <Box className="h-full w-full flex flex-col items-center justify-center bg-slate-900 text-white gap-4">
+             <Box className="h-12 w-12 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
+             <Text fw={900} size="xs" tt="uppercase" className="tracking-widest opacity-50">Synchronizing Global Coordinates...</Text>
+          </Box>
         )}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }

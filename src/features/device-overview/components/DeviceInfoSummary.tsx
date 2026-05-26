@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, Group, Text, Box } from "@mantine/core";
 
 interface DeviceInfoSummaryProps {
   imei: string;
@@ -6,18 +6,16 @@ interface DeviceInfoSummaryProps {
 
 export function DeviceInfoSummary({ imei }: DeviceInfoSummaryProps) {
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm">Device Information</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          <div className="flex justify-between text-xs">
-            <span className="text-muted-foreground">IMEI</span>
-            <span className="font-mono font-medium">{imei}</span>
-          </div>
-        </div>
-      </CardContent>
+    <Card shadow="sm" radius="md" withBorder padding="md">
+      <Box mb="md">
+        <Text fw={600} size="sm">Device Information</Text>
+      </Box>
+      <Box className="space-y-2">
+        <Group justify="space-between" align="center">
+          <Text size="xs" c="dimmed">IMEI</Text>
+          <Text ff="monospace" fw={500}>{imei}</Text>
+        </Group>
+      </Box>
     </Card>
   );
 }

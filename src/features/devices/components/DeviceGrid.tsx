@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useDeviceTable } from "../context/DeviceTableContext";
 import { DeviceCard } from "./DeviceCard";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton, Box, Text } from "@mantine/core";
 import { Cpu } from "lucide-react";
 
 export function DeviceGrid() {
@@ -10,26 +10,26 @@ export function DeviceGrid() {
 
   if (loading) {
     return (
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+      <Box className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {Array(6).fill(0).map((_, i) => (
-          <Skeleton key={i} className="h-36 rounded-xl" />
+          <Skeleton key={i} height={144} radius="xl" />
         ))}
-      </div>
+      </Box>
     );
   }
 
   if (filteredDevices.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-border rounded-2xl">
+      <Box className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-border rounded-2xl">
         <Cpu className="h-12 w-12 text-muted-foreground/20 mb-4" />
-        <p className="text-base font-semibold text-muted-foreground">No devices found</p>
-        <p className="text-sm text-muted-foreground/60 mt-1">Try adjusting your search or add a new device</p>
-      </div>
+        <Text size="md" fw={600} c="dimmed">No devices found</Text>
+        <Text size="sm" c="dimmed" mt={4}>Try adjusting your search or add a new device</Text>
+      </Box>
     );
   }
 
   return (
-    <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+    <Box className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       {filteredDevices.map((device) => (
         <DeviceCard
           key={device.imei}
@@ -43,6 +43,6 @@ export function DeviceGrid() {
           onStatusToggle={refresh}
         />
       ))}
-    </div>
+    </Box>
   );
 }

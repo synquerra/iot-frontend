@@ -1,13 +1,5 @@
 import { Plus, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, Button, Badge, Group, Text, Box, ActionIcon } from "@mantine/core";
 import type { Geofence } from "@/types";
 
 type SavedGeofencesCardProps = {
@@ -42,31 +34,32 @@ export function SavedGeofencesCard({
 }: SavedGeofencesCardProps) {
 
   return (
-    <Card>
-      <CardHeader className="gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1.5">
-          <CardTitle>Saved Geofences</CardTitle>
-          <CardDescription>
+    <Card className="p-0 border-border">
+      <Group justify="space-between" align="start" className="p-4 gap-4 border-b border-border">
+        <div className="space-y-1">
+          <Text size="sm" fw={700} className="text-foreground">Saved Geofences</Text>
+          <Text size="xs" className="text-muted-foreground">
             {selectedImei
               ? `Showing geofences for device ${selectedImei}`
               : "Select a device to view its geofences"}
-          </CardDescription>
+          </Text>
         </div>
         <Button
           onClick={onAddGeofence}
           disabled={isAddingDisabled}
-          className="gap-2 sm:self-start"
+          className="gap-2 sm:self-start text-white font-bold text-xs"
+          color="blue"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-4 w-4 mr-1" />
           Add Geofence
         </Button>
-      </CardHeader>
+      </Group>
 
-      <CardContent className="space-y-3">
+      <Box className="p-4 space-y-3">
         {geofences.length === 0 ? (
-          <div className="text-sm text-muted-foreground">
+          <Text size="sm" className="text-muted-foreground">
             No geofences found.
-          </div>
+          </Text>
         ) : (
           geofences.map((geofence) => {
             const coords = geofence?.coordinates ?? [];
@@ -76,19 +69,22 @@ export function SavedGeofencesCard({
 
             const geofenceId = String(geofence.id ?? geofence.geofence_number);
             return (
-              <div
+              <Card
                 key={geofenceId}
+                withBorder
+                radius="lg"
+                padding="md"
                 onClick={() => onGeofenceClick?.(geofenceId)}
-                className={`flex items-start justify-between rounded-lg border p-4 cursor-pointer transition-colors hover:border-primary/50 hover:bg-muted/50 ${
+                className={`flex flex-row items-start justify-between cursor-pointer transition-all duration-150 hover:border-primary/50 hover:bg-muted/50 ${
                   focusedGeofenceId === geofenceId 
                     ? "border-primary bg-primary/5 dark:bg-primary/10 shadow-sm" 
-                    : ""
+                    : "border-border"
                 }`}
               >
                 <div className="space-y-1 text-sm">
                   <div className="flex gap-2">
                     <Badge variant="outline">{geofence.geofence_number}</Badge>
-                    <Badge variant="secondary">{geofence.geofence_id}</Badge>
+                    <Badge variant="light" color="blue">{geofence.geofence_id}</Badge>
                   </div>
 
                   <div>Points: {coords.length}</div>
@@ -109,17 +105,17 @@ export function SavedGeofencesCard({
                     Created: {formatDate(geofence.created_at)}
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
+                <ActionIcon
+                  variant="subtle"
+                  color="red"
                   onClick={(e) => {
                     e.stopPropagation();
                     onRemoveGeofence(geofence.geofence_number);
                   }}
                 >
                   <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+                </ActionIcon>
+              </Card>
             );
           })
         )}
@@ -128,7 +124,7 @@ export function SavedGeofencesCard({
             This device already has the maximum number of geofences.
           </div>
         ) : null}
-      </CardContent>
+      </Box>
     </Card>
   );
 }

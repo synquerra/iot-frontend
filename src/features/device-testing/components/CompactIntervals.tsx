@@ -1,9 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Card, Button, Box, Group, Text } from "@mantine/core";
 import { Clock } from "lucide-react";
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useGlobalLoading } from "@/contexts/GlobalLoadingContext";
 import type { LatestDeviceSettingsRecord } from "@/features/device-settings/services/deviceSettingsService";
 import { updateDeviceCoreSettings } from "@/features/device-settings/services/deviceSettingsService";
@@ -59,33 +57,33 @@ export function CompactIntervals({ selectedImei, latestSettings }: { selectedIme
   ];
 
   return (
-    <Card className="border-primary/10 shadow-sm overflow-hidden">
-      <CardHeader className="py-2.5 px-4 bg-muted/30 border-b border-primary/5">
-        <CardTitle className="text-xs font-bold flex items-center gap-2">
+    <Card className="border-primary/10 shadow-sm overflow-hidden p-0">
+      <Group justify="space-between" align="center" className="py-2.5 px-4 bg-muted/30 border-b border-primary/5">
+        <Text size="xs" fw={700} className="flex items-center gap-2">
           <Clock className="h-3.5 w-3.5 text-primary" />
           Intervals & Limits
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-3 space-y-3">
+        </Text>
+      </Group>
+      <Box className="p-3 space-y-3">
         <div className="space-y-1.5">
           {fields.map(f => (
             <div key={f.key} className="flex items-center justify-between gap-4">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase">{f.label}</span>
+              <Text size="0.6rem" fw={900} tt="uppercase" className="text-muted-foreground">{f.label}</Text>
               <div className="flex items-center gap-2">
-                <Input 
+                <input 
                   value={values[f.key] || ""} 
                   onChange={(e) => setValues(prev => ({ ...prev, [f.key]: e.target.value }))}
-                  className="h-7 w-24 text-[10px] font-mono bg-muted/50 text-right"
+                  className="h-7 w-24 text-[10px] font-mono bg-muted/50 text-right px-2 rounded border border-border/80 focus:outline-none focus:ring-1 focus:ring-primary"
                 />
-                <span className="text-[9px] font-bold text-muted-foreground w-6">{f.suffix}</span>
+                <Text size="0.55rem" fw={700} className="text-muted-foreground w-6 uppercase">{f.suffix}</Text>
               </div>
             </div>
           ))}
         </div>
-        <Button onClick={handleSend} size="sm" className="w-full h-8 text-[10px] font-bold bg-primary/10 text-primary hover:bg-primary/20 border-none">
+        <Button onClick={handleSend} color="blue" size="sm" className="w-full h-8 text-[10px] font-bold">
           Update Configuration
         </Button>
-      </CardContent>
+      </Box>
     </Card>
   );
 }

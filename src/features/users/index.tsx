@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Users, UserPlus, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, Stack, Center, Loader, Text, ActionIcon } from "@mantine/core";
 import { UserTable } from "./components/UserTable";
 import { UserForm } from "./components/UserForm";
 import {
@@ -107,7 +107,7 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <Stack gap="lg" className="animate-in fade-in duration-500">
       <PageHeader
         title="User Management"
         description="Control access and manage team profiles"
@@ -115,28 +115,26 @@ export default function UsersPage() {
       >
         <Button
           onClick={handleAddClick}
-          className="gap-2 rounded-xl h-10 px-3 sm:px-4 shadow-lg shadow-primary/20"
+          leftSection={<UserPlus size="1rem" />}
         >
-          <UserPlus className="h-4 w-4" />
-          <span className="hidden sm:inline">Add User</span>
+          Add User
         </Button>
-        <Button
-          variant="outline"
-          size="icon"
+        <ActionIcon
+          variant="default"
+          size="lg"
           onClick={() => fetchUsers()}
-          disabled={isFetching}
-          className="h-10 w-10 rounded-xl"
+          loading={isFetching}
         >
-          <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-        </Button>
+          <RefreshCw size="1.1rem" />
+        </ActionIcon>
       </PageHeader>
 
       <div className="min-h-[400px]">
         {isFetching && users.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-4">
-            <div className="h-12 w-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-            <p className="text-sm font-medium text-muted-foreground">Synchronizing user data...</p>
-          </div>
+          <Center py={80} className="flex-col gap-4">
+            <Loader color="blue" size="lg" type="bars" />
+            <Text size="sm" fw={500} c="dimmed">Synchronizing user data...</Text>
+          </Center>
         ) : (
           <UserTable
             data={users}
@@ -154,6 +152,6 @@ export default function UsersPage() {
         onSubmit={handleFormSubmit}
         isLoading={isSubmitting}
       />
-    </div>
+    </Stack>
   );
 }

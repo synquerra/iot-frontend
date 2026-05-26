@@ -1,15 +1,5 @@
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Smartphone, 
-  RefreshCw 
-} from "lucide-react";
+import { Select, Badge, Box, Group, Text } from "@mantine/core";
+import { Smartphone, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Device } from "@/features/devices/services/deviceService";
 
@@ -32,106 +22,92 @@ export function UnifiedDeviceHeader({
   onSelectImei,
   currentMode,
 }: UnifiedDeviceHeaderProps) {
+  const selectData = devices.map((device) => ({
+    value: device.imei,
+    label: device.displayName || `ID: ${device.imei.slice(-6)}`,
+  }));
 
   return (
-    <div className="flex flex-col gap-4">
+    <Box className="flex flex-col gap-4">
       {/* Selector Card */}
-      <div className="relative overflow-hidden bg-card border border-border rounded-2xl shadow-sm p-4 animate-in fade-in slide-in-from-top-2 duration-500">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-          <div className="flex-1 flex items-center gap-4">
-            <div className="h-10 w-10 rounded-full bg-muted/50 flex items-center justify-center shrink-0">
+      <Box className="relative overflow-hidden bg-card border border-border rounded-2xl shadow-sm p-4 animate-in fade-in slide-in-from-top-2 duration-500">
+        <Group justify="space-between" align="center" gap="md" className="flex-col md:flex-row">
+          <Group gap="md" align="center" className="flex-1 w-full">
+            <Box className="h-10 w-10 rounded-full bg-muted/50 flex items-center justify-center shrink-0">
                <Smartphone className="h-5 w-5 text-muted-foreground/60" />
-            </div>
+            </Box>
             
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Target Device Selection</p>
+            <Box className="flex-1 min-w-0">
+              <Group gap="xs" align="center" className="mb-1 w-full" wrap="nowrap" justify="space-between">
+                <Text size="0.6rem" fw={900} tt="uppercase" className="tracking-widest" c="dimmed">Target Device Selection</Text>
                 {selectedDevice && (
-                  <div className="flex items-center gap-2 ml-auto sm:ml-2">
-                    <div className={cn(
+                  <Group gap="xs" align="center" className="ml-auto sm:ml-2" wrap="nowrap">
+                    <Box className={cn(
                       "h-1.5 w-1.5 rounded-full",
                       selectedDevice.status === "active" ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/30"
                     )} />
-                    <span className={cn(
-                      "text-[8px] font-black uppercase tracking-widest",
-                      selectedDevice.status === "active" ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
-                    )}>
+                    <Text size="0.65rem" fw={900} tt="uppercase" className="tracking-widest" c={selectedDevice.status === "active" ? "emerald.6" : "dimmed"}>
                       {selectedDevice.status === "active" ? "Online" : "Offline"}
-                    </span>
+                    </Text>
                     {currentMode && (
                       <>
-                        <div className="h-2 w-px bg-border/60" />
-                        <span className="text-[8px] font-black uppercase tracking-tighter text-orange-600">
+                        <Box className="h-2 w-px bg-border/60" />
+                        <Text size="0.65rem" fw={900} tt="uppercase" color="orange" className="tracking-tighter">
                           {currentMode}
-                        </span>
+                        </Text>
                       </>
                     )}
-                  </div>
+                  </Group>
                 )}
-              </div>
+              </Group>
               {routeImei ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-black uppercase tracking-tight truncate">
+                <Group gap="xs" align="center" wrap="nowrap">
+                  <Text size="md" fw={900} tt="uppercase" className="tracking-tight truncate">
                     {selectedDevice?.displayName || selectedImei}
-                  </span>
-                  <Badge variant="secondary" className="font-mono text-[10px] font-bold bg-muted text-muted-foreground border-transparent">
+                  </Text>
+                  <Badge variant="light" color="gray" size="xs" className="font-mono text-[10px] font-bold border-transparent">
                     {selectedImei}
                   </Badge>
-                </div>
+                </Group>
               ) : (
                 <Select
                   value={selectedImei}
-                  onValueChange={onSelectImei}
+                  onChange={(val) => val && onSelectImei(val)}
                   disabled={isLoadingDevices}
-                >
-                  <SelectTrigger className="w-full md:w-[320px] bg-muted/30 border-border/50 h-10 text-sm font-black uppercase tracking-tight hover:bg-muted/50 transition-all focus:ring-primary/20">
-                    <SelectValue placeholder="Select Device" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {devices.map((device) => (
-                      <SelectItem
-                        key={device.imei}
-                        value={device.imei}
-                        className="text-xs font-bold uppercase py-2.5"
-                      >
-                        <div className="flex flex-col">
-                          <span>{device.displayName || `ID: ${device.imei.slice(-6)}`}</span>
-                          <span className="text-[9px] opacity-40 font-mono">{device.imei}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  data={selectData}
+                  placeholder="Select Device"
+                  className="w-full md:w-[320px]"
+                />
               )}
-            </div>
-          </div>
+            </Box>
+          </Group>
 
           {selectedDevice && (
-            <div className="flex items-center gap-4 md:pl-4 md:border-l border-border/50">
-              <div className="flex flex-col items-end">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">Telemetry Status</p>
-                <div className="flex items-center gap-2">
-                   <Badge variant="outline" className="text-[10px] font-mono font-bold text-muted-foreground/80 bg-muted/20">
+            <Group gap="md" align="center" className="md:pl-4 md:border-l border-border/50 w-full md:w-auto justify-end">
+              <Box className="flex flex-col items-end">
+                <Text size="0.6rem" fw={900} tt="uppercase" className="tracking-widest" c="dimmed" mb={4}>Telemetry Status</Text>
+                <Group gap="xs" align="center" wrap="nowrap">
+                   <Badge variant="light" color="gray" size="sm" className="font-mono font-bold">
                      {selectedImei}
                    </Badge>
-                   <div className="h-8 w-8 rounded-lg bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-center">
+                   <Box className="h-8 w-8 rounded-lg bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-center">
                       <RefreshCw className={cn("h-4 w-4 text-emerald-500", selectedDevice.status === "active" && "animate-spin-slow")} />
-                   </div>
-                </div>
-              </div>
-            </div>
+                   </Box>
+                </Group>
+              </Box>
+            </Group>
           )}
-        </div>
+        </Group>
 
         {isLoadingDevices && !routeImei && (
-          <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
-            <div className="flex items-center gap-3 px-4 py-2 bg-card border border-border rounded-full shadow-lg">
+          <Box className="absolute inset-0 bg-background/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
+            <Group gap="xs" className="px-4 py-2 bg-card border border-border rounded-full shadow-lg" wrap="nowrap">
               <RefreshCw className="h-4 w-4 animate-spin text-primary" />
-              <span className="text-xs font-bold uppercase tracking-widest">Updating Node List...</span>
-            </div>
-          </div>
+              <Text size="xs" fw={750} tt="uppercase" className="tracking-widest">Updating Node List...</Text>
+            </Group>
+          </Box>
         )}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }

@@ -1,11 +1,4 @@
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, Button, Box, Text, Badge, Group } from "@mantine/core";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle,
@@ -31,36 +24,40 @@ export function QuickActions() {
   };
 
   return (
-    <Card className="relative opacity-60 grayscale-[0.5] pointer-events-none">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Quick Actions</CardTitle>
-          <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded border border-border/50">Dummy</span>
-        </div>
-        <CardDescription>Remote device controls</CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-2">
+    <Card shadow="sm" radius="md" withBorder padding="md" className="relative opacity-60 grayscale-[0.5] pointer-events-none">
+      <Box mb="md">
+        <Group justify="space-between" align="center">
+          <Text fw={600} size="sm">Quick Actions</Text>
+          <Badge variant="outline" size="xs" radius="sm">Dummy</Badge>
+        </Group>
+        <Text size="xs" c="dimmed">Remote device controls</Text>
+      </Box>
+      <Box className="grid gap-2">
         {actions.map((action) => (
           <Button
             key={action.label}
-            variant="ghost"
+            variant="subtle"
+            color={action.destructive ? "red" : "gray"}
             className={cn(
-              "w-full justify-start gap-3 h-auto py-3 px-4",
+              "w-full h-auto py-3 px-4",
               action.destructive &&
-                "text-destructive hover:text-destructive hover:bg-destructive/10",
+                "text-red-500 hover:text-red-600 hover:bg-red-500/10",
             )}
+            leftSection={
+              <action.icon
+                className={cn(
+                  "h-4 w-4",
+                  !action.destructive && colorStyles[action.color],
+                )}
+              />
+            }
+            rightSection={<ChevronRight className="h-4 w-4 text-muted-foreground opacity-50" />}
+            styles={{ inner: { justifyContent: "flex-start", flex: 1 }, label: { flex: 1, textAlign: "left" } }}
           >
-            <action.icon
-              className={cn(
-                "h-4 w-4",
-                !action.destructive && colorStyles[action.color],
-              )}
-            />
-            <span className="flex-1 text-left">{action.label}</span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            {action.label}
           </Button>
         ))}
-      </CardContent>
+      </Box>
     </Card>
   );
 }

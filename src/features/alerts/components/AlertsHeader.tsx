@@ -1,8 +1,6 @@
-import { Button } from "@/components/ui/button";
+import { Button, ActionIcon, SegmentedControl } from "@mantine/core";
 import { RefreshCw, AlertOctagon, AlertCircle, Search, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
 
 interface AlertsHeaderProps {
   viewMode: "errors" | "alerts";
@@ -39,36 +37,33 @@ export function AlertsHeader({
 
             <div className="h-8 w-px bg-border/60 mx-2 hidden sm:block" />
 
-            <Tabs value={viewMode} onValueChange={(v) => onViewModeChange(v as any)} className="w-full sm:w-auto">
-              <TabsList className="grid w-full sm:w-[240px] grid-cols-2 h-9 p-1 bg-muted/40 border border-border/50">
-                <TabsTrigger value="errors" className="text-[10px] font-black uppercase tracking-widest gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                  <AlertOctagon className="h-3 w-3" />
-                  Errors
-                </TabsTrigger>
-                <TabsTrigger value="alerts" className="text-[10px] font-black uppercase tracking-widest gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                  <AlertCircle className="h-3 w-3" />
-                  Alerts
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <SegmentedControl
+              value={viewMode}
+              onChange={(val: any) => onViewModeChange(val)}
+              data={[
+                { label: <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"><AlertOctagon className="h-3 w-3" /> Errors</span>, value: 'errors' },
+                { label: <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"><AlertCircle className="h-3 w-3" /> Alerts</span>, value: 'alerts' },
+              ]}
+              classNames={{ root: 'bg-muted/40 border border-border/50 h-9 p-1 rounded-xl', indicator: 'bg-background shadow-sm rounded-lg' }}
+            />
           </div>
 
           {/* Right: Search & Actions */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="relative group flex-1 sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
-              <Input 
+              <input 
                 placeholder="Filter by IMEI or Message..."
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-9 h-9 text-xs font-bold bg-muted/20 border-border/50 focus:bg-background transition-all rounded-xl"
+                className="pl-9 pr-3 h-9 text-xs font-bold bg-muted/20 border border-border/50 focus:bg-background outline-none transition-all rounded-xl w-full"
               />
             </div>
 
             <div className="flex items-center gap-2">
               <Button 
                 variant="outline" 
-                size="sm" 
+                color="gray"
                 onClick={onRefresh} 
                 disabled={isRefreshing}
                 className="h-9 px-4 font-black uppercase tracking-widest text-[9px] gap-2 rounded-xl border-border/50 bg-background hover:bg-muted/50"
@@ -77,13 +72,13 @@ export function AlertsHeader({
                 {isRefreshing ? "Syncing" : "Refresh"}
               </Button>
               
-              <Button 
+              <ActionIcon 
                 variant="outline" 
-                size="icon"
+                color="gray"
                 className="h-9 w-9 rounded-xl border-border/50 bg-background hover:bg-muted/50"
               >
                 <Filter className="h-3.5 w-3.5 text-muted-foreground/60" />
-              </Button>
+              </ActionIcon>
             </div>
           </div>
         </div>

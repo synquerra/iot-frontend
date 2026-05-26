@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge, ActionIcon, Tooltip } from "@mantine/core";
 import { cn } from "@/lib/utils";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -13,8 +13,6 @@ import {
   Polygon,
 } from "react-leaflet";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Fix for default markers in React-Leaflet
 import icon from "leaflet/dist/images/marker-icon.png";
@@ -64,29 +62,20 @@ const ZoomControls = ({ onZoomIn, onZoomOut }: { onZoomIn: () => void, onZoomOut
   const map = useMap();
   return (
     <div className="absolute top-4 right-4 flex flex-col gap-2 z-[1000]">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button size="icon" variant="secondary" className="h-8 w-8 bg-background/90 backdrop-blur shadow-lg" onClick={() => { map.zoomIn(); onZoomIn(); }}>
-            <ZoomIn className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="left">Zoom In</TooltipContent>
+      <Tooltip label="Zoom In" position="left">
+        <ActionIcon variant="default" size="lg" radius="md" className="bg-background/90 backdrop-blur shadow-lg border-0" onClick={() => { map.zoomIn(); onZoomIn(); }}>
+          <ZoomIn size="1.1rem" />
+        </ActionIcon>
       </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button size="icon" variant="secondary" className="h-8 w-8 bg-background/90 backdrop-blur shadow-lg" onClick={() => { map.zoomOut(); onZoomOut(); }}>
-            <ZoomOut className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="left">Zoom Out</TooltipContent>
+      <Tooltip label="Zoom Out" position="left">
+        <ActionIcon variant="default" size="lg" radius="md" className="bg-background/90 backdrop-blur shadow-lg border-0" onClick={() => { map.zoomOut(); onZoomOut(); }}>
+          <ZoomOut size="1.1rem" />
+        </ActionIcon>
       </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button size="icon" variant="secondary" className="h-8 w-8 bg-background/90 backdrop-blur shadow-lg" onClick={() => map.setView(map.getCenter(), map.getZoom())}>
-            <Compass className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="left">Reset View</TooltipContent>
+      <Tooltip label="Reset View" position="left">
+        <ActionIcon variant="default" size="lg" radius="md" className="bg-background/90 backdrop-blur shadow-lg border-0" onClick={() => map.setView(map.getCenter(), map.getZoom())}>
+          <Compass size="1.1rem" />
+        </ActionIcon>
       </Tooltip>
     </div>
   );
@@ -161,12 +150,12 @@ export function LiveMap({ latitude, longitude, geoid, fullScreen = false, imei, 
             <div className="p-2 min-w-[150px]">
               <div className={cn("p-2.5 rounded-lg border", 
                 geoid === "11" ? "bg-amber-500/5 border-amber-500/20" :
-                (geoid && geoid !== "10") ? "bg-primary/5 border-primary/20" : 
+                (geoid && geoid !== "10") ? "bg-blue-500/5 border-blue-500/20" : 
                 "bg-red-500/5 border-red-500/20")}>
                 <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-1">Geofence Status</p>
                 <p className={cn("font-mono text-xs font-black", 
                   geoid === "11" ? "text-amber-600" :
-                  (geoid && geoid !== "10") ? "text-primary" : 
+                  (geoid && geoid !== "10") ? "text-blue-500" : 
                   "text-red-500")}>
                   {geoid === "11" ? "GPS DISABLED" : (geoid && geoid !== "10") ? `ZONE: ${geoid}` : "NOT IN GEOFENCE"}
                 </p>
@@ -184,9 +173,10 @@ export function LiveMap({ latitude, longitude, geoid, fullScreen = false, imei, 
         fullScreen ? "bottom-6 left-6" : "bottom-3 left-3 scale-[0.85] origin-bottom-left"
       )}>
         <Badge 
+          size="lg"
           variant="outline" 
           className={cn(
-            "pointer-events-auto px-4 py-2 rounded-xl border backdrop-blur-2xl shadow-2xl font-mono text-xs font-black tracking-widest uppercase transition-all",
+            "pointer-events-auto px-4 py-2 rounded-xl backdrop-blur-2xl shadow-2xl font-mono text-xs font-black tracking-widest uppercase transition-all",
             geoid === "11"
               ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
               : (geoid && geoid !== "10")

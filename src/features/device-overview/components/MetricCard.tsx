@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, Box, Group, Text } from "@mantine/core";
 import { cn } from "@/lib/utils";
 import type { MetricCardProps } from "@/types";
 
@@ -33,43 +33,43 @@ export function MetricCard({
   };
 
   return (
-    <Card className={cn(
+    <Card radius="xl" padding={0} className={cn(
       "group relative transition-all duration-300 overflow-hidden border-2 h-full",
       "hover:shadow-xl hover:translate-y-[-4px] active:translate-y-0",
       solidBackgrounds[color] || solidBackgrounds.primary,
       hoverGlows[color] || hoverGlows.primary,
     )}>
-      <div className="absolute -right-4 -top-4 opacity-[0.08] group-hover:opacity-[0.15] transition-all duration-500 pointer-events-none rotate-6 scale-150 transform-gpu">
+      <Box className="absolute -right-4 -top-4 opacity-[0.08] group-hover:opacity-[0.15] transition-all duration-500 pointer-events-none rotate-6 scale-150 transform-gpu">
         <Icon className="h-24 w-24 text-white" />
-      </div>
+      </Box>
 
-      <CardContent className="p-4 md:p-5 relative z-10 flex flex-col justify-between h-full text-white">
-        <div className="flex items-center gap-3">
-          <div
-            className="rounded-xl p-2.5 transition-all duration-300 bg-white/15 group-hover:bg-white/25 group-hover:scale-105"
+      <Box className="p-4 md:p-5 relative z-10 flex flex-col justify-between h-full text-white">
+        <Group gap="sm" align="center" wrap="nowrap">
+          <Box
+            className="rounded-xl p-2.5 transition-all duration-300 bg-white/15 group-hover:bg-white/25 group-hover:scale-105 shrink-0"
           >
             <Icon className="h-5 w-5" />
-          </div>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/85">
+          </Box>
+          <Text size="0.65rem" fw={900} tt="uppercase" className="tracking-[0.2em] text-white/85">
             {label}
-          </p>
-        </div>
+          </Text>
+        </Group>
 
-        <div className="space-y-0 mt-4">
-          <div className="flex items-baseline gap-1.5 overflow-hidden">
-            <span className="text-3xl font-black tracking-tighter font-mono leading-none drop-shadow-sm truncate">
+        <Box className="space-y-0 mt-4">
+          <Group gap={6} align="baseline" wrap="nowrap" className="overflow-hidden">
+            <Text size="1.875rem" fw={900} ff="monospace" className="tracking-tighter leading-none drop-shadow-sm truncate text-white">
               {value}
-            </span>
+            </Text>
             {unit && (
-              <span className="text-[10px] font-black text-white/70 uppercase tracking-widest leading-none">
+              <Text size="0.65rem" fw={900} tt="uppercase" className="text-white/70 tracking-widest leading-none shrink-0">
                 {unit}
-              </span>
+              </Text>
             )}
-          </div>
-        </div>
+          </Group>
+        </Box>
 
-        {children && <div className="mt-4 pt-4 border-t border-white/15">{children}</div>}
-      </CardContent>
+        {children && <Box className="mt-4 pt-4 border-t border-white/15">{children}</Box>}
+      </Box>
     </Card>
   );
 }

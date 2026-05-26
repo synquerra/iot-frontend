@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { GeofenceSidebar } from "./components/GeofenceSidebar";
 import { CurrentGeofencesMap } from "./components/CurrentGeofencesMap";
 import { GeofenceDeviceHeader } from "./components/GeofenceDeviceHeader";

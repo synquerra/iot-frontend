@@ -1,14 +1,4 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Card, Badge, Button, Menu, ActionIcon, Group, Box, Text } from "@mantine/core";
 import { cn } from "@/lib/utils";
 import {
   CalendarIcon,
@@ -24,10 +14,9 @@ import {
   Copy,
   Activity,
   Power,
-  RefreshCw,
   Layers,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useState } from "react";
 import { toggleDeviceStatus } from "../services/deviceService";
 import { SwitchModeDialog } from "./SwitchModeDialog";
@@ -114,226 +103,220 @@ export function DeviceCard({
   return (
     <>
       <Card
+        shadow="sm"
+        radius="xl"
+        withBorder
         onClick={handleCardClick}
-      className={cn(
-        "cursor-pointer transition-all duration-200 relative group hover:shadow-md border-border",
-        !isActive && "opacity-75"
-      )}
-    >
-      <CardContent className="p-3">
+        className={cn(
+          "cursor-pointer transition-all duration-200 relative group hover:shadow-md border-border p-3",
+          !isActive && "opacity-75"
+        )}
+      >
         {/* Dropdown Menu */}
-        <div className="absolute top-3 right-3 z-10 dropdown-trigger">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+        <Box className="absolute top-3 right-3 z-10 dropdown-trigger">
+          <Menu position="bottom-end" shadow="md" width={220} radius="md">
+            <Menu.Target>
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                className="opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={(e) => e.stopPropagation()}
               >
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Device Actions</DropdownMenuLabel>
-              <DropdownMenuSeparator />
+                <MoreVertical size="1rem" />
+              </ActionIcon>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Label>Device Actions</Menu.Label>
 
-              <DropdownMenuItem onClick={handleToggleStatus} disabled={isToggling} className="cursor-pointer">
-                <Power className={cn("h-4 w-4 mr-2", isActive ? "text-destructive" : "text-emerald-500")} />
-                <div className="flex flex-col text-left">
-                  <span>{isActive ? "Deactivate" : "Activate"}</span>
-                  <span className="text-xs text-muted-foreground">{isActive ? "Set to offline" : "Set to online"}</span>
-                </div>
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onView?.(); }} className="cursor-pointer">
-                <Eye className="h-4 w-4 mr-2" />
-                <span>View Overview</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSettings?.(); }} className="cursor-pointer">
-                <Settings className="h-4 w-4 mr-2" />
-                <span>Settings</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onGeofencing?.(); }} className="cursor-pointer">
-                <MapPinned className="h-4 w-4 mr-2" />
-                <span>Geofencing</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onTelemetry?.(); }} className="cursor-pointer">
-                <Activity className="h-4 w-4 mr-2" />
-                <span>Telemetry</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={(e) => { e.stopPropagation(); setSwitchModeOpen(true); }}
-                className="cursor-pointer"
+              <Menu.Item
+                leftSection={<Power size="1rem" className={isActive ? "text-red-500" : "text-emerald-500"} />}
+                onClick={handleToggleStatus}
+                disabled={isToggling}
               >
-                <Layers className="h-4 w-4 mr-2 text-primary" />
-                <div className="flex flex-col text-left">
-                  <span>Switch Mode</span>
-                  <span className="text-xs text-muted-foreground">
+                <Box>
+                  <Text size="sm">{isActive ? "Deactivate" : "Activate"}</Text>
+                  <Text size="xs" c="dimmed">{isActive ? "Set to offline" : "Set to online"}</Text>
+                </Box>
+              </Menu.Item>
+
+              <Menu.Divider />
+
+              <Menu.Item leftSection={<Eye size="1rem" />} onClick={(e) => { e.stopPropagation(); onView?.(); }}>
+                View Overview
+              </Menu.Item>
+
+              <Menu.Item leftSection={<Settings size="1rem" />} onClick={(e) => { e.stopPropagation(); onSettings?.(); }}>
+                Settings
+              </Menu.Item>
+
+              <Menu.Item leftSection={<MapPinned size="1rem" />} onClick={(e) => { e.stopPropagation(); onGeofencing?.(); }}>
+                Geofencing
+              </Menu.Item>
+
+              <Menu.Item leftSection={<Activity size="1rem" />} onClick={(e) => { e.stopPropagation(); onTelemetry?.(); }}>
+                Telemetry
+              </Menu.Item>
+
+              <Menu.Item
+                leftSection={<Layers size="1rem" className="text-primary" />}
+                onClick={(e) => { e.stopPropagation(); setSwitchModeOpen(true); }}
+              >
+                <Box>
+                  <Text size="sm">Switch Mode</Text>
+                  <Text size="xs" c="dimmed">
                     {device.currentMode ? `Current: ${device.currentMode}` : "Change active mode"}
-                  </span>
-                </div>
-              </DropdownMenuItem>
+                  </Text>
+                </Box>
+              </Menu.Item>
 
-              <DropdownMenuSeparator />
+              <Menu.Divider />
 
-              <DropdownMenuItem
+              <Menu.Item
+                leftSection={<Trash2 size="1rem" />}
+                color="red"
                 onClick={(e) => { e.stopPropagation(); onRemove?.(); }}
                 disabled
-                className="text-destructive focus:text-destructive cursor-not-allowed opacity-40"
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                <div className="flex flex-col">
-                  <span>Remove Device</span>
-                  <span className="text-xs text-muted-foreground">Coming soon</span>
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+                <Box>
+                  <Text size="sm">Remove Device</Text>
+                  <Text size="xs" c="dimmed">Coming soon</Text>
+                </Box>
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+        </Box>
 
         {/* Status indicator line */}
-        <div className={cn(
-          "absolute left-0 top-4 bottom-4 w-0.5 rounded-full transition-all",
+        <Box className={cn(
+          "absolute left-0 top-4 bottom-4 w-1 rounded-r-full transition-all",
           isActive ? "bg-emerald-500" : "bg-muted-foreground/20"
         )} />
 
         {/* Header */}
-        <div className="pl-3 pr-7 mb-2">
-          <div className="flex items-center gap-1.5 mb-0.5">
+        <Box className="pl-4 pr-7 mb-2">
+          <Group gap={6} mb={2}>
             <Badge
-              variant="secondary"
-              className={cn(
-                "text-[9px] px-1.5 py-0 h-3.5 capitalize font-bold border",
-                isActive
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800/50"
-                  : "bg-muted text-muted-foreground border-border"
-              )}
+              size="xs"
+              variant={isActive ? "light" : "outline"}
+              color={isActive ? "teal" : "gray"}
+              className="tracking-widest uppercase"
             >
               {isActive ? "Active" : "Inactive"}
             </Badge>
             {device.geoid && device.geoid !== "10" && (
-              <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-3.5 font-mono font-bold border-primary/30 text-primary">
+              <Badge size="xs" variant="outline" color="blue" className="tracking-widest uppercase font-mono">
                 {device.geoid === "11" ? "GPS Off" : `Zone: ${device.geoid}`}
               </Badge>
             )}
-          </div>
-          <h3 className="font-bold text-[13px] tracking-tight truncate leading-none">{device.displayName}</h3>
-        </div>
+          </Group>
+          <Text size="sm" fw={900} className="tracking-tight truncate leading-none mt-1">
+            {device.displayName}
+          </Text>
+        </Box>
 
         {/* Info Grid */}
-        <div className="pl-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
-          <div className="min-w-0">
-            <span className="block text-[9px] font-semibold uppercase text-muted-foreground mb-0.5">IMEI</span>
-            <div
-              className="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors group/imei"
+        <Box className="pl-4 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+          <Box className="min-w-0">
+            <Text size="0.6rem" fw={700} tt="uppercase" c="dimmed" mb={2}>IMEI</Text>
+            <Group
+              gap={4}
+              className="cursor-pointer hover:text-primary transition-colors group/imei"
               onClick={(e) => {
                 e.stopPropagation();
                 navigator.clipboard.writeText(device.imei);
                 toast.success("IMEI copied");
               }}
               title="Click to copy"
+              wrap="nowrap"
             >
-              <span className="font-mono truncate">{device.imei}</span>
+              <Text size="xs" ff="monospace" className="truncate">{device.imei}</Text>
               <Copy className="h-3 w-3 opacity-0 group-hover/imei:opacity-60 transition-opacity flex-shrink-0" />
-            </div>
-          </div>
+            </Group>
+          </Box>
 
           {device.topic && (
-            <div className="min-w-0">
-              <span className="block text-[9px] font-semibold uppercase text-muted-foreground mb-0.5">Topic</span>
-              <div
-                className="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors group/topic"
+            <Box className="min-w-0">
+              <Text size="0.6rem" fw={700} tt="uppercase" c="dimmed" mb={2}>Topic</Text>
+              <Group
+                gap={4}
+                className="cursor-pointer hover:text-primary transition-colors group/topic"
                 onClick={(e) => {
                   e.stopPropagation();
                   navigator.clipboard.writeText(device.topic!);
                   toast.success("Topic copied");
                 }}
                 title="Click to copy"
+                wrap="nowrap"
               >
-                <span className="font-mono truncate">{device.topic.length > 18 ? `${device.topic.substring(0, 16)}…` : device.topic}</span>
+                <Text size="xs" ff="monospace" className="truncate">{device.topic.length > 18 ? `${device.topic.substring(0, 16)}…` : device.topic}</Text>
                 <Copy className="h-3 w-3 opacity-0 group-hover/topic:opacity-60 transition-opacity flex-shrink-0" />
-              </div>
-            </div>
+              </Group>
+            </Box>
           )}
-        </div>
+        </Box>
 
         {/* Telemetry Row */}
         {(device.battery || device.signal || device.gps_strength || device.temperature) && (
-          <div className="pl-3 flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-border/50">
+          <Group gap="sm" className="pl-4 mt-3 pt-3 border-t border-border/50">
             {device.battery && (
-              <div className={cn("flex items-center gap-1 text-xs", Number(device.battery) < 20 ? "text-red-500" : "text-muted-foreground")} title="Battery">
-                <Battery className="h-3.5 w-3.5 flex-shrink-0" />
-                <span className="font-medium">{device.battery}%</span>
-              </div>
+              <Group gap={4} title="Battery">
+                <Battery className={cn("h-3.5 w-3.5 flex-shrink-0", Number(device.battery) < 20 ? "text-red-500" : "text-muted-foreground")} />
+                <Text size="xs" fw={600} ff="monospace">{device.battery}%</Text>
+              </Group>
             )}
             {device.signal && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground" title="Signal">
-                <Wifi className="h-3.5 w-3.5 flex-shrink-0" />
-                <span className="font-medium">{device.signal}</span>
-              </div>
+              <Group gap={4} title="Signal">
+                <Wifi className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                <Text size="xs" fw={600} ff="monospace">{device.signal}</Text>
+              </Group>
             )}
             {device.gps_strength && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground" title="GPS">
-                <Signal className="h-3.5 w-3.5 flex-shrink-0" />
-                <span className="font-medium">{device.gps_strength}</span>
-              </div>
+              <Group gap={4} title="GPS">
+                <Signal className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                <Text size="xs" fw={600} ff="monospace">{device.gps_strength}</Text>
+              </Group>
             )}
             {device.temperature && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground" title="Temperature">
-                <Thermometer className="h-3.5 w-3.5 flex-shrink-0" />
-                <span className="font-medium">{device.temperature}</span>
-              </div>
+              <Group gap={4} title="Temperature">
+                <Thermometer className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                <Text size="xs" fw={600} ff="monospace">{device.temperature}</Text>
+              </Group>
             )}
-          </div>
+          </Group>
         )}
 
         {/* Footer */}
-        <div className="pl-3 mt-2 flex items-center justify-between gap-2">
+        <Group justify="space-between" className="pl-4 mt-3 pt-2">
           {formattedDate && (
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <CalendarIcon className="h-3 w-3 flex-shrink-0" />
-              <span className="truncate">{formattedDate}</span>
-            </div>
+            <Group gap={4} wrap="nowrap">
+              <CalendarIcon className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
+              <Text size="0.65rem" c="dimmed" className="truncate">{formattedDate}</Text>
+            </Group>
           )}
           <Button
-            size="sm"
-            variant="ghost"
+            size="xs"
+            variant="subtle"
+            color={isActive ? "gray" : "teal"}
             className={cn(
-              "action-button h-7 px-3 text-[10px] font-bold uppercase tracking-wide ml-auto flex-shrink-0",
-              isActive
-                ? "text-muted-foreground hover:bg-muted"
-                : "text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+              "action-button font-bold uppercase tracking-wide ml-auto flex-shrink-0",
+              isActive && "hover:bg-muted"
             )}
             onClick={handleToggleStatus}
-            disabled={isToggling}
+            loading={isToggling}
+            leftSection={!isToggling && <Power size="0.8rem" />}
           >
-            {isToggling ? (
-              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <>
-                <Power className="h-3.5 w-3.5 mr-1" />
-                {isActive ? "Deactivate" : "Activate"}
-              </>
-            )}
+            {isActive ? "Deactivate" : "Activate"}
           </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </Group>
+      </Card>
 
-    <SwitchModeDialog
-      open={switchModeOpen}
-      onOpenChange={setSwitchModeOpen}
-      imei={device.imei}
-      currentModeName={device.currentMode}
-      onSwitched={() => { onSwitchMode?.(); onStatusToggle?.(); }}
-    />
+      <SwitchModeDialog
+        open={switchModeOpen}
+        onOpenChange={setSwitchModeOpen}
+        imei={device.imei}
+        currentModeName={device.currentMode}
+        onSwitched={() => { onSwitchMode?.(); onStatusToggle?.(); }}
+      />
     </>
   );
 }

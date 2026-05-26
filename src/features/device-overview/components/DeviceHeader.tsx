@@ -1,18 +1,4 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Badge, Button, Menu, Tooltip, Box, Group, Text, ActionIcon } from "@mantine/core";
 import { cn } from "@/lib/utils";
 import {
   Activity,
@@ -30,7 +16,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
 import { SwitchModeDialog } from "@/features/devices/components/SwitchModeDialog";
 import { toggleDeviceStatus } from "@/features/devices/services/deviceService";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 interface DeviceHeaderProps {
   name: string;
@@ -98,143 +84,130 @@ export function DeviceHeader({
   };
 
   return (
-    <header className="relative w-full overflow-hidden border-b bg-background pb-3">
-      <div className="relative z-10">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <Box component="header" className="relative w-full overflow-hidden border-b bg-background pb-3 border-border">
+      <Box className="relative z-10">
+        <Group justify="space-between" align="center" className="flex-col md:flex-row gap-4">
           {/* Left: icon + name + status */}
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-primary/10 border border-primary/20 shadow-inner">
-              <Smartphone className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
-            </div>
-            <div className="flex flex-col gap-0.5 sm:gap-1 pt-0.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-sm font-bold tracking-tight leading-none">{name || effectiveImei}</h1>
+          <Group gap={10} align="center">
+            <Box className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-blue-500/10 border border-blue-500/20 shadow-inner shrink-0">
+              <Smartphone className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-500" />
+            </Box>
+            <Box className="flex flex-col gap-0.5 sm:gap-1 pt-0.5">
+              <Group gap="sm" align="center" wrap="wrap">
+                <Text size="sm" fw={700} className="tracking-tight leading-none">{name || effectiveImei}</Text>
                 <Badge
-                  variant={isOnline ? "default" : "secondary"}
+                  variant={isOnline ? "filled" : "outline"}
+                  color={isOnline ? "teal" : "gray"}
+                  size="sm"
                   className={cn(
-                    "px-2 py-0.5 font-semibold text-[10px] tracking-wide uppercase",
-                    isOnline ? "bg-emerald-500 hover:bg-emerald-600" : "bg-slate-500"
+                    "font-semibold tracking-wide uppercase",
                   )}
+                  leftSection={isOnline ? (
+                    <Box component="span" className="mr-1 h-1.5 w-1.5 rounded-full inline-block bg-white animate-pulse" />
+                  ) : null}
                 >
-                  <span className={cn(
-                    "mr-1.5 h-1.5 w-1.5 rounded-full inline-block",
-                    isOnline ? "bg-emerald-200 animate-pulse" : "bg-slate-300"
-                  )} />
                   {status}
                 </Badge>
                 {currentModeName && (
-                  <Badge variant="outline" className="px-2 py-0.5 text-[10px] font-black uppercase tracking-widest border-primary/30 text-primary bg-primary/5">
-                    <Layers className="h-2.5 w-2.5 mr-1" />
+                  <Badge variant="light" color="blue" size="sm" className="font-black uppercase tracking-widest" leftSection={<Layers size="0.6rem" />}>
                     {currentModeName}
                   </Badge>
                 )}
-              </div>
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              </Group>
+              <Group gap={6} align="center" className="text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
-                Updated {formatDateTime(lastUpdate)}
-              </span>
-            </div>
-          </div>
+                <Text size="xs">Updated {formatDateTime(lastUpdate)}</Text>
+              </Group>
+            </Box>
+          </Group>
 
           {/* Right: Refresh + Actions dropdown */}
-          <div className="flex items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 rounded-lg"
-                  onClick={onRefresh}
-                  disabled={refreshing}
-                >
-                  <RefreshCcw className={cn("h-4 w-4", refreshing && "animate-spin text-primary")} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Sync Dashboard</TooltipContent>
+          <Group gap="sm" align="center">
+            <Tooltip label="Sync Dashboard">
+              <ActionIcon
+                variant="default"
+                size="lg"
+                radius="md"
+                onClick={onRefresh}
+                loading={refreshing}
+              >
+                <RefreshCcw size="1.1rem" className={cn(refreshing && "animate-spin text-blue-500")} />
+              </ActionIcon>
             </Tooltip>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" className="gap-2 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg shadow-sm px-4 h-9">
-                  <Settings className="h-4 w-4" />
-                  <span>Actions</span>
-                  <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+            <Menu shadow="md" width={220} position="bottom-end">
+              <Menu.Target>
+                <Button size="sm" radius="md" rightSection={<ChevronDown size="0.9rem" className="opacity-70" />} leftSection={<Settings size="1rem" />}>
+                  Actions
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Device Actions
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Label className="uppercase tracking-wider">Device Actions</Menu.Label>
+                <Menu.Divider />
 
-                <DropdownMenuItem
+                <Menu.Item
+                  leftSection={<Power size="1rem" className={isOnline ? "text-red-500" : "text-emerald-500"} />}
                   onClick={handleToggleStatus}
                   disabled={isToggling}
-                  className="cursor-pointer"
                 >
-                  <Power className={cn("h-4 w-4 mr-2", isOnline ? "text-destructive" : "text-emerald-500")} />
-                  <div className="flex flex-col text-left">
-                    <span>{isOnline ? "Deactivate" : "Activate"}</span>
-                    <span className="text-xs text-muted-foreground">{isOnline ? "Set to offline" : "Set to online"}</span>
-                  </div>
-                </DropdownMenuItem>
+                  <Box>
+                    <Text size="sm">{isOnline ? "Deactivate" : "Activate"}</Text>
+                    <Text size="xs" c="dimmed">{isOnline ? "Set to offline" : "Set to online"}</Text>
+                  </Box>
+                </Menu.Item>
 
-                <DropdownMenuSeparator />
+                <Menu.Divider />
 
-                <DropdownMenuItem
+                <Menu.Item
+                  leftSection={<Settings size="1rem" />}
                   onClick={() => navigate(`/devices/settings/${effectiveImei}`)}
-                  className="cursor-pointer"
                 >
-                  <Settings className="h-4 w-4 mr-2" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
+                  Settings
+                </Menu.Item>
 
-                <DropdownMenuItem
+                <Menu.Item
+                  leftSection={<MapPinned size="1rem" />}
                   onClick={() => navigate(`/devices/geofencing/${effectiveImei}`)}
-                  className="cursor-pointer"
                 >
-                  <MapPinned className="h-4 w-4 mr-2" />
-                  <span>Geofencing</span>
-                </DropdownMenuItem>
+                  Geofencing
+                </Menu.Item>
 
-                <DropdownMenuItem
+                <Menu.Item
+                  leftSection={<Activity size="1rem" />}
                   onClick={() => navigate(`/devices/telemetry/${effectiveImei}`)}
-                  className="cursor-pointer"
                 >
-                  <Activity className="h-4 w-4 mr-2" />
-                  <span>Telemetry</span>
-                </DropdownMenuItem>
+                  Telemetry
+                </Menu.Item>
 
-                <DropdownMenuItem
+                <Menu.Item
+                  leftSection={<Layers size="1rem" className="text-blue-500" />}
                   onClick={() => setSwitchModeOpen(true)}
-                  className="cursor-pointer"
                 >
-                  <Layers className="h-4 w-4 mr-2 text-primary" />
-                  <div className="flex flex-col text-left">
-                    <span>Switch Mode</span>
-                    <span className="text-xs text-muted-foreground">
+                  <Box>
+                    <Text size="sm">Switch Mode</Text>
+                    <Text size="xs" c="dimmed">
                       {currentModeName ? `Current: ${currentModeName}` : "Change active mode"}
-                    </span>
-                  </div>
-                </DropdownMenuItem>
+                    </Text>
+                  </Box>
+                </Menu.Item>
 
-                <DropdownMenuSeparator />
+                <Menu.Divider />
 
-                <DropdownMenuItem
+                <Menu.Item
+                  leftSection={<Trash2 size="1rem" />}
+                  color="red"
                   disabled
-                  className="text-destructive focus:text-destructive cursor-not-allowed opacity-40"
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  <div className="flex flex-col">
-                    <span>Remove Device</span>
-                    <span className="text-xs text-muted-foreground">Coming soon</span>
-                  </div>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </div>
+                  <Box>
+                    <Text size="sm">Remove Device</Text>
+                    <Text size="xs" c="dimmed">Coming soon</Text>
+                  </Box>
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
+        </Group>
+      </Box>
 
       <SwitchModeDialog
         open={switchModeOpen}
@@ -243,6 +216,6 @@ export function DeviceHeader({
         currentModeName={currentModeName}
         onSwitched={onModeSwitch}
       />
-    </header>
+    </Box>
   );
 }

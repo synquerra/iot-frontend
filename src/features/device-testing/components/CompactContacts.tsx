@@ -1,9 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Card, Button, Box, Group, Text, TextInput } from "@mantine/core";
 import { Phone } from "lucide-react";
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useGlobalLoading } from "@/contexts/GlobalLoadingContext";
 import type { LatestDeviceSettingsRecord } from "@/features/device-settings/services/deviceSettingsService";
 import { updateDevicePhoneNumbers } from "@/features/device-settings/services/deviceSettingsService";
@@ -47,30 +45,30 @@ export function CompactContacts({ latestSettings }: { latestSettings: LatestDevi
   ];
 
   return (
-    <Card className="border-primary/10 shadow-sm overflow-hidden">
-      <CardHeader className="py-2.5 px-4 bg-muted/30 border-b border-primary/5">
-        <CardTitle className="text-xs font-bold flex items-center gap-2">
+    <Card className="border-primary/10 shadow-sm overflow-hidden p-0">
+      <Group justify="space-between" align="center" className="py-2.5 px-4 bg-muted/30 border-b border-primary/5">
+        <Text size="xs" fw={700} className="flex items-center gap-2">
           <Phone className="h-3.5 w-3.5 text-primary" />
           Device Contacts
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-3 space-y-3">
+        </Text>
+      </Group>
+      <Box className="p-3 space-y-3">
         <div className="space-y-2">
            {fields.map(f => (
              <div key={f.key} className="space-y-1">
-               <label className="text-[9px] font-bold text-muted-foreground uppercase">{f.label}</label>
-               <Input 
+               <Text size="0.55rem" fw={900} tt="uppercase" className="text-muted-foreground">{f.label}</Text>
+               <TextInput 
                   value={phones[f.key]} 
                   onChange={e => setPhones(p => ({ ...p, [f.key]: e.target.value }))}
-                  className="h-7 text-[10px] font-mono bg-muted/50"
+                  styles={{ input: { height: '1.75rem', fontSize: '0.625rem', fontFamily: 'monospace', borderRadius: '0.375rem' } }}
                />
              </div>
            ))}
         </div>
-        <Button onClick={handleUpdate} size="sm" className="w-full h-8 text-[10px] font-bold bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-none">
+        <Button onClick={handleUpdate} color="teal" size="sm" className="w-full h-8 text-[10px] font-bold">
           Sync Contact Info
         </Button>
-      </CardContent>
+      </Box>
     </Card>
   );
 }

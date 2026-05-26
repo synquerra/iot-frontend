@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button, ActionIcon } from "@mantine/core";
 import { Save, X, Trash2, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -37,12 +37,13 @@ export function GeofenceActionBar({
       <div className="flex items-center gap-2">
         {onDelete && (
           <Button 
-            variant="ghost" 
+            variant="subtle" 
+            color="red"
             size="sm"
             className="h-9 gap-1.5 font-medium px-3 text-destructive hover:text-destructive hover:bg-destructive/10 border border-transparent hover:border-destructive/20"
             onClick={onDelete}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-4 w-4 mr-1" />
             <span className="hidden md:inline">Delete</span>
           </Button>
         )}
@@ -51,40 +52,39 @@ export function GeofenceActionBar({
         
         <Button 
           variant="outline" 
+          color="gray"
           size="sm"
           className="h-9 gap-1.5 font-semibold px-4 border-border bg-background hover:bg-muted"
           onClick={onOpenSettings}
         >
-          <Settings2 className="h-4 w-4 text-primary" />
+          <Settings2 className="h-4 w-4 text-primary mr-1" />
           Config Settings
         </Button>
 
         <Button 
           size="sm"
+          color={isGeometryComplete ? "green" : "blue"}
           className={cn(
-            "h-9 gap-1.5 font-bold px-6 shadow-lg transition-all duration-300 text-white",
-            isGeometryComplete 
-              ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-900/20" 
-              : "bg-primary shadow-primary/20"
+            "h-9 gap-1.5 font-bold px-6 shadow-lg transition-all duration-300 text-white"
           )}
           onClick={onSave} 
           disabled={isSaving}
         >
-          <Save className="h-4 w-4" />
+          <Save className="h-4 w-4 mr-1" />
           {isSaving ? "Syncing..." : "Finalize & Save"}
         </Button>
 
         <div className="w-px h-6 bg-border mx-1" />
 
-        <Button 
-          variant="secondary" 
-          size="icon"
+        <ActionIcon 
+          variant="subtle" 
+          color="gray"
           className="h-9 w-9 rounded-lg border border-border hover:bg-muted"
           onClick={onClose}
           title="Close Editor"
         >
           <X className="h-4 w-4" />
-        </Button>
+        </ActionIcon>
       </div>
     </div>
   );

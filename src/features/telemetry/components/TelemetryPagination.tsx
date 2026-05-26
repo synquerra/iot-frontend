@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button, Group, Text } from "@mantine/core";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface TelemetryPaginationProps {
@@ -19,32 +19,32 @@ export function TelemetryPagination({
   onPrev
 }: TelemetryPaginationProps) {
   return (
-    <div className="flex items-center justify-between bg-card/30 p-4 rounded-xl border border-primary/5">
-      <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+    <Group justify="space-between" className="bg-card/30 p-4 rounded-xl border border-primary/5">
+      <Text size="xs" fw={700} c="dimmed" tt="uppercase" className="tracking-widest">
         Showing entries {skip + 1} to {skip + dataLength}
-      </div>
-      <div className="flex items-center gap-2">
+      </Text>
+      <Group gap="xs">
         <Button 
-          variant="outline" 
+          variant="default" 
           size="sm" 
           onClick={onPrev} 
           disabled={skip === 0 || isLoading}
-          className="h-9 px-4 border-primary/10 text-[10px] font-bold uppercase tracking-widest transition-all"
+          leftSection={<ChevronLeft size="1rem" />}
+          className="text-[10px] font-bold uppercase tracking-widest"
         >
-          <ChevronLeft className="h-4 w-4 mr-1" />
           Prev
         </Button>
         <Button 
-          variant="outline" 
+          variant="default" 
           size="sm" 
           onClick={onNext} 
           disabled={dataLength < limit || isLoading}
-          className="h-9 px-4 border-primary/10 text-[10px] font-bold uppercase tracking-widest transition-all"
+          rightSection={<ChevronRight size="1rem" />}
+          className="text-[10px] font-bold uppercase tracking-widest"
         >
           Next
-          <ChevronRight className="h-4 w-4 ml-1" />
         </Button>
-      </div>
-    </div>
+      </Group>
+    </Group>
   );
 }

@@ -1,24 +1,62 @@
+import { AppShell, Box } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
+import { useState } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Outlet } from "react-router-dom";
 
 export default function AppLayout() {
-    return (
-        <div className="[--header-height:calc(theme(spacing.14))] overflow-hidden">
-            <SidebarProvider className="flex flex-col h-screen">
-                <SiteHeader />
+  const [mobileOpened, { toggle: toggleMobile }] = useDisclosure(false);
+  const [collapsed, setCollapsed] = useState(false);
 
-                <div className="flex flex-1 overflow-hidden">
-                    <AppSidebar />
+  return (
+    <AppShell
+      header={{ height: 60 }}
+      navbar={{
+        width: collapsed ? 84 : 272,
+        breakpoint: "sm",
+        collapsed: { mobile: !mobileOpened },
+      }}
+      padding="md"
+      styles={{
+        main: {
+          backgroundColor: "var(--mantine-color-body)",
+          minHeight: "100vh",
+        },
+      }}
+    >
+      <AppShell.Header
+        style={{
+          backgroundColor: "var(--mantine-color-body)",
+          backdropFilter: "blur(14px)",
+          borderBottom: "1px solid var(--mantine-color-default-border)",
+        }}
+      >
+        <SiteHeader
+          mobileOpened={mobileOpened}
+          toggleMobile={toggleMobile}
+          collapsed={collapsed}
+          onCollapseToggle={() => setCollapsed(!collapsed)}
+        />
+      </AppShell.Header>
 
-                    <SidebarInset className="flex-1 min-w-0 overflow-hidden">
-                        <main className="h-full w-full min-w-0 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-5">
-                            <Outlet />
-                        </main>
-                    </SidebarInset>
-                </div>
-            </SidebarProvider>
-        </div>
-    );
+      <AppShell.Navbar
+        p="sm"
+        style={{
+          borderRight: "1px solid var(--mantine-color-default-border)",
+          backgroundColor: "var(--mantine-color-body)",
+          overflow: "hidden",
+          transition: "width 300ms ease",
+        }}
+      >
+        <AppSidebar collapsed={collapsed} />
+      </AppShell.Navbar>
+
+      <AppShell.Main>
+        <Box w="100%" h="100%">
+          <Outlet />
+        </Box>
+      </AppShell.Main>
+    </AppShell>
+  );
 }

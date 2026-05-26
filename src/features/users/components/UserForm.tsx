@@ -1,22 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import { Modal, Button, TextInput, PasswordInput, Select, Switch, Group, Stack, SimpleGrid } from "@mantine/core";
 import { type User, type UserRole } from "../types";
 
 interface UserFormProps {
@@ -70,115 +53,107 @@ export function UserForm({ open, onOpenChange, user, onSubmit, isLoading }: User
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>{user ? "Edit User" : "Add New User"}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="first_name">First Name <span className="text-destructive">*</span></Label>
-              <Input
-                id="first_name"
-                name="first_name"
-                value={formData.first_name}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="last_name">Last Name <span className="text-destructive">*</span></Label>
-              <Input
-                id="last_name"
-                name="last_name"
-                value={formData.last_name}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="middle_name">Middle Name (Optional)</Label>
-            <Input
-              id="middle_name"
-              name="middle_name"
-              value={formData.middle_name}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email Address <span className="text-destructive">*</span></Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              value={formData.email}
+    <Modal
+      opened={open}
+      onClose={() => onOpenChange(false)}
+      title={user ? "Edit User" : "Add New User"}
+      size="md"
+      overlayProps={{ blur: 3, backgroundOpacity: 0.55 }}
+    >
+      <form onSubmit={handleSubmit}>
+        <Stack gap="sm">
+          <SimpleGrid cols={2}>
+            <TextInput
+              label="First Name"
+              withAsterisk
+              name="first_name"
+              value={formData.first_name}
               onChange={handleChange}
               required
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="mobile">Mobile Number <span className="text-destructive">*</span></Label>
-            <Input
-              id="mobile"
-              name="mobile"
-              value={formData.mobile}
+            <TextInput
+              label="Last Name"
+              withAsterisk
+              name="last_name"
+              value={formData.last_name}
               onChange={handleChange}
               required
             />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="user_type">User Type <span className="text-destructive">*</span></Label>
-              <Select
-                value={formData.user_type}
-                onValueChange={(value) => setFormData((prev) => ({ ...prev, user_type: value as UserRole }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="fota">FOTA</SelectItem>
-                  <SelectItem value="testing">Testing</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          </SimpleGrid>
+          
+          <TextInput
+            label="Middle Name"
+            name="middle_name"
+            value={formData.middle_name}
+            onChange={handleChange}
+          />
+          
+          <TextInput
+            label="Email Address"
+            withAsterisk
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+          />
+          
+          <TextInput
+            label="Mobile Number"
+            withAsterisk
+            name="mobile"
+            value={formData.mobile}
+            onChange={handleChange}
+            required
+          />
+          
+          <SimpleGrid cols={user ? 1 : 2}>
+            <Select
+              label="User Type"
+              withAsterisk
+              value={formData.user_type}
+              onChange={(value) => setFormData((prev) => ({ ...prev, user_type: value as UserRole }))}
+              data={[
+                { value: 'admin', label: 'Admin' },
+                { value: 'fota', label: 'FOTA' },
+                { value: 'testing', label: 'Testing' }
+              ]}
+              required
+            />
             {!user && (
-              <div className="space-y-2">
-                <Label htmlFor="password">Password <span className="text-destructive">*</span></Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required={!user}
-                />
-              </div>
-            )}
-          </div>
-          {user && (
-            <div className="flex items-center justify-between space-x-2 pt-2">
-              <Label htmlFor="is_active">Active Status</Label>
-              <Switch
-                id="is_active"
-                checked={formData.is_active}
-                onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, is_active: checked }))}
+              <PasswordInput
+                label="Password"
+                withAsterisk
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
               />
-            </div>
+            )}
+          </SimpleGrid>
+
+          {user && (
+            <Group justify="space-between" mt="xs">
+              <Switch
+                labelPosition="left"
+                label="Active Status"
+                checked={formData.is_active}
+                onChange={(e) => setFormData((prev) => ({ ...prev, is_active: e.currentTarget.checked }))}
+                color="teal"
+              />
+            </Group>
           )}
-          <DialogFooter className="pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Saving..." : user ? "Update User" : "Create User"}
+            <Button type="submit" loading={isLoading}>
+              {user ? "Update User" : "Create User"}
             </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          </Group>
+        </Stack>
+      </form>
+    </Modal>
   );
 }

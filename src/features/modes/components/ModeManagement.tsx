@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { ModeSidebar } from "./ModeSidebar";
 import { ModeForm } from "./ModeForm";
 import {
@@ -12,7 +12,7 @@ import {
 import { addModeCondition } from "../services/modeConditionService";
 import type { DeviceMode, CreateModePayload, UpdateModePayload } from "../types";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton, Box, SimpleGrid } from "@mantine/core";
 
 export default function ModeManagement() {
   const [modes, setModes] = useState<DeviceMode[]>([]);
@@ -139,14 +139,14 @@ export default function ModeManagement() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-[calc(100vh-4rem)] w-full overflow-hidden bg-background">
+    <Box className="flex flex-col md:flex-row h-[calc(100vh-4rem)] w-full overflow-hidden bg-background">
       {/* Sidebar - Hidden on mobile when a mode is selected, collapsible on desktop */}
-      <div className={cn(
+      <Box className={cn(
         "md:flex transition-all duration-300 ease-in-out shrink-0",
         showMobileSidebar ? "flex w-full" : "hidden",
         isSidebarCollapsed ? "md:w-0 md:opacity-0" : "md:w-64 lg:w-72 opacity-100"
       )}>
-        <div className="w-full h-full bg-card border-r border-border overflow-hidden">
+        <Box className="w-full h-full bg-card border-r border-border overflow-hidden">
           <ModeSidebar
             modes={modes}
             selectedModeId={selectedModeId}
@@ -154,22 +154,22 @@ export default function ModeManagement() {
             onAddNew={handleAddNew}
             loading={loading}
           />
-        </div>
-      </div>
+        </Box>
+      </Box>
 
       {/* Detail Area - Hidden on mobile when showing the sidebar */}
-      <div className={cn(
+      <Box className={cn(
         "flex-1 min-w-0 h-full relative overflow-hidden",
         !showMobileSidebar ? "block" : "hidden md:block"
       )}>
         {detailsLoading ? (
-          <div className="p-4 md:p-8 space-y-6">
-            <Skeleton className="h-12 w-1/3 rounded-xl" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <Skeleton className="h-64 rounded-2xl" />
-              <Skeleton className="h-64 rounded-2xl" />
-            </div>
-          </div>
+          <Box className="p-4 md:p-8 space-y-6">
+            <Skeleton className="h-12 w-1/3 rounded-xl animate-pulse" />
+            <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+              <Skeleton className="h-64 rounded-2xl animate-pulse" />
+              <Skeleton className="h-64 rounded-2xl animate-pulse" />
+            </SimpleGrid>
+          </Box>
         ) : (
           <ModeForm
             mode={selectedMode}
@@ -197,7 +197,7 @@ export default function ModeManagement() {
             isSaving={isSaving}
           />
         )}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }

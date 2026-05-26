@@ -23,12 +23,17 @@ import {
   BatteryCharging,
   Edit2,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
+import {
+  Badge,
+  Checkbox,
+  TextInput,
+  Box,
+  Group,
+  Text,
+  Button,
+  ActionIcon,
+  Card
+} from "@mantine/core";
 import { cn } from "@/lib/utils";
 import type { DeviceMode, CreateModePayload, ModeCondition } from "../types";
 import {
@@ -40,7 +45,7 @@ import {
 import { listDevices } from "@/features/devices/services/deviceService";
 import { listGeofences } from "@/features/geofencing/services/geofenceService";
 import type { GeofenceRecord } from "@/features/geofencing/types";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 interface ModeFormProps {
   mode: DeviceMode | null;
@@ -399,25 +404,25 @@ export function ModeForm({
     <form onSubmit={handleSubmit} className="flex flex-col h-full bg-background/50 relative">
       <div className="flex-1 overflow-y-auto p-3 scroll-container">
         <Card className="border border-border shadow-sm bg-card overflow-hidden">
-          <CardHeader className="py-2 px-4 border-b bg-muted/30 flex flex-row items-center justify-between space-y-0 gap-3">
-            <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+          <Group justify="space-between" align="center" className="py-2 px-4 border-b bg-muted/30 gap-3">
+            <Group gap="xs" align="center" className="min-w-0 flex-1">
               {onBackToList && (
-                <Button
+                <ActionIcon
                   type="button"
-                  variant="ghost"
-                  size="icon"
+                  variant="subtle"
+                  color="gray"
                   onClick={onBackToList}
                   className="md:hidden h-8 w-8 rounded-lg bg-muted/50 shrink-0"
                 >
                   <ChevronLeft className="h-4 w-4" />
-                </Button>
+                </ActionIcon>
               )}
 
               {onToggleSidebar && (
-                <Button
+                <ActionIcon
                   type="button"
-                  variant="ghost"
-                  size="icon"
+                  variant="subtle"
+                  color="gray"
                   onClick={onToggleSidebar}
                   className="hidden md:flex h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors shrink-0"
                   title={isSidebarCollapsed ? "Show mode list" : "Hide mode list"}
@@ -427,54 +432,54 @@ export function ModeForm({
                   ) : (
                     <PanelLeftClose className="h-4 w-4" />
                   )}
-                </Button>
+                </ActionIcon>
               )}
 
-              <div className="flex items-center gap-2 min-w-0">
+              <Group gap="xs" align="center" wrap="nowrap" className="min-w-0">
                 <Settings2 className="h-3.5 w-3.5 text-primary shrink-0" />
-                <CardTitle className="text-[10px] font-black uppercase tracking-widest truncate">
+                <Text size="xs" fw={900} tt="uppercase" className="tracking-widest truncate">
                   {mode && !isDuplicating ? `Profile: ${mode.name}` : "New Profile Configuration"}
-                </CardTitle>
-              </div>
-            </div>
+                </Text>
+              </Group>
+            </Group>
 
-            <div className="flex items-center gap-1.5 shrink-0">
+            <Group gap="xs" align="center" className="shrink-0">
               {mode && !mode.is_system_mode && !isDuplicating && (
-                <Button
+                <ActionIcon
                   type="button"
-                  variant="ghost"
-                  size="icon"
+                  variant="subtle"
+                  color="red"
                   onClick={() => onDelete(mode.id)}
                   className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
                   title="Delete Mode"
                 >
                   <Trash2 className="h-4 w-4" />
-                </Button>
+                </ActionIcon>
               )}
 
-              <Button
+              <ActionIcon
                 type="button"
-                variant="ghost"
-                size="icon"
+                variant="subtle"
+                color="gray"
                 onClick={handleDuplicate}
                 className="h-8 w-8"
                 title="Duplicate Mode"
               >
                 <Copy className="h-4 w-4" />
-              </Button>
+              </ActionIcon>
 
-              <div className="w-[1px] h-4 bg-border/60 mx-1 hidden sm:block" />
+              <Box className="w-[1px] h-4 bg-border/60 mx-1 hidden sm:block" />
 
-              <Button
+              <ActionIcon
                 type="button"
-                variant="ghost"
-                size="icon"
+                variant="subtle"
+                color="gray"
                 onClick={onCancel}
                 className="h-8 w-8"
                 title="Cancel Changes"
               >
                 <X className="h-4 w-4" />
-              </Button>
+              </ActionIcon>
 
               <Button
                 type="submit"
@@ -488,35 +493,51 @@ export function ModeForm({
                 )}
                 <span className="hidden sm:inline">Save</span>
               </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
+            </Group>
+          </Group>
+          <Box className="p-0">
             <div className="p-4 space-y-6">
               {/* Basic Information */}
               <div className="space-y-4">
-                <div className="flex items-center gap-1.5 px-1">
+                <Group gap="xs" align="center" className="px-1">
                   <Info className="h-3.5 w-3.5 text-primary/50" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70">General Information</span>
-                </div>
+                  <Text size="xs" fw={700} tt="uppercase" className="tracking-widest" c="primary.7">General Information</Text>
+                </Group>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-1">
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-foreground/80">Mode Name *</Label>
-                    <Input
+                    <Text size="0.65rem" fw={900} tt="uppercase" className="tracking-widest text-foreground/80">Mode Name *</Text>
+                    <TextInput
                       value={formData.name}
                       onChange={(e) => handleChange("name", e.target.value)}
                       placeholder="e.g. High Performance"
-                      className="h-9 bg-card border-border text-foreground font-bold text-xs rounded-lg hover:border-primary/50 focus:border-primary focus:bg-background focus:ring-1 focus:ring-primary transition-all duration-200"
+                      styles={{
+                        input: {
+                          height: '2.25rem',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          borderRadius: '0.5rem',
+                        }
+                      }}
+                      className="w-full"
                       required
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-foreground/80">Priority</Label>
-                    <Input
+                    <Text size="0.65rem" fw={900} tt="uppercase" className="tracking-widest text-foreground/80">Priority</Text>
+                    <TextInput
                       type="number"
                       value={formData.priority}
                       onChange={(e) => handleChange("priority", parseInt(e.target.value))}
-                      className="h-9 bg-card border-border text-foreground font-bold text-xs rounded-lg hover:border-primary/50 focus:border-primary focus:bg-background focus:ring-1 focus:ring-primary transition-all duration-200"
+                      styles={{
+                        input: {
+                          height: '2.25rem',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          borderRadius: '0.5rem',
+                        }
+                      }}
+                      className="w-full"
                       required
                     />
                   </div>
@@ -525,39 +546,39 @@ export function ModeForm({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-1">
                   <div className="flex items-center gap-3 py-2.5 px-3 bg-card hover:bg-card/85 border border-border rounded-xl transition-all duration-200 shadow-sm group">
                     <div className="flex-1 flex items-center">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-foreground/90 group-hover:text-foreground cursor-pointer">System Mode</Label>
+                      <Text size="xs" fw={700} tt="uppercase" className="tracking-widest text-foreground/90 group-hover:text-foreground cursor-pointer">System Mode</Text>
                     </div>
                     <Checkbox
                       checked={formData.is_system_mode}
-                      onCheckedChange={(v) => handleChange("is_system_mode", !!v)}
-                      className="rounded border-border/80 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                      onChange={(e) => handleChange("is_system_mode", e.currentTarget.checked)}
+                      className="rounded border-border/80"
                     />
                   </div>
 
                   <div className="flex items-center gap-3 py-2.5 px-3 bg-card hover:bg-card/85 border border-border rounded-xl transition-all duration-200 shadow-sm group">
                     <div className="flex-1 flex items-center">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-foreground/90 group-hover:text-foreground">Watchdog Timer</Label>
+                      <Text size="xs" fw={700} tt="uppercase" className="tracking-widest text-foreground/90 group-hover:text-foreground">Watchdog Timer</Text>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Input
+                    <Group gap="xs" align="center">
+                      <input
                         type="number"
                         min="0"
                         value={formData.watch_time}
                         onChange={(e) => handleChange("watch_time", parseInt(e.target.value) || 0)}
-                        className="h-7 w-20 bg-background hover:bg-background/80 border border-border text-[10px] font-bold text-center rounded-md text-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                        className="h-7 w-20 bg-background hover:bg-background/80 border border-border text-[10px] font-bold text-center rounded-md text-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all focus:outline-none"
                       />
-                      <span className="text-[9px] font-black text-muted-foreground/50 uppercase">sec</span>
-                    </div>
+                      <Text size="0.6rem" fw={900} className="text-muted-foreground/50 uppercase">sec</Text>
+                    </Group>
                   </div>
 
                   <div className="flex items-center gap-3 py-2.5 px-3 bg-card hover:bg-card/85 border border-border rounded-xl transition-all duration-200 shadow-sm group">
                     <div className="flex-1 flex items-center">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-foreground/90 group-hover:text-foreground cursor-pointer">Allow User Conditions</Label>
+                      <Text size="xs" fw={700} tt="uppercase" className="tracking-widest text-foreground/90 group-hover:text-foreground cursor-pointer">Allow User Conditions</Text>
                     </div>
                     <Checkbox
                       checked={formData.allow_user_conditions}
-                      onCheckedChange={(v) => handleChange("allow_user_conditions", !!v)}
-                      className="rounded border-border/80 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                      onChange={(e) => handleChange("allow_user_conditions", e.currentTarget.checked)}
+                      className="rounded border-border/80"
                     />
                   </div>
                 </div>
@@ -568,10 +589,10 @@ export function ModeForm({
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Intervals Section */}
                 <div className="space-y-3">
-                  <div className="flex items-center gap-1.5 px-1">
+                  <Group gap="xs" align="center" className="px-1">
                     <Timer className="h-3.5 w-3.5 text-primary/50" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70">Transmission Intervals</span>
-                  </div>
+                    <Text size="xs" fw={700} tt="uppercase" className="tracking-widest" c="primary.7">Transmission Intervals</Text>
+                  </Group>
                   <div className="space-y-1">
                      <SettingRow
                       icon={Activity}
@@ -608,10 +629,10 @@ export function ModeForm({
 
                 {/* Thresholds Section */}
                 <div className="space-y-3">
-                  <div className="flex items-center gap-1.5 px-1">
+                  <Group gap="xs" align="center" className="px-1">
                     <ShieldAlert className="h-3.5 w-3.5 text-orange-500/60" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-orange-600/80">Safety Thresholds</span>
-                  </div>
+                    <Text size="xs" fw={700} tt="uppercase" className="tracking-widest" c="orange.7">Safety Thresholds</Text>
+                  </Group>
                   <div className="space-y-1">
                     <SettingRow
                       icon={Thermometer}
@@ -645,28 +666,28 @@ export function ModeForm({
 
               {/* Entry Conditions Section */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-1.5">
+                <Group justify="space-between" align="center" className="px-1" wrap="nowrap">
+                  <Group gap="xs" align="center">
                     <MapPin className="h-3.5 w-3.5 text-primary/50" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70">
+                    <Text size="xs" fw={700} tt="uppercase" className="tracking-widest" c="primary.7">
                       Entry Conditions (any one true triggers the mode)
-                    </span>
-                  </div>
+                    </Text>
+                  </Group>
                   <span title="Entry conditions define when this mode is automatically activated.">
                     <HelpCircle className="h-4 w-4 text-muted-foreground/40 hover:text-primary transition-colors cursor-help shrink-0" />
                   </span>
-                </div>
+                </Group>
 
                 {loadingConditions ? (
-                  <div className="flex items-center justify-center p-6 bg-muted/10 rounded-xl border border-dashed border-border">
-                    <span className="text-xs font-bold text-muted-foreground animate-pulse">Loading conditions...</span>
-                  </div>
+                  <Box className="flex items-center justify-center p-6 bg-muted/10 rounded-xl border border-dashed border-border">
+                    <Text size="xs" fw={700} className="text-muted-foreground animate-pulse">Loading conditions...</Text>
+                  </Box>
                 ) : entryConditions.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-6 px-4 bg-muted/10 rounded-xl border border-dashed border-border/80">
-                    <p className="text-xs font-semibold text-muted-foreground/60 text-center">
+                  <Box className="flex flex-col items-center justify-center py-6 px-4 bg-muted/10 rounded-xl border border-dashed border-border/80">
+                    <Text size="xs" fw={600} className="text-muted-foreground/60 text-center">
                       No entry conditions yet. Click below to add one.
-                    </p>
-                  </div>
+                    </Text>
+                  </Box>
                 ) : (
                   <div className="space-y-1.5">
                     {entryConditions.map((cond) => (
@@ -685,10 +706,11 @@ export function ModeForm({
                 <Button
                   type="button"
                   variant="outline"
+                  color="gray"
                   onClick={() => handleOpenAddDialog("entry")}
                   className="w-full h-10 border-dashed border bg-background hover:bg-muted/10 border-border hover:border-primary/40 font-bold uppercase tracking-widest text-[9px] gap-2 rounded-xl transition-all"
+                  leftSection={<Plus className="h-3.5 w-3.5" />}
                 >
-                  <Plus className="h-3.5 w-3.5" />
                   Add Entry Condition
                 </Button>
               </div>
@@ -697,28 +719,28 @@ export function ModeForm({
 
               {/* Exit Conditions Section */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-1.5">
+                <Group justify="space-between" align="center" className="px-1" wrap="nowrap">
+                  <Group gap="xs" align="center">
                     <MapPin className="h-3.5 w-3.5 text-primary/50" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70">
+                    <Text size="xs" fw={700} tt="uppercase" className="tracking-widest" c="primary.7">
                       Exit Conditions (any one true exits the mode)
-                    </span>
-                  </div>
+                    </Text>
+                  </Group>
                   <span title="Exit conditions define when this mode is automatically deactivated.">
                     <HelpCircle className="h-4 w-4 text-muted-foreground/40 hover:text-primary transition-colors cursor-help shrink-0" />
                   </span>
-                </div>
+                </Group>
 
                 {loadingConditions ? (
-                  <div className="flex items-center justify-center p-6 bg-muted/10 rounded-xl border border-dashed border-border">
-                    <span className="text-xs font-bold text-muted-foreground animate-pulse">Loading conditions...</span>
-                  </div>
+                  <Box className="flex items-center justify-center p-6 bg-muted/10 rounded-xl border border-dashed border-border">
+                    <Text size="xs" fw={700} className="text-muted-foreground animate-pulse">Loading conditions...</Text>
+                  </Box>
                 ) : exitConditions.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-6 px-4 bg-muted/10 rounded-xl border border-dashed border-border/80">
-                    <p className="text-xs font-semibold text-muted-foreground/60 text-center">
+                  <Box className="flex flex-col items-center justify-center py-6 px-4 bg-muted/10 rounded-xl border border-dashed border-border/80">
+                    <Text size="xs" fw={600} className="text-muted-foreground/60 text-center">
                       No exit conditions yet. Click below to add one.
-                    </p>
-                  </div>
+                    </Text>
+                  </Box>
                 ) : (
                   <div className="space-y-1.5">
                     {exitConditions.map((cond) => (
@@ -737,42 +759,43 @@ export function ModeForm({
                 <Button
                   type="button"
                   variant="outline"
+                  color="gray"
                   onClick={() => handleOpenAddDialog("exit")}
                   className="w-full h-10 border-dashed border bg-background hover:bg-muted/10 border-border hover:border-primary/40 font-bold uppercase tracking-widest text-[9px] gap-2 rounded-xl transition-all"
+                  leftSection={<Plus className="h-3.5 w-3.5" />}
                 >
-                  <Plus className="h-3.5 w-3.5" />
                   Add Exit Condition
                 </Button>
               </div>
             </div>
-          </CardContent>
+          </Box>
         </Card>
       </div>
 
       {/* Modern Overlay Modal for Adding/Editing Conditions */}
       {isConditionDialogOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <Box className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <Card className="w-full max-w-md border border-border bg-card shadow-2xl overflow-hidden rounded-2xl animate-in zoom-in-95 duration-200">
-            <CardHeader className="py-3 px-4 border-b bg-muted/30 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-xs font-black uppercase tracking-widest">
+            <Group justify="space-between" align="center" className="py-3 px-4 border-b bg-muted/30">
+              <Text size="xs" fw={900} tt="uppercase" className="tracking-widest">
                 {editingCondition 
                   ? `Edit ${dialogType === "entry" ? "Entry" : "Exit"} Condition` 
                   : `Add ${dialogType === "entry" ? "Entry" : "Exit"} Condition`}
-              </CardTitle>
-              <Button
+              </Text>
+              <ActionIcon
                 type="button"
-                variant="ghost"
-                size="icon"
+                variant="subtle"
+                color="gray"
                 onClick={() => setIsConditionDialogOpen(false)}
                 className="h-8 w-8 text-muted-foreground hover:bg-muted"
               >
                 <X className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <div className="space-y-0">
-              <CardContent className="p-4 space-y-4">
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Condition Type</Label>
+              </ActionIcon>
+            </Group>
+            <Box className="space-y-0">
+              <Box className="p-4 space-y-4">
+                <Box className="space-y-1.5">
+                  <Text size="0.65rem" fw={900} tt="uppercase" className="tracking-widest text-muted-foreground/70">Condition Type</Text>
                   <select
                     value={condType}
                     onChange={(e) => setCondType(e.target.value)}
@@ -783,25 +806,25 @@ export function ModeForm({
                     <option value="battery_low">Battery Threshold</option>
                     <option value="speed_exceeded">Speed Threshold</option>
                   </select>
-                </div>
+                </Box>
 
                 {condType.startsWith("geofence") && (
                   <>
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Geofence Flag</Label>
+                    <Box className="space-y-1.5">
+                      <Text size="0.65rem" fw={900} tt="uppercase" className="tracking-widest text-muted-foreground/70">Geofence Flag</Text>
                       {geofences.length === 0 ? (
-                        <div className="relative">
-                          <Input
+                        <Box className="relative">
+                          <input
                             placeholder="Enter raw geofence ID"
                             value={selectedGeofenceId}
                             onChange={(e) => setSelectedGeofenceId(e.target.value)}
-                            className="h-10 bg-background border-border/80 font-bold text-xs rounded-lg"
+                            className="h-10 px-3 bg-background border border-border/80 font-bold text-xs rounded-lg focus:outline-none focus:ring-1 focus:ring-primary w-full"
                             required
                           />
-                          <p className="text-[8px] font-bold text-amber-600 uppercase tracking-wide mt-1">
+                          <Text size="0.55rem" fw={700} className="text-amber-600 uppercase tracking-wide mt-1">
                             No active geofences found. Enter geofence ID manually.
-                          </p>
-                        </div>
+                          </Text>
+                        </Box>
                       ) : (
                         <select
                           value={selectedGeofenceId}
@@ -817,15 +840,15 @@ export function ModeForm({
                           ))}
                         </select>
                       )}
-                    </div>
+                    </Box>
 
                   </>
                 )}
 
                 {condType === "battery_low" && (
                   <div className="grid grid-cols-2 gap-3.5">
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Operator</Label>
+                    <Box className="space-y-1.5">
+                      <Text size="0.65rem" fw={900} tt="uppercase" className="tracking-widest text-muted-foreground/70">Operator</Text>
                       <select
                         value={batteryOperator}
                         onChange={(e) => setBatteryOperator(e.target.value)}
@@ -837,26 +860,26 @@ export function ModeForm({
                         <option value=">=">{">= Greater Than or Equal"}</option>
                         <option value="==">{"== Equal To"}</option>
                       </select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Battery Value (%)</Label>
-                      <Input
+                    </Box>
+                    <Box className="space-y-1.5">
+                      <Text size="0.65rem" fw={900} tt="uppercase" className="tracking-widest text-muted-foreground/70">Battery Value (%)</Text>
+                      <input
                         type="number"
                         min="1"
                         max="100"
                         value={batteryThreshold}
                         onChange={(e) => setBatteryThreshold(parseInt(e.target.value) || 20)}
-                        className="h-10 bg-background border-border/80 font-bold text-xs rounded-lg"
+                        className="h-10 px-3 bg-background border border-border/80 font-bold text-xs rounded-lg focus:outline-none focus:ring-1 focus:ring-primary w-full"
                         required
                       />
-                    </div>
+                    </Box>
                   </div>
                 )}
 
                 {condType === "speed_exceeded" && (
                   <div className="grid grid-cols-2 gap-3.5">
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Operator</Label>
+                    <Box className="space-y-1.5">
+                      <Text size="0.65rem" fw={900} tt="uppercase" className="tracking-widest text-muted-foreground/70">Operator</Text>
                       <select
                         value={speedOperator}
                         onChange={(e) => setSpeedOperator(e.target.value)}
@@ -868,37 +891,38 @@ export function ModeForm({
                         <option value="<=">{"<= Less Than or Equal"}</option>
                         <option value="==">{"== Equal To"}</option>
                       </select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Speed Value (km/h)</Label>
-                      <Input
+                    </Box>
+                    <Box className="space-y-1.5">
+                      <Text size="0.65rem" fw={900} tt="uppercase" className="tracking-widest text-muted-foreground/70">Speed Value (km/h)</Text>
+                      <input
                         type="number"
                         min="1"
                         value={speedLimitVal}
                         onChange={(e) => setSpeedLimitVal(parseInt(e.target.value) || 70)}
-                        className="h-10 bg-background border-border/80 font-bold text-xs rounded-lg"
+                        className="h-10 px-3 bg-background border border-border/80 font-bold text-xs rounded-lg focus:outline-none focus:ring-1 focus:ring-primary w-full"
                         required
                       />
-                    </div>
+                    </Box>
                   </div>
                 )}
 
                 <div className="flex items-center gap-3 py-2 px-3 bg-muted/20 rounded-xl border border-border/30">
-                  <div className="flex-1">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Condition Enabled</Label>
-                    <p className="text-[9px] font-bold text-muted-foreground/40 uppercase">Determine active state</p>
-                  </div>
+                  <Box className="flex-1">
+                    <Text size="0.65rem" fw={900} tt="uppercase" className="tracking-widest text-muted-foreground/70">Condition Enabled</Text>
+                    <Text size="0.55rem" fw={700} className="text-muted-foreground/40 uppercase">Determine active state</Text>
+                  </Box>
                   <Checkbox
                     checked={isEnabled}
-                    onCheckedChange={(v) => setIsEnabled(!!v)}
+                    onChange={(e) => setIsEnabled(e.currentTarget.checked)}
                     className="rounded border-border/60"
                   />
                 </div>
-              </CardContent>
-              <div className="py-3 px-4 border-t bg-muted/30 flex items-center justify-end gap-2">
+              </Box>
+              <Group justify="end" className="py-3 px-4 border-t bg-muted/30 gap-2">
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="subtle"
+                  color="gray"
                   onClick={() => setIsConditionDialogOpen(false)}
                   className="h-9 px-4 font-black uppercase tracking-widest text-[9px] rounded-lg text-muted-foreground"
                 >
@@ -911,10 +935,10 @@ export function ModeForm({
                 >
                   Save
                 </Button>
-              </div>
-            </div>
+              </Group>
+            </Box>
           </Card>
-        </div>
+        </Box>
       )}
     </form>
   );
@@ -1011,7 +1035,7 @@ function ConditionRow({
       <div className="shrink-0 flex items-center pl-1">
         <Checkbox
           checked={condition.enabled}
-          onCheckedChange={(checked) => onToggle(!!checked)}
+          onChange={(e) => onToggle(e.currentTarget.checked)}
           className="rounded border-border/60"
         />
       </div>
@@ -1063,14 +1087,14 @@ function SettingRow({
             : "bg-card border-border/80 group-hover:border-primary/40 group-hover:bg-background/80"
         )}
       >
-        <Input
+        <input
           type="number"
           min="0"
           value={value}
           disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
           className={cn(
-            "border-0 focus-visible:ring-0 h-5 w-full text-[11px] font-black font-mono bg-transparent shadow-none text-right p-0",
+            "border-0 focus:ring-0 h-5 w-full text-[11px] font-black font-mono bg-transparent shadow-none text-right p-0 focus:outline-none",
             disabled ? "cursor-not-allowed opacity-50" : ""
           )}
         />

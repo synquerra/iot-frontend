@@ -1,10 +1,28 @@
-"use client"
+"use client";
 
-import { MenuIcon, ChevronRight, LayoutDashboard, Settings, Terminal, Map, Bell, Package, Activity } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { useSidebar } from "@/components/ui/sidebar"
-import { useLocation } from "react-router-dom"
+import {
+  ChevronRight,
+  LayoutDashboard,
+  Settings,
+  Terminal,
+  Map,
+  Bell,
+  Package,
+  Activity,
+} from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { NavUser } from "@/components/nav-user";
+import { useLocation } from "react-router-dom";
+import {
+  Box,
+  Burger,
+  Divider,
+  Group,
+  Image,
+  Paper,
+  Text,
+  ThemeIcon,
+} from "@mantine/core";
 
 const pathConfigs = [
   { pattern: /^\/devices\/settings(\/.*)?$/, label: "Device Settings", icon: Settings },
@@ -18,67 +36,67 @@ const pathConfigs = [
   { pattern: /^\/$/, label: "Dashboard", icon: LayoutDashboard },
 ];
 
-export function SiteHeader() {
-  const { toggleSidebar } = useSidebar()
-  const location = useLocation()
-  const pathname = location.pathname
-  
-  const currentPath = pathConfigs.find(c => c.pattern.test(pathname)) || { label: "Dashboard", icon: LayoutDashboard }
+export function SiteHeader({
+  mobileOpened,
+  toggleMobile,
+  collapsed,
+  onCollapseToggle,
+}: {
+  mobileOpened: boolean;
+  toggleMobile: () => void;
+  collapsed: boolean;
+  onCollapseToggle: () => void;
+}) {
+  const pathname = useLocation().pathname;
+  const currentPath =
+    pathConfigs.find((config) => config.pattern.test(pathname)) ?? {
+      label: "Dashboard",
+      icon: LayoutDashboard,
+    };
+  const CurrentIcon = currentPath.icon;
 
   return (
-    <header className="flex sticky top-0 z-50 w-full items-center border-b bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
-      <div className="flex h-[--header-height] w-full items-center gap-2 px-3 sm:gap-3 sm:px-4">
-        {/* Mobile: Menu toggle */}
-        <Button
-          className="sm:hidden flex-shrink-0"
-          variant="ghost"
-          size="icon"
-          onClick={toggleSidebar}
-        >
-          <MenuIcon className="size-5" />
-        </Button>
+    <Group h="100%" px="md" gap="sm" wrap="nowrap">
+      <Burger opened={mobileOpened} onClick={toggleMobile} hiddenFrom="sm" size="sm" />
 
-        {/* Desktop: Logo */}
-        <div className="hidden sm:inline-flex items-center justify-center rounded-xl border border-border/60 bg-slate-900 p-1 backdrop-blur-lg shadow-sm flex-shrink-0">
-          <img
-            src="/images/logo.png"
-            alt="Synquerra"
-            className="max-h-9"
-          />
-        </div>
+      <Paper
+        visibleFrom="sm"
+        p={6}
+        radius="md"
+        shadow="xs"
+        withBorder
+        bg="dark.8"
+        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+      >
+        <Image src="/images/logo.png" alt="Synquerra" h={28} w="auto" fit="contain" />
+      </Paper>
 
-        {/* Desktop: Sidebar toggle */}
-        <Button
-          className="hidden sm:flex flex-shrink-0"
-          variant="ghost"
-          size="icon"
-          onClick={toggleSidebar}
-        >
-          <MenuIcon className="size-5" />
-        </Button>
+      <Burger opened={!collapsed} onClick={onCollapseToggle} visibleFrom="sm" size="sm" />
 
-        {/* Divider */}
-        <div className="h-5 w-px bg-border/60 flex-shrink-0" />
+      <Divider orientation="vertical" />
 
-        {/* Breadcrumb — always visible */}
-        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          <currentPath.icon className="h-3.5 w-3.5 text-primary/60 flex-shrink-0" />
-          <div className="flex items-center gap-1 min-w-0">
-            <span className="hidden xs:block text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 flex-shrink-0">
+      <Group gap="xs" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
+        <ThemeIcon variant="light" radius="md" size="lg">
+          <CurrentIcon size={16} />
+        </ThemeIcon>
+
+        <Box style={{ minWidth: 0 }}>
+          <Group gap={6} wrap="nowrap">
+            <Text size="10px" fw={700} tt="uppercase" c="dimmed" visibleFrom="xs">
               System
-            </span>
-            <ChevronRight className="hidden xs:block h-3 w-3 text-muted-foreground/30 flex-shrink-0" />
-            <span className="text-xs font-bold uppercase tracking-wide text-foreground truncate">
+            </Text>
+            <ChevronRight size={12} color="var(--mantine-color-dimmed)" />
+            <Text size="sm" fw={700} tt="uppercase" truncate>
               {currentPath.label}
-            </span>
-          </div>
-        </div>
+            </Text>
+          </Group>
+        </Box>
+      </Group>
 
-        {/* Right: Theme toggle */}
-        <div className="ml-auto flex items-center gap-2 flex-shrink-0">
-          <ThemeToggle />
-        </div>
-      </div>
-    </header>
-  )
+      <Group gap="xs" wrap="nowrap">
+        <ThemeToggle />
+        <NavUser compact />
+      </Group>
+    </Group>
+  );
 }

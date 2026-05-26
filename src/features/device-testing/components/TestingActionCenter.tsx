@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button, Switch, Card, Badge, Group, Text, Box, ActionIcon } from "@mantine/core";
 import {
   Phone,
   Plane,
@@ -13,7 +11,7 @@ import {
   StopCircle,
 } from "lucide-react";
 import { useGlobalLoading } from "@/contexts/GlobalLoadingContext";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   updateAirplaneMode,
   updateLedStatus,
@@ -21,7 +19,6 @@ import {
   toggleAmbientListening,
 } from "@/features/device-settings/services/deviceSettingsService";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 
 interface TestingActionCenterProps {
   imei?: string | null;
@@ -139,7 +136,7 @@ export function TestingActionCenter({
         <Switch
           disabled={disabled}
           checked={isLedOn}
-          onCheckedChange={handleLedToggle}
+          onChange={(e) => handleLedToggle(e.currentTarget.checked)}
         />
       ),
     },
@@ -153,11 +150,12 @@ export function TestingActionCenter({
       activeBg: "bg-indigo-500/10 border-indigo-500/20",
       control: (
         <Button
-          size="sm"
-          variant={isAirplaneEnabled ? "secondary" : "outline"}
+          size="xs"
+          variant={isAirplaneEnabled ? "filled" : "outline"}
+          color="indigo"
           disabled={disabled || isAirplaneEnabled}
           onClick={handleAirplaneEnable}
-          className="h-6 px-2.5 text-[10px] font-bold uppercase tracking-wide"
+          className="h-6 px-2 text-[10px] font-bold uppercase tracking-wide text-white"
         >
           {isAirplaneEnabled ? "Locked" : "Enable"}
         </Button>
@@ -175,7 +173,7 @@ export function TestingActionCenter({
         <Switch
           disabled={disabled}
           checked={!!incomingCallEnabled}
-          onCheckedChange={handleToggleIncomingCalls}
+          onChange={(e) => handleToggleIncomingCalls(e.currentTarget.checked)}
         />
       ),
     },
@@ -189,20 +187,20 @@ export function TestingActionCenter({
       activeBg: "bg-rose-500/10 border-rose-500/20",
       control: (
         <div className="flex items-center gap-1.5">
-          <Button
-            variant="ghost"
-            size="icon"
+          <ActionIcon
+            variant="subtle"
+            color="red"
             className="h-6 w-6 text-destructive hover:bg-destructive/10 disabled:opacity-50"
             onClick={() => handleToggleAmbient("Stop")}
             title="Hard Reset / Stop Monitoring"
             disabled={disabled || ambientListeningStatus === "Stop"}
           >
             <StopCircle className="h-3.5 w-3.5" />
-          </Button>
+          </ActionIcon>
           <Switch
             disabled={disabled}
             checked={ambientListeningStatus === "Enable"}
-            onCheckedChange={(on) => handleToggleAmbient(on ? "Enable" : "Disable")}
+            onChange={(e) => handleToggleAmbient(e.currentTarget.checked ? "Enable" : "Disable")}
           />
         </div>
       ),
@@ -232,25 +230,21 @@ export function TestingActionCenter({
   ];
 
   return (
-    <Card className="border-border shadow-sm bg-card">
-      <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between gap-3 space-y-0 bg-muted/5">
+    <Card className="border-border shadow-sm bg-card p-0">
+      <Group justify="space-between" align="center" className="py-3 px-4 border-b bg-muted/5">
         <div className="flex items-center gap-2">
           <FlaskConical className="h-4 w-4 text-primary" />
-          <CardTitle className="text-xs font-bold uppercase tracking-wide">System Toggles</CardTitle>
+          <Text size="xs" fw={700} className="uppercase tracking-wide text-foreground font-bold">System Toggles</Text>
         </div>
         <Badge
-          variant={topic ? "secondary" : "destructive"}
-          className={cn(
-            "text-[9px] font-black tracking-widest uppercase px-1.5 py-0 h-4 border",
-            topic
-              ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800/50"
-              : ""
-          )}
+          color={topic ? "teal" : "red"}
+          variant="light"
+          className="text-[9px] font-black tracking-widest uppercase px-1.5 py-0 h-4 border border-teal-200"
         >
           {topic ? "Link Active" : "No Link"}
         </Badge>
-      </CardHeader>
-      <CardContent className="p-4 space-y-4">
+      </Group>
+      <Box className="p-4 space-y-4">
         <div className={cn(
           "grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3",
           disabled && "opacity-50 grayscale pointer-events-none"
@@ -258,11 +252,14 @@ export function TestingActionCenter({
           {controls.map((ctrl) => {
             const Icon = ctrl.icon;
             return (
-              <div
+              <Card
                 key={ctrl.id}
+                withBorder
+                radius="lg"
+                padding="sm"
                 className={cn(
-                  "bg-card border rounded-xl p-3 flex flex-col gap-3 transition-all",
-                  ctrl.isOn ? cn("border", ctrl.activeBg) : "border-border shadow-sm",
+                  "bg-card flex flex-col gap-3 transition-all shadow-sm",
+                  ctrl.isOn ? cn("border", ctrl.activeBg) : "border-border",
                   ctrl.isDisabled && "opacity-50 grayscale border-dashed shadow-none"
                 )}
               >
@@ -282,12 +279,11 @@ export function TestingActionCenter({
                   <p className="text-xs font-semibold leading-tight">{ctrl.label}</p>
                   <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">{ctrl.description}</p>
                 </div>
-              </div>
+              </Card>
             );
           })}
         </div>
-
-      </CardContent>
+      </Box>
     </Card>
   );
 }

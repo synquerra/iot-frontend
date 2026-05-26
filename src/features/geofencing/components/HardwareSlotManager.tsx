@@ -1,13 +1,5 @@
 import { MapPin, X, RefreshCw, Cpu } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Button, Select, Card, Badge, Group, Box, Text, ActionIcon, SimpleGrid, ThemeIcon } from "@mantine/core";
 import { cn } from "@/lib/utils";
 import type { GeofenceRecord, GeofenceAssignment } from "../types";
 
@@ -44,33 +36,42 @@ export function HardwareSlotManager({
     const geofence = hasGeofence ? getGeofenceById(assignment.geofence_id) : null;
     const isPending = assignment?.status === "PENDING";
 
+    const getAvailableGeofences = () => {
+      return allGeofences
+        .filter((g) => !assignments.some((a) => a.geofence_id === g.geofence_id && a.geofence_number !== slotKey))
+        .map(g => ({
+          value: g.geofence_id,
+          label: g.geofence_name,
+        }));
+    };
+
     return (
-      <div className="flex flex-col gap-2.5 flex-1 min-w-0 w-full group/slot">
-        <div className="flex items-center justify-between px-1">
-          <span className="text-[10px] font-black text-foreground/75 uppercase tracking-[0.15em]">
+      <Box className="flex flex-col gap-2.5 flex-1 min-w-0 w-full group/slot">
+        <Group justify="space-between" px={4}>
+          <Text size="xs" fw={900} c="dimmed" tt="uppercase" className="tracking-[0.15em]">
             {slotLabel}
-          </span>
+          </Text>
           {/* Status Badges */}
           {isDesyncPending ? (
-            <Badge variant="outline" className="text-[8px] font-black tracking-widest px-1.5 py-0 h-4.5 uppercase border-rose-500/30 text-rose-500 bg-rose-500/10 animate-pulse">
+            <Badge size="xs" variant="light" color="red" className="font-black tracking-widest uppercase animate-pulse">
                To Desync
             </Badge>
           ) : isPending ? (
-            <Badge variant="outline" className="text-[8px] font-black tracking-widest px-1.5 py-0 h-4.5 uppercase border-amber-500/30 text-amber-500 bg-amber-500/10 animate-pulse">
+            <Badge size="xs" variant="light" color="orange" className="font-black tracking-widest uppercase animate-pulse">
                To Sync
             </Badge>
           ) : geofence ? (
-            <Badge variant="outline" className="text-[8px] font-black tracking-widest px-1.5 py-0 h-4.5 uppercase border-emerald-500/20 text-emerald-500 bg-emerald-500/5">
+            <Badge size="xs" variant="light" color="teal" className="font-black tracking-widest uppercase">
                Synced
             </Badge>
           ) : (
-            <Badge variant="outline" className="text-[8px] font-black tracking-widest px-1.5 py-0 h-4.5 uppercase border-border/80 text-muted-foreground/50 bg-muted/10">
+            <Badge size="xs" variant="light" color="gray" className="font-black tracking-widest uppercase">
                Empty
             </Badge>
           )}
-        </div>
+        </Group>
         
-        <div className={cn(
+        <Box className={cn(
           "relative h-14 rounded-2xl border transition-all duration-300 shadow-sm flex items-center justify-between px-4 overflow-hidden",
           isDesyncPending
             ? "bg-rose-500/5 border-rose-500/25 border-dashed"
@@ -82,128 +83,101 @@ export function HardwareSlotManager({
         )}>
           {geofence && !isDesyncPending ? (
             <>
-              <div className="flex items-center gap-3 min-w-0">
-                <div 
-                  className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0 shadow-sm border border-white/10"
-                  style={{ backgroundColor: geofence.color || "#4f46e5" }}
-                >
+              <Group gap="sm" className="min-w-0 flex-1">
+                <ThemeIcon variant="filled" color="indigo" radius="md" size="md">
                   <MapPin className="h-3.5 w-3.5 text-white" />
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[11px] font-black uppercase tracking-tight truncate leading-none mb-1 text-foreground">
+                </ThemeIcon>
+                <Box className="flex-1 min-w-0">
+                  <Text size="xs" fw={900} tt="uppercase" className="tracking-tight truncate leading-none mb-1">
                     {geofence.geofence_name}
-                  </span>
-                  <span className="text-[9px] font-mono font-bold text-muted-foreground/60 leading-none">
+                  </Text>
+                  <Text size="0.6rem" c="dimmed" fw={700} ff="monospace" className="leading-none">
                     ID: {geofence.geofence_id}
-                  </span>
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
+                  </Text>
+                </Box>
+              </Group>
+              <ActionIcon
+                variant="subtle"
+                color="red"
                 onClick={() => onUpdateAssignment(slotKey, null)}
-                className="h-7 w-7 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 text-muted-foreground/40 hover:scale-105 active:scale-95 transition-all shrink-0"
+                className="hover:scale-105 active:scale-95 transition-all shrink-0"
                 title="Desync Geofence"
               >
-                <X className="h-4 w-4" />
-              </Button>
+                <X size="1rem" />
+              </ActionIcon>
             </>
           ) : isDesyncPending ? (
             <>
-              <div className="flex items-center gap-3 min-w-0 opacity-60">
-                <div className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0 bg-rose-500/10 border border-rose-500/20 text-rose-500">
+              <Group gap="sm" className="min-w-0 flex-1 opacity-60">
+                <Box className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0 bg-rose-500/10 border border-rose-500/20 text-rose-500">
                   <X className="h-4 w-4 animate-pulse" />
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[11px] font-black uppercase tracking-tight truncate leading-none mb-1 text-rose-500 line-through">
+                </Box>
+                <Box className="flex-1 min-w-0">
+                  <Text size="xs" fw={900} tt="uppercase" className="tracking-tight truncate leading-none mb-1 text-rose-500 line-through">
                     {getGeofenceById(originalGeofenceId)?.geofence_name || "Geofence"}
-                  </span>
-                  <span className="text-[9px] font-bold text-rose-400/70 leading-none">
+                  </Text>
+                  <Text size="0.6rem" fw={700} className="text-rose-400/70 leading-none">
                     Pending De-provisioning
-                  </span>
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
+                  </Text>
+                </Box>
+              </Group>
+              <ActionIcon
+                variant="subtle"
                 onClick={() => onUpdateAssignment(slotKey, originalGeofenceId)}
-                className="h-7 w-7 rounded-lg hover:bg-primary/10 hover:text-primary text-muted-foreground/40 hover:scale-105 active:scale-95 transition-all shrink-0"
+                className="hover:scale-105 active:scale-95 transition-all shrink-0"
                 title="Undo Desync"
               >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
+                <RefreshCw size="1rem" />
+              </ActionIcon>
             </>
           ) : (
-            <Select onValueChange={(val) => onUpdateAssignment(slotKey, val)}>
-              <SelectTrigger className="absolute inset-0 w-full h-full border-none bg-transparent px-4 hover:bg-transparent focus:ring-0 shadow-none flex items-center justify-between">
-                <div className="flex items-center gap-2.5 text-muted-foreground/50">
-                  <Cpu className="h-4 w-4 text-primary/40 group-hover/slot:text-primary/70 transition-colors" />
-                  <span className="text-[10px] font-black uppercase tracking-widest group-hover/slot:text-foreground/80 transition-colors">Assign Record</span>
-                </div>
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border-border/80 shadow-xl bg-card z-[1200]">
-                {allGeofences
-                  .filter((g) => !assignments.some((a) => a.geofence_id === g.geofence_id && a.geofence_number !== slotKey))
-                  .map((g) => (
-                    <SelectItem key={g.geofence_id} value={g.geofence_id} className="py-2.5 rounded-lg focus:bg-primary/5 cursor-pointer">
-                      <div className="flex items-center gap-3">
-                        <div className="h-3.5 w-3.5 rounded-md border border-white/10 shrink-0" style={{ backgroundColor: g.color || "#4f46e5" }} />
-                        <span className="text-[11px] font-black uppercase tracking-tight text-foreground">{g.geofence_name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                {allGeofences.filter((g) => !assignments.some((a) => a.geofence_id === g.geofence_id && a.geofence_number !== slotKey)).length === 0 && (
-                   <div className="p-6 text-center">
-                     <p className="text-[10px] font-bold uppercase text-muted-foreground/50 tracking-widest mb-1">No Available Records</p>
-                     <p className="text-[9px] text-muted-foreground/30 italic">Create or select another geofence</p>
-                   </div>
-                )}
-              </SelectContent>
-            </Select>
+            <Select
+              onChange={(val) => onUpdateAssignment(slotKey, val)}
+              placeholder="ASSIGN RECORD"
+              data={getAvailableGeofences()}
+              variant="unstyled"
+              className="absolute inset-0 w-full h-full"
+              classNames={{
+                input: "h-full w-full px-4 text-[10px] font-black tracking-widest uppercase cursor-pointer",
+                dropdown: "bg-card border-border shadow-xl rounded-xl",
+                option: "text-xs font-bold uppercase",
+              }}
+              leftSection={<Cpu size="0.9rem" className="text-muted-foreground ml-2" />}
+              nothingFoundMessage={
+                <Box p="md" className="text-center">
+                  <Text size="xs" fw={700} tt="uppercase" c="dimmed" className="tracking-widest mb-1">No Available Records</Text>
+                  <Text size="0.6rem" fs="italic" c="dimmed">Create or select another geofence</Text>
+                </Box>
+              }
+            />
           )}
-        </div>
-      </div>
+        </Box>
+      </Box>
     );
   };
 
   return (
-    <Card className="w-full shadow-sm border-border rounded-2xl overflow-hidden bg-card/50 backdrop-blur-sm">
-      <CardContent className="p-4 md:p-5 flex flex-col lg:flex-row items-stretch lg:items-center gap-6">
-        {/* Slots Grid */}
-        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <Card shadow="sm" radius="xl" withBorder className="bg-card/50 backdrop-blur-sm">
+      <Box className="flex flex-col lg:flex-row items-stretch lg:items-center gap-6">
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md" className="flex-1">
           {renderSlot("GEO1 Node", "GEO1")}
           {renderSlot("GEO2 Node", "GEO2")}
           {renderSlot("GEO3 Node", "GEO3")}
-        </div>
+        </SimpleGrid>
 
-        {/* Action Button */}
-        <div className="shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3.5 pt-3 lg:pt-0">
-
+        <Group justify="flex-end" className="shrink-0 pt-3 lg:pt-0">
           <Button
             onClick={onSave}
             disabled={isSaving || !selectedImei || pendingCount === 0}
-            size="lg"
-            className={cn(
-              "w-full lg:w-auto font-black uppercase tracking-[0.15em] text-[10px] h-11 px-8 shadow-lg transition-all rounded-xl",
-              isSaving ? "bg-muted" : "bg-primary hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98]"
-            )}
+            size="md"
+            loading={isSaving}
+            leftSection={!isSaving && <RefreshCw size="1rem" />}
+            className="w-full lg:w-auto font-black uppercase tracking-[0.15em] text-[10px] px-8 transition-all"
           >
-            {isSaving ? (
-              <>
-                <RefreshCw className="h-4 w-4 animate-spin mr-3 opacity-50" />
-                Synchronizing...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-3" />
-                Sync to Device
-              </>
-            )}
+            Sync to Device
           </Button>
-        </div>
-      </CardContent>
+        </Group>
+      </Box>
     </Card>
   );
 }

@@ -12,20 +12,10 @@ import {
   Users,
 } from "lucide-react";
 import * as React from "react";
-import { NavLink } from "react-router-dom";
 import { useUserContext } from "@/contexts/UserContext";
+import { Group, Stack, Box, Text, Image } from "@mantine/core";
 
 import { NavMain } from "@/components/nav-main";
-import { NavUser } from "@/components/nav-user";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
 
 const data = {
   topNavItems: [
@@ -37,7 +27,7 @@ const data = {
       roles: ["admin"],
     },
     {
-      name: "Device List",
+      name: "Device Fleet",
       path: "/devices/list",
       end: "/devices",
       icon: PhoneIcon,
@@ -95,7 +85,11 @@ const data = {
   ],
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+  collapsed,
+}: {
+  collapsed: boolean;
+}) {
   const { userType } = useUserContext();
 
   const filteredNavItems = React.useMemo(() => {
@@ -107,32 +101,32 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }, [userType]);
 
   return (
-    <Sidebar
-      className="top-[--header-height] !h-[calc(100svh-var(--header-height))]"
-      {...props}
-    >
-      <SidebarHeader className="sm:hidden">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <NavLink to="/">
-                <img src="/images/favicon.png" className="size-8" />
+    <Stack h="100%" gap="lg">
+      <Box>
+        {!collapsed && (
+          <Box px="xs" mb="lg" visibleFrom="sm">
+            <Text size="xs" fw={900} c="dimmed" tt="uppercase">
+              Core Fleet
+            </Text>
+          </Box>
+        )}
 
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Synquerra</span>
-                  <span className="truncate text-xs">Management</span>
-                </div>
-              </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={filteredNavItems} />
-      </SidebarContent>
-      <SidebarFooter>
-        <NavUser />
-      </SidebarFooter>
-    </Sidebar>
+        <Group hiddenFrom="sm" p="sm" mb="md" justify="space-between" align="center">
+          <Group gap="sm" wrap="nowrap">
+            <Image src="/images/favicon.png" alt="Synquerra" h={32} w={32} fit="contain" />
+            <Box>
+              <Text size="sm" fw={600}>
+                Synquerra
+              </Text>
+              <Text size="xs" c="dimmed">
+                Management
+              </Text>
+            </Box>
+          </Group>
+        </Group>
+
+        <NavMain items={filteredNavItems} collapsed={collapsed} />
+      </Box>
+    </Stack>
   );
 }

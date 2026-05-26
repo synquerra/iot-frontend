@@ -2,28 +2,10 @@ import { useEffect, useState } from "react";
 import L, { type LatLngTuple } from "leaflet";
 import icon from "leaflet/dist/images/marker-icon.png";
 import iconShadow from "leaflet/dist/images/marker-shadow.png";
-import { LocateFixed, RotateCcw, Save, Trash2 } from "lucide-react";
+import { RotateCcw, Save, Trash2 } from "lucide-react";
 import { MapContainer, Marker, Polygon, Polyline, TileLayer, useMap, useMapEvents } from "react-leaflet";
-import { toast } from "sonner";
-
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { toast } from "@/lib/toast";
+import { Button, Card, Select, Badge, Modal, Group, Text, Box } from "@mantine/core";
 import { DEFAULT_CENTER } from "../constants";
 import type { ActiveGeofence } from "../types";
 import type { GeofencePayload } from "../hooks/useGeofenceCommand";
@@ -32,14 +14,7 @@ import type {
   DeviceCommandResponse,
   PublishedDeviceCommandResult,
 } from "@/helpers/deviceCommandConstants";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+
 const defaultMarker = L.icon({
   iconUrl: icon,
   shadowUrl: iconShadow,
@@ -235,218 +210,208 @@ export function AddGeofenceDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} >
-      <DialogContent className="max-h-[90vh] overflow-hidden p-0 sm:max-w-6xl ">
-        <div className="flex h-full max-h-[90vh] flex-col">
-          <DialogHeader className="border-b px-6 py-4">
-            <DialogTitle>Add Geofencing</DialogTitle>
-            <DialogDescription>
-              Click on the map to create a polygon for device {selectedImei}. Save
-              once the shape has at least three vertices.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto p-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between gap-3">
-                  <CardTitle>Create Geofence</CardTitle>
-                  <Badge variant={draftVertices.length >= 3 ? "default" : "secondary"}>
-                    {draftVertices.length}/{maxVertices} points
-                  </Badge>
-                </div>
-                <CardDescription>
-                  Name the location, place up to {maxVertices} points, then save the
-                  polygon.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-lg border bg-muted/30 p-3 text-sm">
-                  <div className="text-muted-foreground">Target device</div>
-                  <div className="mt-1 font-mono">{selectedImei || "No device selected"}</div>
-                </div>
-                <Select value={draftNumber} onValueChange={(value) => setDraftNumber(value)} disabled={!selectedImei || isSaving}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="GEO FENCE" />
-                  </SelectTrigger>
-                  <SelectContent position="item-aligned">
-                    <SelectGroup>
-                      <SelectItem value="GEO1">Geofence 1</SelectItem>
-                      <SelectItem value="GEO2">Geofence 2</SelectItem>
-                      <SelectItem value="GEO3">Geofence 3</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                <div className="space-y-2">
-                  <Label htmlFor="geofence-name">Geofence Name <span className="text-destructive">*</span></Label>
-                  <Input
-                    id="geofence-name"
-                    placeholder="Enter location name"
-                    value={draftName}
-                    onChange={(event) => setDraftName(event.target.value)}
-                    disabled={!selectedImei || isSaving}
-                  />
-                </div>
-
-                {/* Section: 5-Point Coordinates */}
-                <div className="space-y-3 pt-2 border-t border-border/50">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-foreground/80">
-                      Coordinates (5-Point Polygon)
-                    </Label>
-                    <span className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-wider">
-                      Map Click or Type
-                    </span>
-                  </div>
-
-                  <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
-                    {localCoords.map((c, i) => (
-                      <div key={i} className="flex items-center gap-2 p-2 rounded-xl bg-card border border-border shadow-sm group hover:border-primary/40 transition-all duration-200">
-                        <span className="w-7 h-7 rounded-lg flex items-center justify-center bg-primary/10 border border-primary/20 text-[9px] font-black text-primary uppercase shrink-0">
-                          P{i + 1}
-                        </span>
-                        <div className="grid grid-cols-2 gap-2 flex-1">
-                          <Input
-                            type="text"
-                            placeholder="Latitude"
-                            className="h-8 text-xs font-bold font-mono bg-background border-border text-foreground hover:border-primary/40 focus:border-primary focus:ring-1 focus:ring-primary focus:bg-background transition-all"
-                            value={c.lat}
-                            onChange={(e) => handleLocalCoordChange(i, "lat", e.target.value)}
-                            disabled={!selectedImei || isSaving}
-                          />
-                          <Input
-                            type="text"
-                            placeholder="Longitude"
-                            className="h-8 text-xs font-bold font-mono bg-background border-border text-foreground hover:border-primary/40 focus:border-primary focus:ring-1 focus:ring-primary focus:bg-background transition-all"
-                            value={c.lng}
-                            onChange={(e) => handleLocalCoordChange(i, "lng", e.target.value)}
-                            disabled={!selectedImei || isSaving}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={undoLastVertex}
-                    disabled={draftVertices.length === 0 || isSaving}
-                    className="gap-2"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                    Undo
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={clearDraft}
-                    disabled={draftVertices.length === 0 || isSaving}
-                    className="gap-2"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Clear
-                  </Button>
-                </div>
-
-                <Button
-                  onClick={saveDraft}
-                  disabled={
-                    !selectedImei ||
-                    draftName.trim() === "" ||
-                    draftVertices.length < 3 ||
-                    !canAddMoreGeofences ||
-                    isSaving
-                  }
-                  className="w-full gap-2"
-                >
-                  <Save className="h-4 w-4" />
-                  {isSaving ? "Saving..." : "Save Geofence"}
-                </Button>
-
-                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  <Badge variant="outline" className="gap-1">
-                    <LocateFixed className="h-3.5 w-3.5" />
-                    {activeDeviceGeofences.length}/{maxGeofences} geofences
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="overflow-hidden">
-              <CardHeader>
-                <CardTitle>Map Editor</CardTitle>
-                <CardDescription>
-                  Click the map to place polygon points. Saved geofences remain
-                  visible for reference while you draw.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="h-[55vh] min-h-[420px] w-full bg-muted">
-                  <MapContainer
-                    center={DEFAULT_CENTER}
-                    zoom={13}
-                    scrollWheelZoom
-                    style={{ height: "100%", width: "100%" }}
-                  >
-                    <TileLayer
-                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
-
-                    <MapClickHandler
-                      disabled={!selectedImei}
-                      onAddPoint={addDraftVertex}
-                    />
-                    <MapResizeHandler />
-
-                    {draftVertices.map((point, index) => (
-                      <Marker
-                        key={`${point[0]}-${point[1]}-${index}`}
-                        position={point}
-                      />
-                    ))}
-
-                    {draftVertices.length === 2 ? (
-                      <Polyline
-                        positions={draftVertices}
-                        pathOptions={{
-                          color: "#f59e0b",
-                          dashArray: "6 6",
-                        }}
-                      />
-                    ) : null}
-
-                    {draftVertices.length >= 3 ? (
-                      <Polygon
-                        positions={draftVertices}
-                        pathOptions={{
-                          color: "#f59e0b",
-                          fillColor: "#fbbf24",
-                          fillOpacity: 0.2,
-                          dashArray: "6 6",
-                        }}
-                      />
-                    ) : null}
-
-                    {activeDeviceGeofences.map((geofence) => (
-                      <Polygon
-                        key={geofence.id}
-                        positions={geofence.coordinates}
-                        pathOptions={{
-                          color: geofence.color,
-                          fillColor: geofence.color,
-                          fillOpacity: 0.18,
-                        }}
-                      />
-                    ))}
-                  </MapContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+    <Modal
+      opened={open}
+      onClose={() => onOpenChange(false)}
+      size="1200px"
+      radius="lg"
+      title={
+        <div>
+          <Text size="md" fw={700} className="text-foreground">Add Geofencing</Text>
+          <Text size="xs" className="text-muted-foreground">
+            Click on the map to create a polygon for device {selectedImei}. Save
+            once the shape has at least three vertices.
+          </Text>
         </div>
-      </DialogContent>
-    </Dialog>
+      }
+    >
+      <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <Card className="p-0 border-border">
+          <Group justify="space-between" align="center" className="p-4 border-b border-border">
+            <Text size="sm" fw={700} className="text-foreground">Create Geofence</Text>
+            <Badge color={draftVertices.length >= 3 ? "blue" : "gray"}>
+              {draftVertices.length}/{maxVertices} points
+            </Badge>
+          </Group>
+          <Box className="p-4 space-y-4">
+            <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+              <Text size="xs" className="text-muted-foreground">Target device</Text>
+              <div className="mt-1 font-mono text-xs font-bold">{selectedImei || "No device selected"}</div>
+            </div>
+            
+            <Select
+              value={draftNumber}
+              onChange={(value) => setDraftNumber(value || "")}
+              disabled={!selectedImei || isSaving}
+              placeholder="GEO FENCE"
+              data={[
+                { value: "GEO1", label: "Geofence 1" },
+                { value: "GEO2", label: "Geofence 2" },
+                { value: "GEO3", label: "Geofence 3" },
+              ]}
+              styles={{ input: { height: '2rem', fontSize: '0.75rem', fontWeight: 700 } }}
+            />
+
+            <div className="space-y-2">
+              <Text size="xs" fw={700} className="text-foreground">Geofence Name <span className="text-red-500">*</span></Text>
+              <input
+                placeholder="Enter location name"
+                value={draftName}
+                onChange={(event) => setDraftName(event.target.value)}
+                disabled={!selectedImei || isSaving}
+                className="h-8 text-xs bg-background border border-border/80 text-foreground hover:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition-all rounded-md px-2 w-full font-semibold"
+              />
+            </div>
+
+            <div className="space-y-3 pt-2 border-t border-border/50">
+              <div className="flex items-center justify-between">
+                <Text size="0.6rem" fw={900} tt="uppercase" className="text-foreground/80 tracking-widest">
+                  Coordinates (5-Point Polygon)
+                </Text>
+                <Text size="0.55rem" fw={700} tt="uppercase" className="text-muted-foreground/50 tracking-wider">
+                  Map Click or Type
+                </Text>
+              </div>
+
+              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
+                {localCoords.map((c, i) => (
+                  <div key={i} className="flex items-center gap-2 p-2 rounded-xl bg-card border border-border shadow-sm group hover:border-primary/40 transition-all duration-200">
+                    <span className="w-7 h-7 rounded-lg flex items-center justify-center bg-primary/10 border border-primary/20 text-[9px] font-black text-primary uppercase shrink-0">
+                      P{i + 1}
+                    </span>
+                    <div className="grid grid-cols-2 gap-2 flex-1">
+                      <input
+                        type="text"
+                        placeholder="Latitude"
+                        className="h-8 text-xs font-bold font-mono bg-background border border-border/80 text-foreground hover:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition-all rounded-md px-2 w-full"
+                        value={c.lat}
+                        onChange={(e) => handleLocalCoordChange(i, "lat", e.target.value)}
+                        disabled={!selectedImei || isSaving}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Longitude"
+                        className="h-8 text-xs font-bold font-mono bg-background border border-border/80 text-foreground hover:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition-all rounded-md px-2 w-full"
+                        value={c.lng}
+                        onChange={(e) => handleLocalCoordChange(i, "lng", e.target.value)}
+                        disabled={!selectedImei || isSaving}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                color="gray"
+                onClick={undoLastVertex}
+                disabled={draftVertices.length === 0 || isSaving}
+                className="gap-2 text-xs font-bold"
+              >
+                <RotateCcw className="h-4 w-4 mr-1" />
+                Undo
+              </Button>
+              <Button
+                variant="outline"
+                color="gray"
+                onClick={clearDraft}
+                disabled={draftVertices.length === 0 || isSaving}
+                className="gap-2 text-xs font-bold"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Clear
+              </Button>
+            </div>
+
+            <Button
+              onClick={saveDraft}
+              color="blue"
+              disabled={
+                !selectedImei ||
+                draftName.trim() === "" ||
+                draftVertices.length < 3 ||
+                !canAddMoreGeofences ||
+                isSaving
+              }
+              className="w-full gap-2 text-white font-bold text-xs"
+            >
+              <Save className="h-4 w-4 mr-1" />
+              {isSaving ? "Saving..." : "Save Geofence"}
+            </Button>
+          </Box>
+        </Card>
+
+        <Card className="overflow-hidden p-0 border-border">
+          <Group justify="space-between" align="center" className="p-4 border-b border-border">
+            <Text size="sm" fw={700} className="text-foreground">Map Editor</Text>
+            <Text size="xs" className="text-muted-foreground">Click the map to place polygon points.</Text>
+          </Group>
+          <Box className="p-0">
+            <div className="h-[55vh] min-h-[420px] w-full bg-muted">
+              <MapContainer
+                center={DEFAULT_CENTER}
+                zoom={13}
+                scrollWheelZoom
+                style={{ height: "100%", width: "100%" }}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+
+                <MapClickHandler
+                  disabled={!selectedImei}
+                  onAddPoint={addDraftVertex}
+                />
+                <MapResizeHandler />
+
+                {draftVertices.map((point, index) => (
+                  <Marker
+                    key={`${point[0]}-${point[1]}-${index}`}
+                    position={point}
+                  />
+                ))}
+
+                {draftVertices.length === 2 ? (
+                  <Polyline
+                    positions={draftVertices}
+                    pathOptions={{
+                      color: "#f59e0b",
+                      dashArray: "6 6",
+                    }}
+                  />
+                ) : null}
+
+                {draftVertices.length >= 3 ? (
+                  <Polygon
+                    positions={draftVertices}
+                    pathOptions={{
+                      color: "#f59e0b",
+                      fillColor: "#fbbf24",
+                      fillOpacity: 0.2,
+                      dashArray: "6 6",
+                    }}
+                  />
+                ) : null}
+
+                {activeDeviceGeofences.map((geofence) => (
+                  <Polygon
+                    key={geofence.id}
+                    positions={geofence.coordinates}
+                    pathOptions={{
+                      color: geofence.color,
+                      fillColor: geofence.color,
+                      fillOpacity: 0.18,
+                    }}
+                  />
+                ))}
+              </MapContainer>
+            </div>
+          </Box>
+        </Card>
+      </div>
+    </Modal>
   );
 }

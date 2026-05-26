@@ -1,95 +1,92 @@
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, Box, Skeleton, Group } from "@mantine/core";
 
 export const MetricCardSkeleton = () => (
-  <Card className="overflow-hidden">
-    <CardContent className="p-6">
-      <div className="flex items-start justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-8 w-16" />
-        </div>
-        <Skeleton className="h-12 w-12 rounded-full" />
-      </div>
-      <div className="mt-4 pt-3 border-t">
-        <Skeleton className="h-4 w-32" />
-      </div>
-    </CardContent>
+  <Card radius="xl" withBorder padding={0} className="overflow-hidden">
+    <Box className="p-6">
+      <Group justify="space-between" align="flex-start">
+        <Box className="space-y-2">
+          <Skeleton height={16} width={80} radius="md" />
+          <Skeleton height={32} width={64} radius="md" />
+        </Box>
+        <Skeleton height={48} width={48} circle />
+      </Group>
+      <Box className="mt-4 pt-3 border-t border-border">
+        <Skeleton height={16} width={128} radius="md" />
+      </Box>
+    </Box>
   </Card>
 );
 
 export const StatusCardSkeleton = () => (
-  <Card>
-    <CardHeader className="pb-2">
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-5 w-16" />
-      </div>
-    </CardHeader>
-    <CardContent>
-      <div className="space-y-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-4 w-4 rounded-full" />
-                <Skeleton className="h-4 w-24" />
-              </div>
-              <Skeleton className="h-4 w-12" />
-            </div>
-            <Skeleton className="h-1.5 w-full" />
-          </div>
-        ))}
-      </div>
-    </CardContent>
+  <Card shadow="sm" radius="md" withBorder padding="md">
+    <Box mb="md">
+      <Group justify="space-between" align="center">
+        <Skeleton height={16} width={96} radius="md" />
+        <Skeleton height={20} width={64} radius="md" />
+      </Group>
+    </Box>
+    <Box className="space-y-4">
+      {[...Array(4)].map((_, i) => (
+        <Box key={i} className="space-y-1.5">
+          <Group justify="space-between" align="center">
+            <Group gap={8} align="center">
+              <Skeleton height={16} width={16} circle />
+              <Skeleton height={16} width={96} radius="md" />
+            </Group>
+            <Skeleton height={16} width={48} radius="md" />
+          </Group>
+          <Skeleton height={6} width="100%" radius="md" />
+        </Box>
+      ))}
+    </Box>
   </Card>
 );
 
 export const ActivityCardSkeleton = () => (
-  <Card>
-    <CardHeader>
-      <div className="flex items-center justify-between">
-        <div>
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-4 w-40 mt-1" />
-        </div>
-        <Skeleton className="h-8 w-20" />
-      </div>
-    </CardHeader>
-    <CardContent>
-      <div className="grid gap-4 sm:grid-cols-3">
+  <Card shadow="sm" radius="md" withBorder padding="md">
+    <Box mb="md">
+      <Group justify="space-between" align="center">
+        <Box>
+          <Skeleton height={20} width={128} radius="md" />
+          <Skeleton height={16} width={160} radius="md" mt={4} />
+        </Box>
+        <Skeleton height={32} width={80} radius="md" />
+      </Group>
+    </Box>
+    <Box>
+      <Box className="grid gap-4 sm:grid-cols-3">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="rounded-xl bg-muted/50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Skeleton className="h-8 w-12" />
-                <Skeleton className="h-3 w-16 mt-1" />
-              </div>
-              <Skeleton className="h-8 w-8 rounded-full" />
-            </div>
-          </div>
+          <Box key={i} className="rounded-xl bg-muted/50 p-4">
+            <Group justify="space-between" align="center">
+              <Box>
+                <Skeleton height={32} width={48} radius="md" />
+                <Skeleton height={12} width={64} radius="md" mt={4} />
+              </Box>
+              <Skeleton height={32} width={32} circle />
+            </Group>
+          </Box>
         ))}
-      </div>
-    </CardContent>
+      </Box>
+    </Box>
   </Card>
 );
 
 export const SidebarCardSkeleton = ({ lines = 2 }: { lines?: number }) => (
-  <Card>
-    <CardHeader>
-      <Skeleton className="h-5 w-32" />
-      <Skeleton className="h-4 w-40" />
-    </CardHeader>
-    <CardContent className="space-y-4">
+  <Card shadow="sm" radius="md" withBorder padding="md">
+    <Box mb="md">
+      <Skeleton height={20} width={128} radius="md" mb={4} />
+      <Skeleton height={16} width={160} radius="md" />
+    </Box>
+    <Box className="space-y-4">
       {[...Array(lines)].map((_, i) => (
-        <div key={i} className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-8 w-8 rounded-lg" />
-            <Skeleton className="h-4 w-24" />
-          </div>
-          <Skeleton className="h-5 w-16" />
-        </div>
+        <Group key={i} justify="space-between" align="center">
+          <Group gap={12} align="center">
+            <Skeleton height={32} width={32} radius="md" />
+            <Skeleton height={16} width={96} radius="md" />
+          </Group>
+          <Skeleton height={20} width={64} radius="md" />
+        </Group>
       ))}
-    </CardContent>
+    </Box>
   </Card>
 );

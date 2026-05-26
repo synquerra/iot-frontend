@@ -1,7 +1,7 @@
 import api from "@/lib/axios";
 import type { DeviceOverview, AnalyticsHealth } from "@/types";
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { getDeviceByImei, type Device } from "@/features/devices/services/deviceService";
 import { getLatestDeviceSettings, type LatestDeviceSettingsRecord } from "@/features/device-settings/services/deviceSettingsService";
 

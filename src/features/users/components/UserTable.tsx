@@ -6,22 +6,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
 } from "@tanstack/react-table";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Table, Badge, Menu, ActionIcon, Button, Group, Text, Box, Center } from "@mantine/core";
 import { MoreHorizontal, Edit, Trash2, Users } from "lucide-react";
 import { type User } from "../types";
 
@@ -42,21 +27,21 @@ export function UserTable({ data, onEdit, onDelete, onAdd }: UserTableProps) {
       cell: (info) => {
         const user = info.row.original;
         return (
-          <div className="flex flex-col">
-            <span className="font-medium">{`${user.first_name} ${user.last_name}`}</span>
-            <span className="text-xs text-muted-foreground">{user.email}</span>
-          </div>
+          <Box>
+            <Text size="sm" fw={500}>{`${user.first_name} ${user.last_name}`}</Text>
+            <Text size="xs" c="dimmed">{user.email}</Text>
+          </Box>
         );
       },
     }),
     columnHelper.accessor("mobile", {
       header: "Mobile",
-      cell: (info) => <span className="font-mono text-xs">{info.getValue()}</span>,
+      cell: (info) => <Text ff="monospace" size="xs">{info.getValue()}</Text>,
     }),
     columnHelper.accessor("user_type", {
       header: "Type",
       cell: (info) => (
-        <Badge variant="secondary" className="font-bold text-[10px] uppercase tracking-wider">
+        <Badge variant="light" color="gray" size="sm" tt="uppercase" fw={700}>
           {info.getValue()}
         </Badge>
       ),
@@ -65,8 +50,9 @@ export function UserTable({ data, onEdit, onDelete, onAdd }: UserTableProps) {
       header: "Status",
       cell: (info) => (
         <Badge
-          variant={info.getValue() ? "default" : "destructive"}
-          className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0 h-4"
+          color={info.getValue() ? "teal" : "red"}
+          variant="filled"
+          size="sm"
         >
           {info.getValue() ? "Active" : "Inactive"}
         </Badge>
@@ -77,26 +63,28 @@ export function UserTable({ data, onEdit, onDelete, onAdd }: UserTableProps) {
       cell: (info) => {
         const user = info.row.original;
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(user)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onDelete(user.user_id)}
-                className="text-destructive focus:text-destructive"
+          <Menu position="bottom-end" withArrow shadow="md">
+            <Menu.Target>
+              <ActionIcon variant="subtle" color="gray">
+                <MoreHorizontal size="1rem" />
+              </ActionIcon>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item
+                leftSection={<Edit size="1rem" />}
+                onClick={() => onEdit(user)}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                Edit
+              </Menu.Item>
+              <Menu.Item
+                leftSection={<Trash2 size="1rem" />}
+                color="red"
+                onClick={() => onDelete(user.user_id)}
+              >
                 Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
         );
       },
     }),
@@ -111,76 +99,70 @@ export function UserTable({ data, onEdit, onDelete, onAdd }: UserTableProps) {
   });
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-border bg-card shadow-lg overflow-hidden">
-        <Table>
-          <TableHeader className="bg-muted/50">
+    <Box>
+      <Box className="rounded-xl border border-border shadow-sm overflow-hidden" bg="var(--mantine-color-body)">
+        <Table verticalSpacing="sm" horizontalSpacing="md" striped highlightOnHover>
+          <Table.Thead className="bg-slate-50 dark:bg-slate-900">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="hover:bg-transparent border-border">
+              <Table.Tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="h-12 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                  <Table.Th key={header.id} className="text-xs uppercase tracking-wider text-muted-foreground">
                     {header.isPlaceholder
                       ? null
                       : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
+                  </Table.Th>
                 ))}
-              </TableRow>
+              </Table.Tr>
             ))}
-          </TableHeader>
-          <TableBody>
+          </Table.Thead>
+          <Table.Tbody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  className="border-border hover:bg-muted/30 transition-colors"
-                >
+                <Table.Tr key={row.id}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-3">
+                    <Table.Td key={cell.id}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
+                    </Table.Td>
                   ))}
-                </TableRow>
+                </Table.Tr>
               ))
             ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-32 text-center">
-                  <div className="flex flex-col items-center justify-center text-muted-foreground gap-2">
-                    <Users className="h-8 w-8 opacity-20" />
-                    <p className="text-sm font-medium">No users found.</p>
-                  </div>
-                </TableCell>
-              </TableRow>
+              <Table.Tr>
+                <Table.Td colSpan={columns.length}>
+                  <Center py="xl" className="flex-col text-muted-foreground">
+                    <Users size="2rem" className="opacity-20 mb-2" />
+                    <Text size="sm" fw={500}>No users found.</Text>
+                  </Center>
+                </Table.Td>
+              </Table.Tr>
             )}
-          </TableBody>
+          </Table.Tbody>
         </Table>
-      </div>
+      </Box>
 
-      <div className="flex items-center justify-between px-2">
-        <div className="text-xs text-muted-foreground font-medium">
+      <Group justify="space-between" mt="md" px="xs">
+        <Text size="xs" c="dimmed" fw={500}>
           Showing {table.getRowModel().rows.length} users
-        </div>
-        <div className="flex items-center space-x-2">
+        </Text>
+        <Group gap="xs">
           <Button
-            variant="outline"
-            size="sm"
+            variant="default"
+            size="xs"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            className="h-8 rounded-lg text-[10px] font-bold uppercase tracking-wide"
           >
             Previous
           </Button>
           <Button
-            variant="outline"
-            size="sm"
+            variant="default"
+            size="xs"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            className="h-8 rounded-lg text-[10px] font-bold uppercase tracking-wide"
           >
             Next
           </Button>
-        </div>
-      </div>
-    </div>
+        </Group>
+      </Group>
+    </Box>
   );
 }

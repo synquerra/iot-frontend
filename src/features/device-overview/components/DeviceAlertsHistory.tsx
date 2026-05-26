@@ -2,10 +2,10 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { getDeviceIncidents, acknowledgeAlert, type AlertErrorItem } from "@/features/alerts/services/alertsService";
 import { AlertsHistory } from "@/features/alerts/components/AlertsHistory";
 import { SeverityOverview } from "@/features/alerts/components/SeverityOverview";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, Box, Group } from "@mantine/core";
 import { AlertCircle, AlertOctagon, XCircle, AlertTriangle, Info } from "lucide-react";
 import type { HistoryItem, ViewMode, SeverityCard } from "@/features/alerts/types";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 interface DeviceAlertsHistoryProps {
   imei: string;
@@ -118,21 +118,30 @@ export function DeviceAlertsHistory({ imei, deviceName }: DeviceAlertsHistoryPro
   };
 
   return (
-    <div className="space-y-6 h-[800px] scroll-container rounded-xl">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)} className="w-full max-w-md">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="errors" className="gap-2">
-              <AlertOctagon className="h-4 w-4" />
+    <Box className="space-y-6 h-[800px] scroll-container rounded-xl">
+      <Group mb="md">
+        <Tabs 
+          value={viewMode} 
+          onChange={(v) => setViewMode(v as ViewMode)}
+          variant="pills"
+          className="w-full max-w-md"
+        >
+          <Tabs.List grow>
+            <Tabs.Tab 
+              value="errors" 
+              leftSection={<AlertOctagon size="1rem" />}
+            >
               Errors
-            </TabsTrigger>
-            <TabsTrigger value="alerts" className="gap-2">
-              <AlertCircle className="h-4 w-4" />
+            </Tabs.Tab>
+            <Tabs.Tab 
+              value="alerts" 
+              leftSection={<AlertCircle size="1rem" />}
+            >
               Alerts
-            </TabsTrigger>
-          </TabsList>
+            </Tabs.Tab>
+          </Tabs.List>
         </Tabs>
-      </div>
+      </Group>
 
       <SeverityOverview cards={cards} loading={loading} />
 
@@ -145,6 +154,6 @@ export function DeviceAlertsHistory({ imei, deviceName }: DeviceAlertsHistoryPro
         onAcknowledge={handleAcknowledge}
         formatDate={formatDate}
       />
-    </div>
+    </Box>
   );
 }

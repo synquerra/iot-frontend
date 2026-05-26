@@ -7,8 +7,7 @@ import { TelemetryFilters } from "./components/TelemetryFilters";
 import { TelemetryPagination } from "./components/TelemetryPagination";
 import { getDeviceByImei, type Device } from "@/features/devices/services/deviceService";
 import { RefreshCw, Activity } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { ActionIcon, Stack, Paper, Text, Group } from "@mantine/core";
 import { PageHeader } from "@/components/PageHeader";
 
 export default function TelemetryPage() {
@@ -49,21 +48,20 @@ export default function TelemetryPage() {
   };
 
   return (
-    <div className="space-y-6 w-full min-w-0 mx-auto overflow-x-hidden pb-10">
+    <Stack gap="lg" className="w-full min-w-0 mx-auto overflow-x-hidden pb-10">
       <PageHeader
         title="Live Telemetry"
         description={device ? `Real-time data stream for ${device.displayName}` : (imei ? `Real-time data stream for ${imei}` : "Real-time raw data transmission logs")}
         icon={Activity}
       >
-        <Button
-          variant="outline"
-          size="icon"
+        <ActionIcon
+          variant="default"
+          size="lg"
           onClick={refresh}
-          disabled={isLoading}
-          className="h-10 w-10 rounded-xl"
+          loading={isLoading}
         >
-          <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin text-primary")} />
-        </Button>
+          <RefreshCw size="1.1rem" />
+        </ActionIcon>
       </PageHeader>
 
       <TelemetryFilters 
@@ -77,17 +75,21 @@ export default function TelemetryPage() {
       />
 
       {error ? (
-        <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-6 text-destructive font-bold flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
-          <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
-             <Activity className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-widest opacity-70">Stream Interrupted</p>
-            <p className="text-sm">{error}</p>
-          </div>
-        </div>
+        <Paper className="border-destructive/20 bg-destructive/5" p="xl" radius="xl" withBorder>
+          <Group align="center">
+            <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+               <Activity className="h-5 w-5 text-destructive" />
+            </div>
+            <div>
+              <Text size="xs" fw={700} tt="uppercase" className="tracking-widest opacity-70 text-destructive">
+                Stream Interrupted
+              </Text>
+              <Text size="sm" className="text-destructive">{error}</Text>
+            </div>
+          </Group>
+        </Paper>
       ) : (
-        <div className="space-y-4">
+        <Stack gap="md">
           <TelemetryTable data={data} loading={isLoading} />
           
           <TelemetryPagination 
@@ -98,8 +100,8 @@ export default function TelemetryPage() {
             onNext={handleNextPage}
             onPrev={handlePrevPage}
           />
-        </div>
+        </Stack>
       )}
-    </div>
+    </Stack>
   );
 }

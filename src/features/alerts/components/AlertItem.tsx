@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge, Text, Group, Box } from "@mantine/core";
 import { Smartphone, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { HistoryItem } from "../types";
@@ -22,41 +22,51 @@ export function AlertItem({ item, isRefreshing, onAcknowledge, formatDate }: Ale
   const theme = severityThemes[item.severity.toLowerCase()] || severityThemes.advisory;
 
   return (
-    <div
+    <Box
       className={cn(
         "group relative rounded-xl border transition-all duration-200 py-2.5 px-4",
         item.is_acknowledged ? "bg-muted/30 border-border opacity-50" : theme
       )}
     >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2 mb-1.5">
-            <h3 className="text-[13px] font-black tracking-tight truncate leading-none">{item.title}</h3>
+      <Group justify="space-between" align="center">
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          <Group gap="xs" mb={6} align="center">
+            <Text size="sm" fw={900} className="tracking-tight truncate leading-none">
+              {item.title}
+            </Text>
             <Badge
-              className={cn(
-                "text-[9px] font-black uppercase px-1.5 py-0 h-4 border-0",
-                item.is_acknowledged ? "bg-muted text-muted-foreground" : "bg-foreground/5 text-inherit"
-              )}
+              size="xs"
+              variant={item.is_acknowledged ? "light" : "filled"}
+              color={item.color}
+              className="font-black uppercase h-4"
             >
               {item.severity}
             </Badge>
-            <span className="text-[9px] font-mono font-black text-muted-foreground/60 bg-foreground/5 px-1.5 py-0.5 rounded leading-none">
+            <Badge 
+              variant="default"
+              size="xs"
+              className="font-mono font-black"
+            >
               {item.code}
-            </span>
-          </div>
+            </Badge>
+          </Group>
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold text-muted-foreground/80 uppercase tracking-tight">
-            <div className="flex items-center gap-1.5">
-              <Smartphone className="h-3 w-3 opacity-40" />
-              <span className="font-mono text-foreground/70">{item.imei}</span>
-            </div>
-            <div className="flex items-center gap-1.5 border-l border-border/40 pl-3">
-              <Clock className="h-3 w-3 opacity-40" />
-              <span className="opacity-70">{formatDate(item.timestamp)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+          <Group gap="md">
+            <Group gap={4}>
+              <Smartphone size="0.75rem" className="opacity-40" />
+              <Text size="xs" fw={700} tt="uppercase" className="tracking-tight opacity-70" ff="monospace">
+                {item.imei}
+              </Text>
+            </Group>
+            <Group gap={4} className="border-l border-border pl-3">
+              <Clock size="0.75rem" className="opacity-40" />
+              <Text size="xs" fw={700} tt="uppercase" className="tracking-tight opacity-70">
+                {formatDate(item.timestamp)}
+              </Text>
+            </Group>
+          </Group>
+        </Box>
+      </Group>
+    </Box>
   );
 }

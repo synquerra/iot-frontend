@@ -13,23 +13,8 @@ import type {
   SortingState,
   VisibilityState,
 } from "@tanstack/react-table";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ChevronDown, ArrowUpDown, Settings2 } from "lucide-react";
+import { Table, Badge, Button, Menu, Group, Box, Center, Text } from "@mantine/core";
+import { ChevronDown, ArrowUpDown, Settings2, Activity } from "lucide-react";
 import type { TelemetryData } from "../hooks/useTelemetry";
 
 const formatDate = (dateString: string) => {
@@ -53,27 +38,28 @@ export const columns: ColumnDef<TelemetryData>[] = [
     accessorKey: "deviceTimestamp",
     header: ({ column }) => (
       <Button
-        variant="ghost"
+        variant="subtle"
+        color="gray"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         className="hover:bg-transparent p-0 font-bold uppercase text-[10px]"
+        rightSection={<ArrowUpDown className="h-3 w-3" />}
       >
         Device Time
-        <ArrowUpDown className="ml-2 h-3 w-3" />
       </Button>
     ),
     cell: ({ row }) => (
-      <div className="font-mono">
+      <Text ff="monospace" size="xs">
         {row.original.deviceTimestamp 
           ? formatDate(row.original.deviceTimestamp) 
           : row.original.deviceRawTimestamp || "-"}
-      </div>
+      </Text>
     ),
   },
   {
     accessorKey: "packet",
     header: "Packet Type",
     cell: ({ row }) => (
-      <Badge variant="outline" className="text-[10px] h-5 tracking-widest uppercase">
+      <Badge variant="outline" color="gray" size="sm" tt="uppercase" className="tracking-widest">
         {row.getValue("packet") || "UNK"}
       </Badge>
     ),
@@ -85,31 +71,31 @@ export const columns: ColumnDef<TelemetryData>[] = [
       const lat = row.original.latitude;
       const lng = row.original.longitude;
       return lat && lng ? (
-        <span className="text-muted-foreground font-mono">
+        <Text c="dimmed" ff="monospace" size="xs">
           {parseFloat(lat).toFixed(4)}, {parseFloat(lng).toFixed(4)}
-        </span>
-      ) : "-";
+        </Text>
+      ) : <Text c="dimmed">-</Text>;
     },
   },
   {
     accessorKey: "speed",
     header: "Speed",
-    cell: ({ row }) => <div className="font-mono">{row.getValue("speed") ? `${row.getValue("speed")} km/h` : "-"}</div>,
+    cell: ({ row }) => <Text ff="monospace" size="xs">{row.getValue("speed") ? `${row.getValue("speed")} km/h` : "-"}</Text>,
   },
   {
     id: "power",
     header: "Bat / Sig",
     cell: ({ row }) => (
-      <div className="flex flex-col gap-0.5 font-mono">
-        <span className="text-green-600 dark:text-green-400 font-semibold">{row.original.battery ? `${row.original.battery}%` : "-"}</span>
-        <span className="text-blue-600 dark:text-blue-400">{row.original.signal ? `${row.original.signal} sig` : "-"}</span>
-      </div>
+      <Box style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <Text span c="teal" fw={600} size="xs" ff="monospace">{row.original.battery ? `${row.original.battery}%` : "-"}</Text>
+        <Text span c="blue" size="xs" ff="monospace">{row.original.signal ? `${row.original.signal} sig` : "-"}</Text>
+      </Box>
     ),
   },
   {
     accessorKey: "rawTemperature",
     header: "Temp",
-    cell: ({ row }) => <div className="font-mono">{row.getValue("rawTemperature") || "-"}</div>,
+    cell: ({ row }) => <Text ff="monospace" size="xs">{String(row.getValue("rawTemperature") || "-")}</Text>,
   },
   {
     accessorKey: "geoid",
@@ -117,12 +103,12 @@ export const columns: ColumnDef<TelemetryData>[] = [
     cell: ({ row }) => {
       const geoid = row.original.geoid;
       if (geoid === "10") {
-        return <span className="text-muted-foreground font-mono italic">Not in a geofence</span>;
+        return <Text c="dimmed" ff="monospace" fs="italic" size="xs">Not in a geofence</Text>;
       }
       if (geoid === "11") {
-        return <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-none h-5 text-[10px] uppercase">GPS Disabled</Badge>;
+        return <Badge color="orange" variant="light" size="sm" tt="uppercase">GPS Disabled</Badge>;
       }
-      return <div className="font-mono">{geoid ? `ID: ${geoid}` : "-"}</div>;
+      return <Text ff="monospace" size="xs">{geoid ? `ID: ${geoid}` : "-"}</Text>;
     },
   },
   {
@@ -131,11 +117,11 @@ export const columns: ColumnDef<TelemetryData>[] = [
     cell: ({ row }) => {
       const alert = row.getValue("alert") as string;
       return alert && alert !== "normal" ? (
-        <Badge variant="destructive" className="h-5 text-[10px] uppercase">
+        <Badge color="red" size="sm" tt="uppercase">
           {alert}
         </Badge>
       ) : (
-        <span className="text-muted-foreground font-mono">Normal</span>
+        <Text c="dimmed" ff="monospace" size="xs">Normal</Text>
       );
     },
   },
@@ -170,112 +156,113 @@ export function TelemetryTable({ data, loading }: Props) {
 
   if (loading && data.length === 0) {
     return (
-      <div className="rounded-md border border-border p-8 text-center text-muted-foreground animate-pulse font-mono uppercase text-xs tracking-widest">
-        Synchronizing live telemetry log stream...
-      </div>
+      <Center py={48} className="rounded-md border border-border bg-muted/5 animate-pulse flex-col text-muted-foreground">
+        <Activity size="2rem" className="opacity-20 mb-2" />
+        <Text ff="monospace" size="xs" tt="uppercase" className="tracking-widest">
+          Synchronizing live telemetry log stream...
+        </Text>
+      </Center>
     );
   }
 
   return (
-    <div className="w-full space-y-4">
-      <div className="flex items-center justify-end">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="ml-auto h-8 gap-2 border-primary/20 bg-primary/5 hover:bg-primary/10">
-              <Settings2 className="h-3.5 w-3.5" />
+    <Box className="w-full space-y-4">
+      <Group justify="flex-end">
+        <Menu shadow="md" width={200} position="bottom-end">
+          <Menu.Target>
+            <Button variant="light" size="xs" leftSection={<Settings2 size="0.9rem" />} rightSection={<ChevronDown size="0.9rem" className="opacity-50" />}>
               Columns
-              <ChevronDown className="h-3.5 w-3.5 opacity-50" />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          </Menu.Target>
+          <Menu.Dropdown>
             {table
               .getAllColumns()
               .filter((column) => column.getCanHide())
               .map((column) => {
                 return (
-                  <DropdownMenuCheckboxItem
+                  <Menu.Item
                     key={column.id}
                     className="capitalize text-xs"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                    onClick={() => column.toggleVisibility(!column.getIsVisible())}
+                    rightSection={column.getIsVisible() ? <Text size="xs">✓</Text> : null}
                   >
                     {column.id.replace(/([A-Z])/g, ' $1')}
-                  </DropdownMenuCheckboxItem>
+                  </Menu.Item>
                 );
               })}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-      <div className="rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden shadow-sm">
-        <Table>
-          <TableHeader>
+          </Menu.Dropdown>
+        </Menu>
+      </Group>
+      
+      <Box className="rounded-xl border border-border shadow-sm overflow-hidden" bg="var(--mantine-color-body)">
+        <Table verticalSpacing="sm" horizontalSpacing="md" striped highlightOnHover>
+          <Table.Thead className="bg-slate-50 dark:bg-slate-900">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="bg-muted/30 border-b border-primary/5">
+              <Table.Tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id} className="h-10 text-[10px] font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                    <Table.Th key={header.id} className="text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
                             header.column.columnDef.header,
                             header.getContext()
                           )}
-                    </TableHead>
+                    </Table.Th>
                   );
                 })}
-              </TableRow>
+              </Table.Tr>
             ))}
-          </TableHeader>
-          <TableBody>
+          </Table.Thead>
+          <Table.Tbody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  className="hover:bg-primary/5 transition-colors border-b border-primary/5 last:border-0"
-                >
+                <Table.Tr key={row.id}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-3 text-[11px] whitespace-nowrap">
+                    <Table.Td key={cell.id} className="text-[11px] whitespace-nowrap">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
+                    </Table.Td>
                   ))}
-                </TableRow>
+                </Table.Tr>
               ))
             ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground font-mono italic">
-                  No telemetry data packets found.
-                </TableCell>
-              </TableRow>
+              <Table.Tr>
+                <Table.Td colSpan={columns.length}>
+                  <Center py="xl" className="text-muted-foreground">
+                    <Text ff="monospace" fs="italic" size="sm">No telemetry data packets found.</Text>
+                  </Center>
+                </Table.Td>
+              </Table.Tr>
             )}
-          </TableBody>
+          </Table.Tbody>
         </Table>
-      </div>
-      <div className="flex items-center justify-between px-2">
-        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">
+      </Box>
+
+      <Group justify="space-between" px="xs">
+        <Text size="xs" fw={500} c="dimmed" tt="uppercase" className="tracking-widest">
           Displaying {data.length} Real-time Packets
-        </div>
-        <div className="flex items-center space-x-2">
+        </Text>
+        <Group gap="xs">
           <Button
-            variant="outline"
-            size="sm"
+            variant="default"
+            size="xs"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            className="h-8 px-3 text-[10px] font-bold uppercase tracking-tighter"
+            className="text-[10px] font-bold uppercase tracking-tighter"
           >
             Previous
           </Button>
           <Button
-            variant="outline"
-            size="sm"
+            variant="default"
+            size="xs"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            className="h-8 px-3 text-[10px] font-bold uppercase tracking-tighter"
+            className="text-[10px] font-bold uppercase tracking-tighter"
           >
             Next
           </Button>
-        </div>
-      </div>
-    </div>
+        </Group>
+      </Group>
+    </Box>
   );
 }

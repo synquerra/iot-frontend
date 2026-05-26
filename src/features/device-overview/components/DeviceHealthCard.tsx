@@ -1,6 +1,4 @@
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Badge, Card, Progress, Box, Group, Text } from "@mantine/core";
 import { cn } from "@/lib/utils";
 import { Clock4, Cpu } from "lucide-react";
 
@@ -31,35 +29,33 @@ export function DeviceHealthCard({
   ];
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium">Device Health</CardTitle>
-          <Badge variant="outline" className="text-xs">
+    <Card shadow="sm" radius="md" withBorder padding="md">
+      <Box mb="md">
+        <Group justify="space-between" align="center">
+          <Text fw={600} size="sm">Device Health</Text>
+          <Badge variant="outline" color="gray" size="sm">
             Real-time
           </Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {items.map((item, i) => (
-            <div key={i} className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <item.icon
-                    className={cn("h-4 w-4", `text-${item.color}-500`)}
-                  />
-                  <span className="text-sm">{item.label}</span>
-                </div>
-                <span className="text-sm font-medium">{item.value}</span>
-              </div>
-              {item.progress !== undefined && (
-                <Progress value={item.progress} className="h-1.5" />
-              )}
-            </div>
-          ))}
-        </div>
-      </CardContent>
+        </Group>
+      </Box>
+      <Box className="space-y-4">
+        {items.map((item, i) => (
+          <Box key={i} className="space-y-1.5">
+            <Group justify="space-between" align="center">
+              <Group gap={8} align="center">
+                <item.icon
+                  className={cn("h-4 w-4", `text-${item.color}-500`)}
+                />
+                <Text size="sm">{item.label}</Text>
+              </Group>
+              <Text size="sm" fw={500}>{item.value}</Text>
+            </Group>
+            {item.progress !== undefined && (
+              <Progress value={item.progress} size="sm" color={item.color} />
+            )}
+          </Box>
+        ))}
+      </Box>
     </Card>
   );
 }

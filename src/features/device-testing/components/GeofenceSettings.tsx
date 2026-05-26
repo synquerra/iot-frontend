@@ -1,33 +1,11 @@
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
+import { Button, Card, Select, Badge, Divider, Modal, Group, Text, Box } from "@mantine/core";
 import { MapPin, Send, Maximize2, Share2, Plus, Layers } from "lucide-react";
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useGlobalLoading } from "@/contexts/GlobalLoadingContext";
 import * as geofenceService from "@/features/geofencing/services/geofenceService";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { CurrentGeofencesMap } from "@/features/geofencing/components/CurrentGeofencesMap";
 import type { LatLngTuple } from "leaflet";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import type { GeofenceRecord } from "@/features/geofencing/types";
 
 interface GeofenceSettingsProps {
@@ -61,7 +39,6 @@ export function GeofenceSettings({ topic, selectedImei, deviceLocation }: Geofen
       if (response && (response.status === "success" || Array.isArray(response.data))) {
         setExistingGeofences(response.data || []);
       } else if (Array.isArray(response)) {
-        // Fallback if the API returns the array directly
         setExistingGeofences(response);
       } else {
         toast.error("Geofence records could not be retrieved");
@@ -173,38 +150,38 @@ export function GeofenceSettings({ topic, selectedImei, deviceLocation }: Geofen
     }
   };
 
-  // Convert current coords to LatLngTuple for map display
   const activeMapPoints = coords
     .filter(c => c.lat && c.lng)
     .map(c => ({ lat: parseFloat(c.lat), lng: parseFloat(c.lng) }));
 
   return (
-    <Card className="border-primary/10 shadow-sm h-full flex flex-col">
-      <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between gap-3 space-y-0 bg-muted/5">
+    <Card className="border-primary/10 shadow-sm h-full flex flex-col p-0">
+      <Group justify="space-between" align="center" className="py-3 px-4 border-b bg-muted/5">
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 text-primary" />
-          <CardTitle className="text-xs font-bold flex items-center gap-2 uppercase tracking-wide">
+          <Text size="xs" fw={700} className="uppercase tracking-wide text-foreground font-bold">
             Geofence Control
-          </CardTitle>
+          </Text>
         </div>
         <div className="flex items-center gap-1.5">
-          <Badge variant="outline" className="text-[9px] font-black tracking-widest uppercase px-1.5 py-0 h-4 border">
+          <Badge color={topic ? "teal" : "red"} variant="light" className="text-[9px] font-black tracking-widest uppercase px-1.5 py-0 h-4 border border-teal-200">
             {topic ? "Active Link" : "Offline"}
           </Badge>
           <Button 
             variant="outline" 
-            size="icon" 
-            className="h-6 w-6 rounded-md border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors"
+            color="gray"
+            size="xs" 
+            className="h-6 w-6 rounded-md p-0 flex items-center justify-center"
             onClick={() => setIsMapModalOpen(true)}
           >
-            <Maximize2 className="h-3 w-3 text-primary" />
+            <Maximize2 className="h-3 w-3" />
           </Button>
         </div>
-      </CardHeader>
+      </Group>
 
-      <CardContent className="pt-4 space-y-5 flex-1 scroll-container overflow-y-auto max-h-[600px]">
+      <Box className="pt-4 p-4 space-y-5 flex-1 scroll-container overflow-y-auto max-h-[600px]">
         {/* Existing Assignment / Sync Section */}
-        <div className="space-y-3 p-3 rounded-xl border border-border bg-muted/20">
+        <Card padding="md" radius="lg" withBorder className="space-y-3 bg-muted/20 border-border">
           <div className="flex items-center gap-2 mb-1">
              <Share2 className="h-3 w-3 text-primary" />
              <span className="text-[10px] font-black uppercase tracking-widest text-foreground">Sync to Device</span>
@@ -213,36 +190,29 @@ export function GeofenceSettings({ topic, selectedImei, deviceLocation }: Geofen
           <div className="grid grid-cols-1 gap-3">
             <div className="space-y-1.5">
               <p className="text-[9px] font-bold uppercase text-muted-foreground/60">Choose Record</p>
-              <Select value={selectedExistingId} onValueChange={setSelectedExistingId}>
-                <SelectTrigger className="h-8 text-[11px] font-bold">
-                  <SelectValue placeholder="Select existing geofence" />
-                </SelectTrigger>
-                <SelectContent>
-                  {existingGeofences.map(gf => (
-                    <SelectItem key={gf.geofence_id} value={String(gf.geofence_id)} className="text-[11px] font-bold">
-                      {gf.geofence_name}
-                    </SelectItem>
-                  ))}
-                  {existingGeofences.length === 0 && (
-                    <div className="p-4 text-center text-[10px] text-muted-foreground italic">No geofences found</div>
-                  )}
-                </SelectContent>
-              </Select>
+              <Select
+                value={selectedExistingId}
+                onChange={(val) => setSelectedExistingId(val || "")}
+                placeholder="Select existing geofence"
+                data={existingGeofences.map(gf => ({ value: String(gf.geofence_id), label: gf.geofence_name || "" }))}
+                styles={{ input: { height: '2rem', fontSize: '0.7rem', fontWeight: 700 } }}
+              />
             </div>
 
             <div className="flex items-end gap-3">
               <div className="flex-1 space-y-1.5">
                 <p className="text-[9px] font-bold uppercase text-muted-foreground/60">Hardware Slot</p>
-                <Select value={geoNumber} onValueChange={(val: any) => setGeoNumber(val)}>
-                  <SelectTrigger className="h-8 text-[11px] font-bold">
-                    <SelectValue placeholder="Slot" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="GEO1">GEO1 (Slot 1)</SelectItem>
-                    <SelectItem value="GEO2">GEO2 (Slot 2)</SelectItem>
-                    <SelectItem value="GEO3">GEO3 (Slot 3)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Select
+                  value={geoNumber}
+                  onChange={(val: any) => setGeoNumber(val || "GEO1")}
+                  placeholder="Slot"
+                  data={[
+                    { value: "GEO1", label: "GEO1 (Slot 1)" },
+                    { value: "GEO2", label: "GEO2 (Slot 2)" },
+                    { value: "GEO3", label: "GEO3 (Slot 3)" },
+                  ]}
+                  styles={{ input: { height: '2rem', fontSize: '0.7rem', fontWeight: 700 } }}
+                />
               </div>
               <Button 
                 onClick={handleSyncExisting} 
@@ -250,14 +220,14 @@ export function GeofenceSettings({ topic, selectedImei, deviceLocation }: Geofen
                 className="h-8 gap-2 font-black text-[9px] uppercase tracking-widest px-4"
                 disabled={!selectedExistingId}
               >
-                <Send size={10} />
+                <Send size={10} className="mr-1" />
                 Sync
               </Button>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <Separator className="bg-primary/5" />
+        <Divider my="sm" className="opacity-40" />
 
         {/* New Creation Section */}
         <div className="space-y-4">
@@ -281,69 +251,73 @@ export function GeofenceSettings({ topic, selectedImei, deviceLocation }: Geofen
              </div>
              
              <div className="space-y-1.5">
-               {coords.map((coord, idx) => (
-                 <div key={idx} className="flex items-center gap-2">
-                   <div className="h-7 w-7 rounded-lg border border-border bg-muted/50 flex items-center justify-center shrink-0">
-                      <span className="text-[9px] font-black text-muted-foreground/60">{idx + 1}</span>
-                   </div>
-                   <Input 
-                     placeholder="0.0000" 
-                     value={coord.lat}
-                     onChange={(e) => handleCoordChange(idx, "lat", e.target.value)}
-                     className="h-7 text-[10px] font-mono bg-muted/30 focus-visible:ring-primary/20"
-                   />
-                   <Input 
-                     placeholder="0.0000" 
-                     value={coord.lng}
-                     onChange={(e) => handleCoordChange(idx, "lng", e.target.value)}
-                     className="h-7 text-[10px] font-mono bg-muted/30 focus-visible:ring-primary/20"
-                   />
-                 </div>
-               ))}
+                {coords.map((coord, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-lg border border-border bg-muted/50 flex items-center justify-center shrink-0">
+                       <span className="text-[9px] font-black text-muted-foreground/60">{idx + 1}</span>
+                    </div>
+                    <input 
+                      placeholder="0.0000" 
+                      value={coord.lat}
+                      onChange={(e) => handleCoordChange(idx, "lat", e.target.value)}
+                      className="h-7 text-[10px] font-mono bg-muted/30 px-2 rounded-md border border-border/80 focus:outline-none focus:ring-1 focus:ring-primary w-full"
+                    />
+                    <input 
+                      placeholder="0.0000" 
+                      value={coord.lng}
+                      onChange={(e) => handleCoordChange(idx, "lng", e.target.value)}
+                      className="h-7 text-[10px] font-mono bg-muted/30 px-2 rounded-md border border-border/80 focus:outline-none focus:ring-1 focus:ring-primary w-full"
+                    />
+                  </div>
+                ))}
              </div>
           </div>
           
-          <Button onClick={handleSend} size="sm" className="w-full gap-2 font-black h-9 text-[10px] uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white transition-all shadow-sm">
-            <Share2 size={12} />
+          <Button onClick={handleSend} size="sm" color="blue" className="w-full gap-2 font-black h-9 text-[10px] uppercase tracking-widest transition-all shadow-sm text-white">
+            <Share2 size={12} className="mr-1" />
             Initialize & Sync
           </Button>
         </div>
-      </CardContent>
+      </Box>
 
-      <Dialog open={isMapModalOpen} onOpenChange={setIsMapModalOpen}>
-        <DialogContent className="max-w-[90vw] w-[1000px] h-[80vh] flex flex-col p-0 gap-0 overflow-hidden border-primary/20 rounded-3xl">
-          <DialogHeader className="p-4 border-b bg-muted/30">
-            <DialogTitle className="flex items-center gap-2 text-sm uppercase font-black tracking-widest">
-              <MapPin className="h-5 w-5 text-primary" />
-              Visual Geofence Mapper
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 relative">
-            <CurrentGeofencesMap 
-              activeCoordinates={activeMapPoints}
-              onAddPoint={handleAddMapPoint}
-              onClearPoints={handleClearPoints}
-              otherGeofences={[]}
-              isEditing={true}
-              deviceLocation={deviceLocation}
-              activeColor="#4f46e5"
-            />
-          </div>
-          <div className="p-4 border-t bg-background flex justify-between items-center">
-             <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                Points Collected: <span className="text-primary">{activeMapPoints.length}</span> / 5
-             </div>
-             <div className="flex items-center gap-3">
-                <Button variant="ghost" onClick={handleClearPoints} size="sm" className="h-8 font-black uppercase text-[10px] tracking-widest text-destructive">
-                   Reset Points
-                </Button>
-                <Button onClick={() => setIsMapModalOpen(false)} size="sm" className="h-8 font-black uppercase text-[10px] tracking-widest px-8 shadow-md">
-                   Done Mapping
-                </Button>
-             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <Modal
+        opened={isMapModalOpen}
+        onClose={() => setIsMapModalOpen(false)}
+        title={
+          <Text size="sm" fw={900} className="flex items-center gap-2 uppercase tracking-widest">
+            <MapPin className="h-5 w-5 text-primary" />
+            Visual Geofence Mapper
+          </Text>
+        }
+        size="1000px"
+        radius="lg"
+        styles={{ body: { padding: 0 } }}
+      >
+        <div style={{ height: '70vh' }} className="relative">
+          <CurrentGeofencesMap 
+            activeCoordinates={activeMapPoints}
+            onAddPoint={handleAddMapPoint}
+            onClearPoints={handleClearPoints}
+            otherGeofences={[]}
+            isEditing={true}
+            deviceLocation={deviceLocation}
+            activeColor="#4f46e5"
+          />
+        </div>
+        <div className="p-4 border-t bg-background flex justify-between items-center">
+           <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              Points Collected: <span className="text-primary">{activeMapPoints.length}</span> / 5
+           </div>
+           <div className="flex items-center gap-3">
+              <Button variant="subtle" color="red" onClick={handleClearPoints} size="xs" className="h-8 font-black uppercase text-[10px] tracking-widest">
+                 Reset Points
+              </Button>
+              <Button onClick={() => setIsMapModalOpen(false)} size="xs" className="h-8 font-black uppercase text-[10px] tracking-widest px-8 shadow-md">
+                 Done Mapping
+              </Button>
+           </div>
+        </div>
+      </Modal>
     </Card>
   );
 }

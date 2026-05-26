@@ -5,16 +5,13 @@ import {
 } from "@/features/device-settings/services/deviceSettingsService";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { CompactIntervals } from "./components/CompactIntervals";
 import { CompactContacts } from "./components/CompactContacts";
 import { TestingResultsConsole } from "./components/TestingResultsConsole";
 import { GeofenceSettings } from "./components/GeofenceSettings";
 import { TestingActionCenter } from "./components/TestingActionCenter";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Badge, ScrollArea, Skeleton, ActionIcon, Box, NavLink, Text } from "@mantine/core";
 import { cn } from "@/lib/utils";
 import {
   Smartphone,
@@ -137,7 +134,7 @@ export default function DeviceTesting() {
           </div>
 
           {/* Device list */}
-          <ScrollArea className="h-40 lg:h-[calc(100vh-14rem)]">
+          <ScrollArea style={{ height: 'calc(100vh - 14rem)' }}>
             {isLoadingDevices ? (
               <div className="p-3 space-y-2">
                 {Array(5).fill(0).map((_, i) => (
@@ -155,41 +152,34 @@ export default function DeviceTesting() {
                   const isSelected = device.imei === selectedImei;
                   const isActive = device.status === "active";
                   return (
-                    <button
+                    <NavLink
                       key={device.imei}
+                      active={isSelected}
                       onClick={() => handleSelectDevice(device.imei)}
-                      className={cn(
-                        "w-full text-left px-3 py-2.5 rounded-lg transition-all duration-150 group flex items-center gap-3",
-                        isSelected
-                          ? "bg-primary text-primary-foreground"
-                          : "hover:bg-muted/60 text-foreground"
-                      )}
-                    >
-                      {/* Status dot */}
-                      <div className={cn(
-                        "h-2 w-2 rounded-full flex-shrink-0 mt-0.5",
-                        isSelected
-                          ? (isActive ? "bg-primary-foreground/80 animate-pulse" : "bg-primary-foreground/30")
-                          : (isActive ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/30")
-                      )} />
-                      <div className="min-w-0 flex-1">
-                        <p className={cn(
-                          "text-xs font-semibold truncate leading-tight",
-                          isSelected ? "text-primary-foreground" : "text-foreground"
-                        )}>
+                      label={
+                        <Text size="xs" fw={700}>
                           {device.displayName}
-                        </p>
-                        <p className={cn(
-                          "text-[10px] font-mono truncate leading-tight mt-0.5",
-                          isSelected ? "text-primary-foreground/60" : "text-muted-foreground"
-                        )}>
-                          {device.imei}
-                        </p>
-                      </div>
-                      {isSelected && (
-                        <ChevronRight className="h-3.5 w-3.5 text-primary-foreground/60 flex-shrink-0" />
-                      )}
-                    </button>
+                        </Text>
+                      }
+                      description={device.imei}
+                      leftSection={
+                        <Box
+                          style={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: '50%',
+                          }}
+                          className={cn(
+                            isSelected
+                              ? (isActive ? "bg-white animate-pulse" : "bg-white/40")
+                              : (isActive ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/30")
+                          )}
+                        />
+                      }
+                      rightSection={isSelected ? <ChevronRight size={12} /> : null}
+                      className="rounded-md mb-1"
+                      variant="filled"
+                    />
                   );
                 })}
               </div>
@@ -205,9 +195,9 @@ export default function DeviceTesting() {
           "bg-card border border-border rounded-xl px-4 py-2.5 flex items-center gap-3 transition-all",
           !selectedDevice && "opacity-50"
         )}>
-          <Button
-            variant="ghost"
-            size="icon"
+          <ActionIcon
+            variant="subtle"
+            color="gray"
             className="h-8 w-8 shrink-0 hover:bg-primary/10 hover:text-primary transition-colors"
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
             title={isSidebarCollapsed ? "Show device list" : "Hide device list"}
@@ -217,7 +207,7 @@ export default function DeviceTesting() {
             ) : (
               <PanelLeftClose className="h-4 w-4" />
             )}
-          </Button>
+          </ActionIcon>
 
           <div className={cn(
             "h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0",
@@ -280,16 +270,16 @@ export default function DeviceTesting() {
               </div>
             )}
             {selectedDevice && (
-              <Button
-                variant="ghost"
-                size="icon"
+              <ActionIcon
+                variant="subtle"
+                color="gray"
                 className="h-8 w-8"
                 onClick={() => loadSettings(true)}
                 disabled={isRefreshingSettings || isLoadingSettings}
                 title="Refresh telemetry"
               >
                 <RefreshCw className={cn("h-3.5 w-3.5", (isRefreshingSettings || isLoadingSettings) && "animate-spin text-primary")} />
-              </Button>
+              </ActionIcon>
             )}
           </div>
         </div>

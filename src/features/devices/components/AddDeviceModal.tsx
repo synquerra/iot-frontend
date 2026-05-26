@@ -1,17 +1,6 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+import { Button, Modal, TextInput, Group, Box, Text } from "@mantine/core";
+import { toast } from "@/lib/toast";
 import { Plus } from "lucide-react";
 import api from "@/lib/axios";
 import { useDeviceTable } from "../context/DeviceTableContext";
@@ -34,13 +23,10 @@ export function AddDeviceModal({ children }: { children?: React.ReactNode }) {
       const { data } = await api.post("/device/add", { imei });
       
       if (data?.status === "success" || data?.message) {
-        // Axios interceptor will likely handle the toast if "note" is present,
-        // but it's safe to manually toast success just in case.
         if (!data.note) {
           toast.success(data.message || "Device registered successfully!");
         }
         
-        // Refresh the backend table to reflect new device
         await refresh();
         
         setOpen(false);
@@ -56,55 +42,59 @@ export function AddDeviceModal({ children }: { children?: React.ReactNode }) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <>
+      <Box onClick={() => setOpen(true)} className="inline-block cursor-pointer">
         {children || (
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button leftSection={<Plus size="1rem" />}>
             Add Device
           </Button>
         )}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      </Box>
+
+      <Modal 
+        opened={open} 
+        onClose={() => setOpen(false)} 
+        title={<Text fw={700}>Add New Device</Text>}
+        centered
+        size="md"
+        overlayProps={{ backgroundOpacity: 0.55, blur: 3 }}
+      >
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Add New Device</DialogTitle>
-            <DialogDescription>
+          <Box className="pb-6 pt-2">
+            <Text size="sm" c="dimmed" mb="lg">
               Enter the unique IMEI code to register a new unit to the platform.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-8">
-            <div className="grid gap-2">
-              <Label htmlFor="imei" className="font-semibold text-secondary-foreground">
-                IMEI Number <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="imei"
-                value={imei}
-                onChange={(e) => setImei(e.target.value)}
-                placeholder="e.g. 862942074957887"
-                disabled={loading}
-                autoFocus
-                required
-                className="col-span-3 transition-colors hover:border-ring focus:border-ring"
-              />
-            </div>
-          </div>
-          <DialogFooter>
+            </Text>
+            
+            <TextInput
+              label={
+                <Text component="span" fw={600} size="sm">
+                  IMEI Number <Text component="span" c="red">*</Text>
+                </Text>
+              }
+              value={imei}
+              onChange={(e) => setImei(e.currentTarget.value)}
+              placeholder="e.g. 862942074957887"
+              disabled={loading}
+              autoFocus
+              required
+              data-autofocus
+            />
+          </Box>
+          <Group justify="flex-end" mt="md">
             <Button
               type="button"
-              variant="outline"
+              variant="default"
               onClick={() => setOpen(false)}
               disabled={loading}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading} className="text-white">
+            <Button type="submit" loading={loading}>
               {loading ? "Registering..." : "Add Device"}
             </Button>
-          </DialogFooter>
+          </Group>
         </form>
-      </DialogContent>
-    </Dialog>
+      </Modal>
+    </>
   );
 }

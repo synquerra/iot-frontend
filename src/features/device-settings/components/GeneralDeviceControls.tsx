@@ -1,5 +1,4 @@
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { Button, Switch, Box, Text, Group, Card } from "@mantine/core";
 import {
   updateAirplaneMode,
   updateLedStatus,
@@ -11,7 +10,7 @@ import type { Device } from "@/features/devices/services/deviceService";
 import { useGlobalLoading } from "@/contexts/GlobalLoadingContext";
 import { cn } from "@/lib/utils";
 import { Phone, Plane, SunMedium, Mic, StopCircle } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useEffect, useState } from "react";
 
 type Props = {
@@ -115,7 +114,7 @@ export function GeneralDeviceControls({ selectedDevice, latestSettings }: Props)
         <Switch
           disabled={disabled}
           checked={!!localCallEnabled}
-          onCheckedChange={handleCalls}
+          onChange={(e) => handleCalls(e.currentTarget.checked)}
         />
       ),
     },
@@ -129,11 +128,11 @@ export function GeneralDeviceControls({ selectedDevice, latestSettings }: Props)
       activeBg: "bg-indigo-500/10 border-indigo-500/20",
       control: (
         <Button
-          size="sm"
-          variant={isAirplane ? "secondary" : "outline"}
+          size="compact-xs"
+          variant={isAirplane ? "light" : "outline"}
           disabled={disabled || isAirplane}
           onClick={handleAirplane}
-          className="h-6 px-2.5 text-[10px] font-bold uppercase tracking-wide"
+          className="font-bold uppercase tracking-wide"
         >
           {isAirplane ? "Active" : "Enable"}
         </Button>
@@ -151,7 +150,7 @@ export function GeneralDeviceControls({ selectedDevice, latestSettings }: Props)
         <Switch
           disabled={disabled}
           checked={isLedOn}
-          onCheckedChange={handleLed}
+          onChange={(e) => handleLed(e.currentTarget.checked)}
         />
       ),
     },
@@ -164,11 +163,12 @@ export function GeneralDeviceControls({ selectedDevice, latestSettings }: Props)
       activeColor: "text-rose-600 dark:text-rose-400",
       activeBg: "bg-rose-500/10 border-rose-500/20",
       control: (
-        <div className="flex items-center gap-1.5">
+        <Group gap="xs" align="center">
           <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-destructive hover:bg-destructive/10 disabled:opacity-50"
+            variant="subtle"
+            color="red"
+            size="compact-xs"
+            px={4}
             onClick={() => handleAmbient("Stop")}
             title="Hard Reset / Stop Monitoring"
             disabled={disabled || ambientStatus === "Stop"}
@@ -178,30 +178,33 @@ export function GeneralDeviceControls({ selectedDevice, latestSettings }: Props)
           <Switch
             disabled={disabled}
             checked={isListening}
-            onCheckedChange={(on) => handleAmbient(on ? "Enable" : "Disable")}
+            onChange={(e) => handleAmbient(e.currentTarget.checked ? "Enable" : "Disable")}
           />
-        </div>
+        </Group>
       ),
     },
   ];
 
   return (
-    <div className={cn(
+    <Box className={cn(
       "grid grid-cols-2 lg:grid-cols-4 gap-3",
       disabled && "opacity-50 grayscale pointer-events-none"
     )}>
       {controls.map((ctrl) => {
         const Icon = ctrl.icon;
         return (
-          <div
+          <Card
             key={ctrl.id}
+            withBorder
+            radius="lg"
+            padding="sm"
             className={cn(
-              "bg-card border rounded-xl p-3 flex flex-col gap-3 transition-all",
-              ctrl.isOn ? cn("border", ctrl.activeBg) : "border-border shadow-sm"
+              "bg-card flex flex-col gap-3 transition-all shadow-sm",
+              ctrl.isOn ? cn("border", ctrl.activeBg) : "border-border"
             )}
           >
-            <div className="flex items-start justify-between gap-2">
-              <div className={cn(
+            <Group justify="space-between" align="flex-start" wrap="nowrap">
+              <Box className={cn(
                 "p-1.5 rounded-lg border",
                 ctrl.isOn ? cn(ctrl.activeBg) : "bg-muted border-border"
               )}>
@@ -209,16 +212,16 @@ export function GeneralDeviceControls({ selectedDevice, latestSettings }: Props)
                   "h-4 w-4",
                   ctrl.isOn ? ctrl.activeColor : "text-muted-foreground"
                 )} />
-              </div>
+              </Box>
               {ctrl.control}
-            </div>
-            <div>
-              <p className="text-xs font-semibold leading-tight">{ctrl.label}</p>
-              <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">{ctrl.description}</p>
-            </div>
-          </div>
+            </Group>
+            <Box>
+              <Text size="xs" fw={700} className="leading-tight">{ctrl.label}</Text>
+              <Text size="0.6rem" c="dimmed" className="leading-tight mt-1">{ctrl.description}</Text>
+            </Box>
+          </Card>
         );
       })}
-    </div>
+    </Box>
   );
 }

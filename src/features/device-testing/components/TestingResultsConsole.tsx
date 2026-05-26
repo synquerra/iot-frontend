@@ -1,11 +1,7 @@
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button, ScrollArea, Textarea, Badge, Tooltip, ActionIcon } from "@mantine/core";
 import { Terminal, Send, Trash2, History, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useGlobalLoading } from "@/contexts/GlobalLoadingContext";
 import { getRawMessages, sendTestCommand, type RawMqttMessage } from "../services/testingService";
 import { cn } from "@/lib/utils";
@@ -97,18 +93,15 @@ export function TestingResultsConsole({ imei }: TestingResultsConsoleProps) {
           <Badge variant="outline" className="hidden sm:flex text-[9px] font-mono font-bold tracking-widest px-2 py-0.5 bg-muted/30 border-border/50">
              {messages.length} Packets Captured
           </Badge>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={handleClear}
-                className="h-9 w-9 rounded-xl hover:bg-destructive/10 hover:text-destructive text-muted-foreground/40 transition-all"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className="text-[10px] font-bold uppercase tracking-widest">Clear Buffer</TooltipContent>
+          <Tooltip label="Clear Buffer">
+            <ActionIcon 
+              variant="subtle" 
+              color="gray" 
+              onClick={handleClear}
+              className="h-9 w-9 rounded-xl hover:bg-destructive/10 hover:text-destructive text-muted-foreground/40 transition-all"
+            >
+              <Trash2 className="h-4 w-4" />
+            </ActionIcon>
           </Tooltip>
         </div>
       </div>
@@ -132,7 +125,7 @@ export function TestingResultsConsole({ imei }: TestingResultsConsoleProps) {
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-2">
+                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-3">
                           <Badge
                             variant="secondary"
@@ -189,7 +182,7 @@ export function TestingResultsConsole({ imei }: TestingResultsConsoleProps) {
             <div className="relative">
               <Textarea
                 placeholder='{"action": "ping", "timestamp": "now"}'
-                className="font-mono text-xs min-h-[120px] resize-none bg-background border-border shadow-sm rounded-xl focus:ring-1 focus:ring-primary/20 transition-all p-4"
+                styles={{ input: { fontFamily: 'monospace', fontSize: '0.75rem', minHeight: '120px', resize: 'none' } }}
                 value={command}
                 onChange={(e) => setCommand(e.target.value)}
               />
@@ -197,14 +190,14 @@ export function TestingResultsConsole({ imei }: TestingResultsConsoleProps) {
             </div>
             <Button
               onClick={handleSendManual}
+              color={command.trim() ? "blue" : "gray"}
               size="lg"
               className={cn(
-                "w-full gap-3 font-black uppercase tracking-[0.2em] text-[10px] h-12 rounded-xl transition-all shadow-lg",
-                command.trim() ? "bg-primary hover:shadow-primary/30" : "bg-muted text-muted-foreground"
+                "w-full gap-3 font-black uppercase tracking-[0.2em] text-[10px] h-12 rounded-xl transition-all shadow-lg text-white"
               )}
               disabled={!command.trim()}
             >
-              <Send className="h-3.5 w-3.5" />
+              <Send className="h-3.5 w-3.5 mr-1" />
               Inject Packet
             </Button>
           </div>

@@ -5,54 +5,54 @@ export default {
   theme: {
   	extend: {
   		colors: {
-  			border: 'hsl(var(--border))',
-  			input: 'hsl(var(--input))',
-  			ring: 'hsl(var(--ring))',
-  			background: 'hsl(var(--background))',
-  			foreground: 'hsl(var(--foreground))',
+  			border: 'var(--mantine-color-default-border)',
+  			input: 'var(--mantine-color-default-border)',
+  			ring: 'var(--mantine-color-primary-outline)',
+  			background: 'var(--mantine-color-body)',
+  			foreground: 'var(--mantine-color-text)',
   			primary: {
-  				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
+  				DEFAULT: 'var(--mantine-color-primary-filled)',
+  				foreground: 'var(--mantine-color-white)'
   			},
   			secondary: {
-  				DEFAULT: 'hsl(var(--secondary))',
-  				foreground: 'hsl(var(--secondary-foreground))'
+  				DEFAULT: 'var(--mantine-color-default)',
+  				foreground: 'var(--mantine-color-text)'
   			},
   			destructive: {
-  				DEFAULT: 'hsl(var(--destructive))',
-  				foreground: 'hsl(var(--destructive-foreground))'
+  				DEFAULT: 'var(--mantine-color-red-filled)',
+  				foreground: 'var(--mantine-color-white)'
   			},
   			muted: {
-  				DEFAULT: 'hsl(var(--muted))',
-  				foreground: 'hsl(var(--muted-foreground))'
+  				DEFAULT: 'var(--mantine-color-default-hover)',
+  				foreground: 'var(--mantine-color-dimmed)'
   			},
   			accent: {
-  				DEFAULT: 'hsl(var(--accent))',
-  				foreground: 'hsl(var(--accent-foreground))'
+  				DEFAULT: 'var(--mantine-color-primary-light)',
+  				foreground: 'var(--mantine-color-primary-light-color)'
   			},
   			card: {
-  				DEFAULT: 'hsl(var(--card))',
-  				foreground: 'hsl(var(--card-foreground))'
+  				DEFAULT: 'var(--mantine-color-body)',
+  				foreground: 'var(--mantine-color-text)'
   			},
   			popover: {
-  				DEFAULT: 'hsl(var(--popover))',
-  				foreground: 'hsl(var(--popover-foreground))'
+  				DEFAULT: 'var(--mantine-color-body)',
+  				foreground: 'var(--mantine-color-text)'
   			},
   			sidebar: {
-  				DEFAULT: 'hsl(var(--sidebar-background))',
-  				foreground: 'hsl(var(--sidebar-foreground))',
-  				primary: 'hsl(var(--sidebar-primary))',
-  				'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-  				accent: 'hsl(var(--sidebar-accent))',
-  				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-  				border: 'hsl(var(--sidebar-border))',
-  				ring: 'hsl(var(--sidebar-ring))'
+  				DEFAULT: 'var(--mantine-color-body)',
+  				foreground: 'var(--mantine-color-text)',
+  				primary: 'var(--mantine-color-primary-filled)',
+  				'primary-foreground': 'var(--mantine-color-white)',
+  				accent: 'var(--mantine-color-default-hover)',
+  				'accent-foreground': 'var(--mantine-color-text)',
+  				border: 'var(--mantine-color-default-border)',
+  				ring: 'var(--mantine-color-primary-outline)'
   			}
   		},
   		borderRadius: {
-  			lg: 'var(--radius)',
-  			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
+  			lg: 'var(--mantine-radius-md)',
+  			md: 'var(--mantine-radius-sm)',
+  			sm: 'var(--mantine-radius-xs)'
   		}
   	}
   },

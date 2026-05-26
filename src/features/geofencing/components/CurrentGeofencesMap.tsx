@@ -8,12 +8,12 @@ import {
   User,
   Smartphone,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ActionIcon } from "@mantine/core";
 import { cn } from "@/lib/utils";
 import { DEFAULT_CENTER } from "../constants";
 import { MapClickHandler } from "./MapClickHandler";
 import type { GeofenceCoordinate } from "../types";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 type MapProps = {
   activeCoordinates: GeofenceCoordinate[];
@@ -75,24 +75,22 @@ function LocationControls({ deviceLocation }: { deviceLocation?: LatLngTuple }) 
   return (
     <>
       <div ref={controlsRef} className="absolute bottom-6 right-6 z-[1000] flex flex-col gap-2">
-        <Button
-          variant="secondary"
-          size="icon"
+        <ActionIcon
+          variant="default"
           className="h-10 w-10 rounded-full shadow-lg border-2 border-primary/20 bg-background/95 backdrop-blur-md hover:bg-primary hover:text-white transition-all duration-300 group"
           onClick={(e) => { e.stopPropagation(); goToDevice(); }}
           title="Locate Device"
         >
           <Smartphone className="h-5 w-5 group-hover:scale-110 transition-transform" />
-        </Button>
-        <Button
-          variant="secondary"
-          size="icon"
+        </ActionIcon>
+        <ActionIcon
+          variant="default"
           className="h-10 w-10 rounded-full shadow-lg border-2 border-blue-500/20 bg-background/95 backdrop-blur-md hover:bg-blue-600 hover:text-white transition-all duration-300 group"
           onClick={(e) => { e.stopPropagation(); goToUser(); }}
           title="Locate Me"
         >
           <User className="h-5 w-5 group-hover:scale-110 transition-transform" />
-        </Button>
+        </ActionIcon>
       </div>
 
       {userLocation && (

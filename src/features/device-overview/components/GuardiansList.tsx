@@ -1,17 +1,4 @@
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Avatar, Card, Tooltip, ActionIcon, Group, Text, Box } from "@mantine/core";
 import { Phone } from "lucide-react";
 
 interface GuardiansListProps {
@@ -31,37 +18,33 @@ export function GuardiansList({
   if (guardians.length === 0) return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Guardians</CardTitle>
-        <CardDescription>Emergency contacts</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <Card shadow="sm" radius="md" withBorder padding="md">
+      <Box mb="md">
+        <Text fw={600} size="sm">Guardians</Text>
+        <Text size="xs" c="dimmed">Emergency contacts</Text>
+      </Box>
+      <Box className="space-y-4">
         {guardians.map((guardian, i) => (
-          <div
+          <Group
             key={i}
-            className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+            wrap="nowrap"
+            className="p-3 rounded-lg hover:bg-muted/50 transition-colors"
           >
-            <Avatar className="h-10 w-10 border-2 border-primary/10">
-              <AvatarFallback className="bg-primary/5 text-primary">
-                {guardian.initials}
-              </AvatarFallback>
+            <Avatar size="md" color="blue" radius="xl">
+              {guardian.initials}
             </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{guardian.name}</p>
-              <p className="text-xs text-muted-foreground">{guardian.phone}</p>
-            </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Phone className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Call now</TooltipContent>
+            <Box className="flex-1 min-w-0">
+              <Text size="sm" fw={500} className="truncate">{guardian.name}</Text>
+              <Text size="xs" c="dimmed">{guardian.phone}</Text>
+            </Box>
+            <Tooltip label="Call now">
+              <ActionIcon variant="subtle" color="gray" size="lg" radius="md">
+                <Phone size="1.1rem" />
+              </ActionIcon>
             </Tooltip>
-          </div>
+          </Group>
         ))}
-      </CardContent>
+      </Box>
     </Card>
   );
 }

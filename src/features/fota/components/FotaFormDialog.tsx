@@ -1,20 +1,9 @@
 import { useEffect, useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Modal, Button, TextInput, Textarea, Group, Stack, SimpleGrid, Text } from "@mantine/core";
 import type { FotaUpdate } from "../types";
 import { createFotaUpdate, editFotaUpdate } from "../services/fotaService";
-import { toast } from "sonner";
-import { RefreshCw, PackagePlus, Edit3, FileUp } from "lucide-react";
+import { toast } from "@/lib/toast";
+import { PackagePlus, Edit3, FileUp } from "lucide-react";
 
 // FilePond Imports
 import { FilePond, registerPlugin } from 'react-filepond';
@@ -126,106 +115,94 @@ export function FotaFormDialog({ isOpen, onOpenChange, onSuccess, editData }: Fo
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {isEditing ? (
-                <Edit3 className="h-5 w-5 text-primary" />
-              ) : (
-                <PackagePlus className="h-5 w-5 text-primary" />
-              )}
-              {isEditing ? 'Edit Firmware' : 'Register New Firmware'}
-            </DialogTitle>
-            <DialogDescription>
-              {isEditing 
-                ? "Update the details for this firmware version in the FOTA registry."
-                : "Upload a firmware file and provide version details to register a new update."
-              }
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="version_name">Version Name <span className="text-destructive">*</span></Label>
-                <Input
-                  id="version_name"
-                  placeholder="e.g. v1.0.2"
-                  value={formData.version_name}
-                  onChange={(e) => setFormData({ ...formData, version_name: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="version_code">Version Code <span className="text-destructive">*</span></Label>
-                <Input
-                  id="version_code"
-                  type="number"
-                  placeholder="e.g. 102"
-                  value={formData.version_code}
-                  onChange={(e) => setFormData({ ...formData, version_code: e.target.value })}
-                  required
-                />
-              </div>
-            </div>
+    <Modal 
+      opened={isOpen} 
+      onClose={() => onOpenChange(false)}
+      title={
+        <Group gap="xs">
+          {isEditing ? <Edit3 size="1.25rem" className="text-primary" /> : <PackagePlus size="1.25rem" className="text-primary" />}
+          <Text fw={600}>{isEditing ? 'Edit Firmware' : 'Register New Firmware'}</Text>
+        </Group>
+      }
+      size="lg"
+      overlayProps={{ blur: 3, backgroundOpacity: 0.55 }}
+    >
+      <form onSubmit={handleSubmit}>
+        <Stack gap="md" mt="sm">
+          <Text size="sm" c="dimmed">
+            {isEditing 
+              ? "Update the details for this firmware version in the FOTA registry."
+              : "Upload a firmware file and provide version details to register a new update."
+            }
+          </Text>
 
-            <div className="grid gap-2">
-              <Label className="flex items-center gap-2 mb-1">
-                <FileUp className="h-4 w-4 text-primary" />
-                Update file <span className="text-destructive">*</span>
-              </Label>
-              <div className="filepond-wrapper rounded-xl overflow-hidden border border-dashed border-primary/20 bg-primary/5 p-1">
-                <FilePond
-                  files={files}
-                  onupdatefiles={handleFileUpdate}
-                  allowMultiple={false}
-                  maxFiles={1}
-                  name="firmware"
-                  labelIdle='Drag & Drop your firmware .bin file or <span class="filepond--label-action">Browse</span>'
-                  acceptedFileTypes={['application/octet-stream', 'application/x-binary', '.bin']}
-                  labelFileTypeNotAllowed="Invalid file type"
-                  fileValidateTypeDetectType={(source, type) =>
-                    new Promise((resolve, reject) => {
-                      resolve(type);
-                    })
-                  }
-                />
-              </div>
-              {isEditing && !files.length && (
-                 <p className="text-[10px] text-muted-foreground italic px-1">
-                   Current: {formData.file_url.split('/').pop()}
-                 </p>
-              )}
-            </div>
+          <SimpleGrid cols={2}>
+            <TextInput
+              label="Version Name"
+              withAsterisk
+              placeholder="e.g. v1.0.2"
+              value={formData.version_name}
+              onChange={(e) => setFormData({ ...formData, version_name: e.currentTarget.value })}
+              required
+            />
+            <TextInput
+              label="Version Code"
+              withAsterisk
+              type="number"
+              placeholder="e.g. 102"
+              value={formData.version_code}
+              onChange={(e) => setFormData({ ...formData, version_code: e.currentTarget.value })}
+              required
+            />
+          </SimpleGrid>
 
-            <div className="grid gap-2">
-              <Label htmlFor="release_notes">Release Notes</Label>
-              <Textarea
-                id="release_notes"
-                placeholder="Describe what's new in this version..."
-                className="min-h-[100px]"
-                value={formData.release_notes}
-                onChange={(e) => setFormData({ ...formData, release_notes: e.target.value })}
+          <Stack gap="xs">
+            <Text size="sm" fw={500} className="flex items-center gap-2">
+              <FileUp size="1rem" className="text-primary" />
+              Update file <span className="text-red-500">*</span>
+            </Text>
+            <div className="filepond-wrapper rounded-xl overflow-hidden border border-dashed border-primary/20 bg-primary/5 p-1">
+              <FilePond
+                files={files}
+                onupdatefiles={handleFileUpdate}
+                allowMultiple={false}
+                maxFiles={1}
+                name="firmware"
+                labelIdle='Drag & Drop your firmware .bin file or <span class="filepond--label-action">Browse</span>'
+                acceptedFileTypes={['application/octet-stream', 'application/x-binary', '.bin']}
+                labelFileTypeNotAllowed="Invalid file type"
+                fileValidateTypeDetectType={(source, type) =>
+                  new Promise((resolve, reject) => {
+                    resolve(type);
+                  })
+                }
               />
             </div>
-          </div>
+            {isEditing && !files.length && (
+                <Text size="xs" c="dimmed" fs="italic" px={4}>
+                  Current: {formData.file_url.split('/').pop()}
+                </Text>
+            )}
+          </Stack>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Textarea
+            label="Release Notes"
+            placeholder="Describe what's new in this version..."
+            minRows={4}
+            value={formData.release_notes}
+            onChange={(e) => setFormData({ ...formData, release_notes: e.currentTarget.value })}
+          />
+
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSaving} className="font-bold min-w-[120px]">
-              {isSaving ? (
-                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                isEditing ? "Save Changes" : "Add Firmware"
-              )}
+            <Button type="submit" loading={isSaving}>
+              {isEditing ? "Save Changes" : "Add Firmware"}
             </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          </Group>
+        </Stack>
+      </form>
+    </Modal>
   );
 }

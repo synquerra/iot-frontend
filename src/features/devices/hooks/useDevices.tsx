@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react"
-import { toast } from "sonner"
+import { toast } from "@/lib/toast";
 import { listDevices, type Device } from "../services/deviceService"
 
 export function useDevices() {
