@@ -121,10 +121,10 @@ export default function DeviceTesting() {
       <div className="flex flex-col lg:flex-row gap-4 min-h-0 relative">
       {/* ── Device Selector Panel ── */}
       <aside className={cn(
-        "shrink-0 transition-all duration-300 ease-in-out overflow-hidden",
-        isSidebarCollapsed ? "w-0 opacity-0" : "w-full lg:w-64 xl:w-72"
+        "shrink-0 transition-all duration-300 ease-in-out lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-8rem)]",
+        isSidebarCollapsed ? "w-0 opacity-0 overflow-hidden" : "w-full lg:w-64 xl:w-72"
       )}>
-        <div className="bg-card border border-border rounded-xl overflow-hidden sticky top-0">
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
           {/* Panel header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
             <div className="flex items-center gap-2">
@@ -303,7 +303,10 @@ export default function DeviceTesting() {
 
         {!isLoadingSettings && (
           <div className="space-y-4">
-            {/* Action Center - Now at the top */}
+            {/* Unified Results Console - Now at the top, styled like MQTTBox */}
+            <TestingResultsConsole imei={selectedImei} />
+
+            {/* Action Center */}
             <TestingActionCenter
               imei={selectedImei}
               topic={selectedDevice?.topic}
@@ -333,9 +336,6 @@ export default function DeviceTesting() {
                 <CompactContacts latestSettings={latestSettings} />
               </div>
             </div>
-
-            {/* Unified Results Console */}
-            <TestingResultsConsole imei={selectedImei} />
 
             {/* Context Footer */}
             <div className="flex items-center justify-center gap-2 text-muted-foreground/50 py-4">

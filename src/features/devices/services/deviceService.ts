@@ -189,3 +189,31 @@ export async function switchDeviceMode(imei: string, modeId: string): Promise<{ 
   }
   return data;
 }
+
+export interface DeviceJob {
+  id: string;
+  imei: string;
+  job_type: string;
+  status: string;
+  payload?: any;
+  execution_logs?: any;
+  run_at?: string;
+  completed_at?: string;
+  created_at?: string;
+}
+
+export async function getDeviceJobs(
+  imei: string,
+  limit: number = 50,
+  skip: number = 0
+): Promise<DeviceJob[]> {
+  const { data } = await api.get("job/list", {
+    params: { imei, limit, skip }
+  });
+
+  if (!data || data.status !== "success") {
+    throw new Error(data?.message || "Failed to fetch device jobs");
+  }
+
+  return Array.isArray(data.data) ? data.data : (Array.isArray(data.jobs) ? data.jobs : []);
+}

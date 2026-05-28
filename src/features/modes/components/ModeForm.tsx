@@ -391,9 +391,9 @@ export function ModeForm({
   const entryConditions = conditions.filter(
     (c) => c.trigger === "enter" || c.trigger === "entry"
   );
-  const exitConditions = conditions.filter(
-    (c) => c.trigger === "exit"
-  );
+  // const exitConditions = conditions.filter(
+  //   (c) => c.trigger === "exit"
+  // );
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col h-full bg-background/50 relative">
@@ -693,57 +693,7 @@ export function ModeForm({
                 </Button>
               </div>
 
-              <div className="h-[1px] bg-border/40 mx-1" />
-
-              {/* Exit Conditions Section */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-primary/50" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70">
-                      Exit Conditions (any one true exits the mode)
-                    </span>
-                  </div>
-                  <span title="Exit conditions define when this mode is automatically deactivated.">
-                    <HelpCircle className="h-4 w-4 text-muted-foreground/40 hover:text-primary transition-colors cursor-help shrink-0" />
-                  </span>
-                </div>
-
-                {loadingConditions ? (
-                  <div className="flex items-center justify-center p-6 bg-muted/10 rounded-xl border border-dashed border-border">
-                    <span className="text-xs font-bold text-muted-foreground animate-pulse">Loading conditions...</span>
-                  </div>
-                ) : exitConditions.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-6 px-4 bg-muted/10 rounded-xl border border-dashed border-border/80">
-                    <p className="text-xs font-semibold text-muted-foreground/60 text-center">
-                      No exit conditions yet. Click below to add one.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-1.5">
-                    {exitConditions.map((cond) => (
-                      <ConditionRow
-                        key={cond.id}
-                        condition={cond}
-                        geofences={geofences}
-                        onEdit={() => handleOpenEditDialog(cond)}
-                        onDelete={() => handleDeleteCondition(cond.id)}
-                        onToggle={(checked) => handleToggleCondition(cond, checked)}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleOpenAddDialog("exit")}
-                  className="w-full h-10 border-dashed border bg-background hover:bg-muted/10 border-border hover:border-primary/40 font-bold uppercase tracking-widest text-[9px] gap-2 rounded-xl transition-all"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add Exit Condition
-                </Button>
-              </div>
+              {/* Exit Conditions Section hidden as requested */}
             </div>
           </CardContent>
         </Card>

@@ -9,7 +9,7 @@
 // Storage keys
 const STORAGE_KEY = 'user_context';
 const STORAGE_VERSION = '1.0';
-const CONTEXT_EXPIRY_HOURS = 24;
+const CONTEXT_EXPIRY_HOURS = 720; // 30 days (matches maximum session duration)
 
 // Simple encryption key derivation (in production, use more secure methods)
 const ENCRYPTION_KEY = 'user-context-encryption-key-v1';

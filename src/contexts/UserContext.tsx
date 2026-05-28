@@ -134,6 +134,13 @@ export const UserContextProvider = ({ children }: { children: ReactNode }) => {
         const persisted = loadUserContext()
 
         if (!persisted) {
+          if (localStorage.getItem("accessToken") || localStorage.getItem("refreshToken")) {
+            console.warn("User context is missing but session tokens exist. Cleaning session.");
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("userEmail");
+            localStorage.removeItem("sessionExpiry");
+          }
           setState(prev => ({ ...prev, isRestoring: false }))
           return
         }

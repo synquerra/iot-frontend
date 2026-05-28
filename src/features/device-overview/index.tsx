@@ -12,6 +12,9 @@ import { MetricsGrid } from "./components/MetricGrid";
 import { MetricCardSkeleton } from "./components/SkeletonItems";
 import { DeviceAlertsHistory } from "./components/DeviceAlertsHistory";
 import useDeviceOverview from "./hooks/useDeviceOverview";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Activity, Terminal } from "lucide-react";
+import { JobHistoryTable } from "./components/JobHistoryTable";
 
 export default function DeviceOverviewPage() {
   const { imei } = useParams();
@@ -113,17 +116,30 @@ export default function DeviceOverviewPage() {
 
           <div className="grid gap-8 lg:grid-cols-12 items-start">
 
-            {/* Left Column - Tactical Live Map */}
-            <div className="lg:col-span-8 flex flex-col gap-8">
-              <ActivityBreakdown
-                crawling={data.crawling}
-                stationary={data.stationary}
-                overspeeding={data.overspeeding}
-              />
-              <DeviceAlertsHistory imei={data.imei} deviceName={data.name} />
+            {/* Left Column - Tabs for Telemetry & Job Logs */}
+            <Tabs defaultValue="telemetry" className="lg:col-span-8 space-y-4">
+              <TabsList className="grid grid-cols-2 max-w-[400px]">
+                <TabsTrigger value="telemetry" className="flex items-center gap-2">
+                  <Activity className="h-4 w-4" /> Telemetry & Events
+                </TabsTrigger>
+                <TabsTrigger value="jobs" className="flex items-center gap-2">
+                  <Terminal className="h-4 w-4" /> Job History Trace
+                </TabsTrigger>
+              </TabsList>
 
+              <TabsContent value="telemetry" className="space-y-8 mt-2 focus-visible:outline-none focus-visible:ring-0">
+                <ActivityBreakdown
+                  crawling={data.crawling}
+                  stationary={data.stationary}
+                  overspeeding={data.overspeeding}
+                />
+                <DeviceAlertsHistory imei={data.imei} deviceName={data.name} />
+              </TabsContent>
 
-            </div>
+              <TabsContent value="jobs" className="mt-2 focus-visible:outline-none focus-visible:ring-0">
+                <JobHistoryTable imei={data.imei} />
+              </TabsContent>
+            </Tabs>
 
             <div className="lg:col-span-4 flex flex-col gap-8">
               <DeviceSettingsSummaryCard
